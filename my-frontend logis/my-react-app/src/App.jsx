@@ -33,7 +33,14 @@ function App() {
   const [drivers, setDrivers] = useState([]);
 
   // โครงสร้างอินพุตสำหรับเพิ่มข้อมูลใหม่ใต้ตาราง
-  const [newCustomer, setNewCustomer] = useState({ customer_name: '', phone: '', email: '' });
+  const [newCustomer, setNewCustomer] = useState({
+    customer_name: '',
+    tax_id: '',
+    address: '',
+    phone: '',
+    email: '',
+    contact_person: ''
+  });
   const [newCar, setNewCar] = useState({ car_number: '', car_type: '' });
   const [newDriver, setNewDriver] = useState({ full_name: '', phone: '' });
 
@@ -51,21 +58,22 @@ function App() {
   const fetchData = () => {
     setLoading(true);
     setError(null);
+    setError(null);
     Promise.all([
-      fetch('/api/customers').then(r => r.json()),
-      fetch('/api/cars').then(r => r.json()),
-      fetch('/api/drivers').then(r => r.json())
+      fetch('http://localhost:3000/api/customers').then(r => r.json()),
+      fetch('http://localhost:3000/api/cars').then(r => r.json()), // ใส่ url เต็ม และคง s ไว้ตามฐานข้อมูล
+      fetch('http://localhost:3000/api/driver').then(r => r.json())
     ])
-    .then(([c, carsData, d]) => {
-      setCustomers(c);
-      setCars(carsData);
-      setDrivers(d);
-      setLoading(false);
-    })
-    .catch(err => {
-      setError('ไม่สามารถโหลดข้อมูลได้: ' + err.message);
-      setLoading(false);
-    });
+      .then(([c, carsData, d]) => {
+        setCustomers(c);
+        setCars(carsData);
+        setDrivers(d);
+        setLoading(false);
+      })
+      .catch(err => {
+        setError('ไม่สามารถโหลดข้อมูลได้: ' + err.message);
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -76,30 +84,109 @@ function App() {
 
   // ฟังก์ชันบันทึกข้อมูลเข้าฐานข้อมูล (INSERT)
   const handleAddCustomer = () => {
+
     if (!newCustomer.customer_name) {
       alert('กรุณากรอกชื่อลูกค้า');
       return;
     }
-    fetch('/api/customers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newCustomer) })
-    .then(res => res.json()).then(data => { alert(data.message); setNewCustomer({ customer_name: '', phone: '', email: '' }); fetchData(); });
+    const autoCustomerId = 'c-' + Math.floor(1000000 + Math.random() * 9000000);
+
+    const customerDataToSend = {
+      ...newCustomer,
+      customer_id: autoCustomerId
+    };
+
+    fetch('http://localhost:3000/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(customerDataToSend)
+    })
+      .then(res => res.json())
+      .then(data => {
+
+        if (data.error) {
+          alert('บันทึกไม่สำเร็จ: ' + data.error);
+        } else {
+          alert(data.message);
+          setNewCustomer({
+            customer_name: '',
+            tax_id: '',
+            address: '',
+            phone: '',
+            email: '',
+            contact_person: ''
+          });
+          fetchData();
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
 
   const handleAddCar = () => {
-    if (!newCar.car_number) {
-      alert('กรุณากรอกทะเบียนรถ');
-      return;
-    }
-    fetch('/api/cars', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newCar) })
-    .then(res => res.json()).then(data => { alert(data.message); setNewCar({ car_number: '', car_type: '' }); fetchData(); });
-  };
+    // 1. สุ่มรหัสรถสั้น ๆ (เช่น car-84930) ส่งไปเป็น Primary Key
+    const autoCarId = 'car-' + Math.floor(10000 + Math.random() * 90000);
 
+    // 2. มัดรวมข้อมูลจากสเตท newCar ทั้งหมด พร้อมแนบ car_id
+    const carDataToSend = {
+      ...newCar,
+      car_id: autoCarId
+    };
+
+    // 3. ยิงข้อมูลไปที่หลังบ้านพอร์ต 3000 เส้นทาง /api/car
+    fetch('http://localhost:3000/api/cars', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(carDataToSend)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert('บันทึกไม่สำเร็จ: ' + data.error);
+        } else {
+          alert(data.message); // จะขึ้นเตือน "✅ เพิ่มข้อมูลสำเร็จ!"
+
+          // ล้างช่องกรอกข้อมูลในสเตทให้กลับเป็นค่าว่าง
+          if (typeof setNewCar === 'function') {
+            setNewCar(Object.keys(newCar).reduce((acc, key) => ({ ...acc, [key]: '' }), {}));
+          }
+
+          fetchData(); // รีโหลดตารางเพื่อดึงข้อมูลรถคันใหม่มาโชว์
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
   const handleAddDriver = () => {
-    if (!newDriver.full_name) {
-      alert('กรุณากรอกชื่อคนขับ');
-      return;
-    }
-    fetch('/api/drivers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newDriver) })
-    .then(res => res.json()).then(data => { alert(data.message); setNewDriver({ full_name: '', phone: '' }); fetchData(); });
+    /// 1. เปลี่ยนจาก 'driver-' เป็น 'd-' เพื่อประหยัดพื้นที่ตัวอักษร (รวม 8 ตัวอักษร ไม่เกิน 10 แน่นอน)
+const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
+
+    // 2. มัดรวมข้อมูลจากสเตท newDriver ทั้งหมด พร้อมแนบ driver_id
+    const driverDataToSend = {
+      ...newDriver,
+      driver_id: autoDriverId
+    };
+
+    // 3. ยิงข้อมูลไปที่หลังบ้านพอร์ต 3000 เส้นทาง /api/driver (ไม่มี s ตาม ALLOWED หลังบ้าน)
+    fetch('http://localhost:3000/api/driver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(driverDataToSend)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert('บันทึกไม่สำเร็จ: ' + data.error);
+        } else {
+          alert(data.message); // จะขึ้นเตือน "✅ เพิ่มข้อมูลสำเร็จ!" ลบคำว่า undefined ออกไป
+
+          // ล้างช่องกรอกข้อมูลพนักงานขับรถในสเตทให้กลับเป็นค่าว่าง
+          if (typeof setNewDriver === 'function') {
+            setNewDriver(Object.keys(newDriver).reduce((acc, key) => ({ ...acc, [key]: '' }), {}));
+          }
+
+          fetchData(); // รีโหลดตารางเพื่อดึงข้อมูลพนักงานขับรถคนใหม่มาโชว์
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
 
   // ฟังก์ชันแก้ไขข้อมูลแถวเดิม (UPDATE)
@@ -112,7 +199,7 @@ function App() {
   };
 
   const handleSaveDriverEdit = (id) => {
-    fetch(`/api/drivers/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) }).then(() => { setEditingDriverId(null); fetchData(); });
+    fetch(`/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) }).then(() => { setEditingDriverId(null); fetchData(); });
   };
 
   const handleDeleteCustomer = (id) => {
@@ -133,7 +220,7 @@ function App() {
 
   const handleDeleteDriver = (id) => {
     if (!confirm('ยืนยันการลบคนขับคนนี้?')) return;
-    fetch(`/api/drivers/${id}`, { method: 'DELETE' })
+    fetch(`/api/driver/${id}`, { method: 'DELETE' })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
@@ -181,9 +268,9 @@ function App() {
         <div className="login-right">
           <div className="login-form-card">
             <h2 className="login-form-title">Login</h2>
-            
+
             {loginError && <div className="login-alert">⚠️ {loginError}</div>}
-            
+
             <form onSubmit={handleLogin}>
               <div className="login-form-group">
                 <label className="login-form-label">Email</label>
@@ -255,7 +342,7 @@ function App() {
                 </button>
               </div>
             </form>
-            
+
             <div className="login-hint">
               การสาธิต: สามารถใช้อีเมลและรหัสผ่านใดก็ได้เพื่อเข้าสู่ระบบ
             </div>
@@ -405,7 +492,7 @@ function App() {
               <span className="sidebar-menu-item-icon">🚚</span>
               <span>Truck List</span>
             </li>
-            <li className={`sidebar-menu-item ${activeTab === 'drivers' ? 'active' : ''}`} onClick={() => setActiveTab('drivers')}>
+            <li className={`sidebar-menu-item ${activeTab === 'driver' ? 'active' : ''}`} onClick={() => setActiveTab('driver')}>
               <span className="sidebar-menu-item-icon">👮</span>
               <span>Driver Profile</span>
             </li>
@@ -435,45 +522,120 @@ function App() {
         {/* Dynamic content rendering */}
         <div className="dashboard-content-area">
           {activeTab === 'dashboard' && renderOverview()}
-          
+          {/*ส่วนกรอก ลบ เเก้ไข ข้อมูลลูกค้า*/}
           {activeTab === 'customers' && (
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <h2 style={{ textAlign: 'center', margin: '0 0 15px 0', fontSize: '20px', color: '#1e293b' }}> ตารางข้อมูลลูกค้า (Customers)</h2>
               <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', borderColor: '#f0f0f0', textAlign: 'center' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#fafafa', color: '#555' }}>
-                    <th>ชื่อลูกค้า</th><th>เบอร์โทร</th><th>อีเมล</th><th>การจัดการ</th>
+                    <th>ชื่อลูกค้า</th>
+                    <th>เลขผู้เสียภาษี</th>
+                    <th>ที่อยู่</th>
+                    <th>เบอร์โทร</th>
+                    <th>อีเมล</th>
+                    <th>ชื่อผู้ติดต่อ</th>
+                    <th>การจัดการ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map(c => (
+
+                  {Array.isArray(customers) && customers.map(c => (
                     <tr key={c.customer_id}>
-                      <td>{editingCustomerId === c.customer_id ? <input type="text" value={editCustomerData.customer_name} onChange={e => setEditCustomerData({...editCustomerData, customer_name: e.target.value})} /> : c.customer_name}</td>
-                      <td>{editingCustomerId === c.customer_id ? <input type="text" value={editCustomerData.phone} onChange={e => setEditCustomerData({...editCustomerData, phone: e.target.value})} /> : c.phone}</td>
-                      <td>{editingCustomerId === c.customer_id ? <input type="text" value={editCustomerData.email} onChange={e => setEditCustomerData({...editCustomerData, email: e.target.value})} /> : c.email}</td>
                       <td>
                         {editingCustomerId === c.customer_id ? (
-                          <><button onClick={() => handleSaveCustomerEdit(c.customer_id)}>💾</button> <button onClick={() => setEditingCustomerId(null)}>❌</button></>
+                          <input type="text" value={editCustomerData.customer_name} onChange={e => setEditCustomerData({ ...editCustomerData, customer_name: e.target.value })} />
+                        ) : (
+                          c.customer_name
+                        )}
+                      </td>
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <input type="text" value={editCustomerData.tax_id || ''} onChange={e => setEditCustomerData({ ...editCustomerData, tax_id: e.target.value })} />
+                        ) : (
+                          c.tax_id || '-'
+                        )}
+                      </td>
+
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <input type="text" value={editCustomerData.address || ''} onChange={e => setEditCustomerData({ ...editCustomerData, address: e.target.value })} />
+                        ) : (
+                          c.address || '-'
+                        )}
+                      </td>
+
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <input type="text" value={editCustomerData.phone} onChange={e => setEditCustomerData({ ...editCustomerData, phone: e.target.value })} />
+                        ) : (
+                          c.phone
+                        )}
+                      </td>
+
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <input type="text" value={editCustomerData.email} onChange={e => setEditCustomerData({ ...editCustomerData, email: e.target.value })} />
+                        ) : (
+                          c.email
+                        )}
+                      </td>
+
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <input type="text" value={editCustomerData.contact_person || ''} onChange={e => setEditCustomerData({ ...editCustomerData, contact_person: e.target.value })} />
+                        ) : (
+                          c.contact_person || '-'
+                        )}
+                      </td>
+
+                      <td>
+                        {editingCustomerId === c.customer_id ? (
+                          <>
+                            <button onClick={() => handleSaveCustomerEdit(c.customer_id)}>💾</button>
+                            <button onClick={() => setEditingCustomerId(null)}>❌</button>
+                          </>
                         ) : (
                           <>
-                            <button onClick={() => { setEditingCustomerId(c.customer_id); setEditCustomerData({...c}); }}>✏️</button>
-                            <button onClick={() => handleDeleteCustomer(c.customer_id)} style={{ marginLeft: '5px', color: 'red' }}>🗑️</button>
+                            <button
+                              onClick={() => {
+                                setEditingCustomerId(c.customer_id);
+                                setEditCustomerData({
+                                  customer_name: c.customer_name,
+                                  tax_id: c.tax_id || '',
+                                  address: c.address || '',
+                                  phone: c.phone,
+                                  email: c.email,
+                                  contact_person: c.contact_person || ''
+                                });
+                              }}
+                              style={{ marginRight: '5px', cursor: 'pointer' }}
+                            >
+                              ✏️
+                            </button>
+
+                            <button onClick={() => handleDeleteCustomer(c.customer_id)} style={{ backgroundColor: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                           </>
                         )}
                       </td>
                     </tr>
                   ))}
+
+                  {/* 2. แถวสีเหลืองสำหรับกรอกข้อมูลและปุ่มบันทึก (ใส่กลับคืนมาให้แล้วครับ) */}
                   <tr style={{ backgroundColor: '#fffbe6' }}>
-                    <td><input type="text" placeholder="ชื่อลูกค้า" value={newCustomer.customer_name} onChange={e => setNewCustomer({...newCustomer, customer_name: e.target.value})} style={{ width: '90%' }} /></td>
-                    <td><input type="text" placeholder="เบอร์โทร" value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} style={{ width: '90%' }} /></td>
-                    <td><input type="text" placeholder="อีเมล" value={newCustomer.email} onChange={e => setNewCustomer({...newCustomer, email: e.target.value})} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ชื่อลูกค้า" value={newCustomer.customer_name} onChange={e => setNewCustomer({ ...newCustomer, customer_name: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="เลขผู้เสียภาษี" value={newCustomer.tax_id || ''} onChange={e => setNewCustomer({ ...newCustomer, tax_id: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ที่อยู่" value={newCustomer.address || ''} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="เบอร์โทร" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="อีเมล" value={newCustomer.email} onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ชื่อผู้ติดต่อ" value={newCustomer.contact_person || ''} onChange={e => setNewCustomer({ ...newCustomer, contact_person: e.target.value })} style={{ width: '90%' }} /></td>
                     <td><button onClick={handleAddCustomer} style={{ backgroundColor: '#1890ff', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>➕ บันทึก</button></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           )}
-
+          {/*ส่วนรถ*/}
           {activeTab === 'trucks' && (
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <h2 style={{ textAlign: 'center', margin: '0 0 15px 0', fontSize: '20px', color: '#1e293b' }}>ตารางข้อมูลยานพาหนะ (Cars)</h2>
@@ -487,14 +649,14 @@ function App() {
                   {cars.length === 0 ? null : (
                     cars.map(car => (
                       <tr key={car.car_id}>
-                        <td>{editingCarId === car.car_id ? <input type="text" value={editCarData.car_number} onChange={e => setEditCarData({...editCarData, car_number: e.target.value})} /> : car.car_number}</td>
-                        <td>{editingCarId === car.car_id ? <input type="text" value={editCarData.car_type} onChange={e => setEditCarData({...editCarData, car_type: e.target.value})} /> : car.car_type}</td>
+                        <td>{editingCarId === car.car_id ? <input type="text" value={editCarData.car_number} onChange={e => setEditCarData({ ...editCarData, car_number: e.target.value })} /> : car.car_number}</td>
+                        <td>{editingCarId === car.car_id ? <input type="text" value={editCarData.car_type} onChange={e => setEditCarData({ ...editCarData, car_type: e.target.value })} /> : car.car_type}</td>
                         <td>
                           {editingCarId === car.car_id ? (
                             <><button onClick={() => handleSaveCarEdit(car.car_id)}>💾</button> <button onClick={() => setEditingCarId(null)}>❌</button></>
                           ) : (
                             <>
-                              <button onClick={() => { setEditingCarId(car.car_id); setEditCarData({...car}); }}>✏️</button>
+                              <button onClick={() => { setEditingCarId(car.car_id); setEditCarData({ ...car }); }}>✏️</button>
                               <button onClick={() => handleDeleteCar(car.car_id)} style={{ marginLeft: '5px', color: 'red' }}>🗑️</button>
                             </>
                           )}
@@ -503,16 +665,16 @@ function App() {
                     ))
                   )}
                   <tr style={{ backgroundColor: '#f0f5ff' }}>
-                    <td><input type="text" placeholder="ทะเบียนรถ" value={newCar.car_number} onChange={e => setNewCar({...newCar, car_number: e.target.value})} style={{ width: '90%' }} /></td>
-                    <td><input type="text" placeholder="ประเภทรถ" value={newCar.car_type} onChange={e => setNewCar({...newCar, car_type: e.target.value})} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ทะเบียนรถ" value={newCar.car_number} onChange={e => setNewCar({ ...newCar, car_number: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ประเภทรถ" value={newCar.car_type} onChange={e => setNewCar({ ...newCar, car_type: e.target.value })} style={{ width: '90%' }} /></td>
                     <td><button onClick={handleAddCar} style={{ backgroundColor: '#52c41a', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>➕ บันทึก</button></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           )}
-
-          {activeTab === 'drivers' && (
+          {/*ส่วนคนขับ*/}
+          {activeTab === 'driver' && (
             <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
               <h2 style={{ textAlign: 'center', margin: '0 0 15px 0', fontSize: '20px', color: '#1e293b' }}> ตารางข้อมูลพนักงานขับรถ (Drivers)</h2>
               <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', borderColor: '#f0f0f0', textAlign: 'center' }}>
@@ -522,27 +684,29 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {drivers.length === 0 ? null : (
-                    drivers.map(d => (
+
+                  {
+                    Array.isArray(drivers) && drivers.map(d => (
                       <tr key={d.driver_id}>
-                        <td>{editingDriverId === d.driver_id ? <input type="text" value={editDriverData.full_name} onChange={e => setEditDriverData({...editDriverData, full_name: e.target.value})} /> : d.full_name}</td>
-                        <td>{editingDriverId === d.driver_id ? <input type="text" value={editDriverData.phone} onChange={e => setEditDriverData({...editDriverData, phone: e.target.value})} /> : d.phone}</td>
+                        <td>{editingDriverId === d.driver_id ? <input type="text" value={editDriverData.full_name} onChange={e => setEditDriverData({ ...editDriverData, full_name: e.target.value })} /> : d.full_name}</td>
+                        <td>{editingDriverId === d.driver_id ? <input type="text" value={editDriverData.phone} onChange={e => setEditDriverData({ ...editDriverData, phone: e.target.value })} /> : d.phone}</td>
                         <td>
                           {editingDriverId === d.driver_id ? (
                             <><button onClick={() => handleSaveDriverEdit(d.driver_id)}>💾</button> <button onClick={() => setEditingDriverId(null)}>❌</button></>
                           ) : (
                             <>
-                              <button onClick={() => { setEditingDriverId(d.driver_id); setEditDriverData({...d}); }}>✏️</button>
+                              <button onClick={() => { setEditingDriverId(d.driver_id); setEditDriverData({ ...d }); }}>✏️</button>
                               <button onClick={() => handleDeleteDriver(d.driver_id)} style={{ marginLeft: '5px', color: 'red' }}>🗑️</button>
                             </>
                           )}
                         </td>
                       </tr>
                     ))
-                  )}
+                  }
+
                   <tr style={{ backgroundColor: '#fff7e6' }}>
-                    <td><input type="text" placeholder="ชื่อคนขับ" value={newDriver.full_name} onChange={e => setNewDriver({...newDriver, full_name: e.target.value})} style={{ width: '90%' }} /></td>
-                    <td><input type="text" placeholder="เบอร์โทร" value={newDriver.phone} onChange={e => setNewDriver({...newDriver, phone: e.target.value})} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="ชื่อคนขับ" value={newDriver.full_name} onChange={e => setNewDriver({ ...newDriver, full_name: e.target.value })} style={{ width: '90%' }} /></td>
+                    <td><input type="text" placeholder="เบอร์โทร" value={newDriver.phone} onChange={e => setNewDriver({ ...newDriver, phone: e.target.value })} style={{ width: '90%' }} /></td>
                     <td><button onClick={handleAddDriver} style={{ backgroundColor: '#faad14', color: '#fff', border: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>➕ บันทึก</button></td>
                   </tr>
                 </tbody>
