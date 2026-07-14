@@ -31,7 +31,8 @@ function App() {
   const [customers, setCustomers] = useState([]);
   const [cars, setCars] = useState([]);
   const [drivers, setDrivers] = useState([]);
-
+  const [documents, setDocuments] = useState([]);
+  const [documentItems, setDocumentItems] = useState([]);
   // โครงสร้างอินพุตสำหรับเพิ่มข้อมูลใหม่ใต้ตาราง
   const [newCustomer, setNewCustomer] = useState({
     customer_name: '',
@@ -52,28 +53,35 @@ function App() {
   const [editingDriverId, setEditingDriverId] = useState(null);
   const [editDriverData, setEditDriverData] = useState({});
 
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchData = () => {
     setLoading(true);
     setError(null);
-    setError(null);
+
     Promise.all([
       fetch('http://localhost:3000/api/customers').then(r => r.json()),
-      fetch('http://localhost:3000/api/cars').then(r => r.json()), // ใส่ url เต็ม และคง s ไว้ตามฐานข้อมูล
-      fetch('http://localhost:3000/api/driver').then(r => r.json())
+      fetch('http://localhost:3000/api/cars').then(r => r.json()),
+      fetch('http://localhost:3000/api/driver').then(r => r.json()),
+      fetch('http://localhost:3000/api/document').then(r => r.json()), // ดึงข้อมูลตัวที่ 4
+      fetch('http://localhost:3000/api/document_items').then(r => r.json())
     ])
-      .then(([c, carsData, d]) => {
+      // 👈 เพิ่ม docData เข้ามาในอาร์เรย์ตัวรับค่าให้ครบ 4 ตัวตามลำดับ
+      .then(([c, carsData, d, docData, itemsData]) => {
         setCustomers(c);
         setCars(carsData);
         setDrivers(d);
+        setDocuments(docData);
+        setDocumentItems(itemsData);
         setLoading(false);
       })
       .catch(err => {
         setError('ไม่สามารถโหลดข้อมูลได้: ' + err.message);
         setLoading(false);
       });
+
   };
 
   useEffect(() => {
@@ -157,7 +165,7 @@ function App() {
   };
   const handleAddDriver = () => {
     /// 1. เปลี่ยนจาก 'driver-' เป็น 'd-' เพื่อประหยัดพื้นที่ตัวอักษร (รวม 8 ตัวอักษร ไม่เกิน 10 แน่นอน)
-const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
+    const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
 
     // 2. มัดรวมข้อมูลจากสเตท newDriver ทั้งหมด พร้อมแนบ driver_id
     const driverDataToSend = {
@@ -413,6 +421,9 @@ const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
       </div>
     </div>
   );
+  const quotations = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Quotation') : [];
+  const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
+  const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
 
   return (
     <div className="dashboard-layout-container">
@@ -459,15 +470,15 @@ const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
                 <span>Document Center</span>
               </div>
               <ul className="sidebar-menu-list" style={{ marginTop: '4px' }}>
-                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'document' ? 'active' : ''}`} onClick={() => setActiveTab('document')}>
+                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'quotation' ? 'active' : ''}`} onClick={() => setActiveTab('quotation')}>
                   <span className="sidebar-menu-item-icon">📄</span>
                   <span>Quotation</span>
                 </li>
-                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'document' ? 'active' : ''}`} onClick={() => setActiveTab('document')}>
+                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'invoice' ? 'active' : ''}`} onClick={() => setActiveTab('invoice')}>
                   <span className="sidebar-menu-item-icon">📄</span>
                   <span>Invoice</span>
                 </li>
-                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'document' ? 'active' : ''}`} onClick={() => setActiveTab('document')}>
+                <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'receipt' ? 'active' : ''}`} onClick={() => setActiveTab('receipt')}>
                   <span className="sidebar-menu-item-icon">📄</span>
                   <span>Receipt</span>
                 </li>
@@ -479,6 +490,7 @@ const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
             </li>
           </ul>
         </div>
+
 
         {/* Group: MASTER DATA */}
         <div className="sidebar-group">
@@ -713,41 +725,105 @@ const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
               </table>
             </div>
           )}
-
-          {activeTab === 'document' && (
-            <GenericTable
-              tableName="document"
-              title="📄 เอกสารทั้งหมด (Documents)"
-              hiddenFields={['remark']}
-              labels={{
-                document_id: 'รหัส',
-                document_type: 'ประเภท',
-                document_no: 'เลขที่เอกสาร',
-                document_date: 'วันที่',
-                account_no: 'เลขที่บัญชี',
-                customer_id: 'รหัสลูกค้า',
-                st_no: 'เลขที่ ST',
-                st_date: 'วันที่ ST',
-                re_no: 'เลขที่ RE',
-                re_date: 'วันที่ RE',
-                withholding_percent: 'หัก ณ ที่จ่าย %',
-                withholding_amount: 'จำนวนเงินหัก',
-                grand_total: 'รวมทั้งสิ้น',
-                net_total: 'สุทธิ',
-                status: 'สถานะ',
-                driver_id: 'รหัสคนขับ',
-                car_id: 'รหัสรถ',
-                do_no: 'เลขที่ DO',
-                do_date: 'วันที่ DO',
-                consigner_id: 'รหัสผู้ส่ง',
-                consignee_id: 'รหัสผู้รับ'
-              }}
-            />
+          {/*ใบเสนอราคา ใบเสร็จ ใบเเจ้งหนี้*/}
+          {activeTab === 'quotation' && (
+            <div>
+              <h2 style={{ marginBottom: '15px' }}>เอกสารใบเสนอราคา (Quotation)</h2>
+              <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f2f2f2' }}>
+                    <th>เลขที่เอกสาร</th>
+                    <th>วันที่</th>
+                    <th>ยอดรวมทั้งสิ้น</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotations.length === 0 ? (
+                    <tr><td colSpan="4" align="center">ไม่มีข้อมูลใบเสนอราคา</td></tr>
+                  ) : (
+                    quotations.map(doc => (
+                      <tr key={doc.document_id}>
+                        <td>{doc.document_no}</td>
+                        <td>{doc.document_date ? new Date(doc.document_date).toLocaleDateString() : '-'}</td>
+                        <td>{Number(doc.grand_total).toLocaleString()} บาท</td>
+                        <td>{doc.status || 'รอดำเนินการ'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
+
+          {activeTab === 'invoice' && (
+            <div>
+              <h2 style={{ marginBottom: '15px' }}>เอกสารใบแจ้งหนี้ (Invoice)</h2>
+              <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f2f2f2' }}>
+                    <th>เลขที่เอกสาร</th>
+                    <th>วันที่</th>
+                    <th>ยอดรวมทั้งสิ้น</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoices.length === 0 ? (
+                    <tr><td colSpan="4" align="center">ไม่มีข้อมูลใบแจ้งหนี้</td></tr>
+                  ) : (
+                    invoices.map(doc => (
+                      <tr key={doc.document_id}>
+                        <td>{doc.document_no}</td>
+                        <td>{doc.document_date ? new Date(doc.document_date).toLocaleDateString() : '-'}</td>
+                        <td>{Number(doc.grand_total).toLocaleString()} บาท</td>
+                        <td>{doc.status || 'รอดำเนินการ'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {activeTab === 'receipt' && (
+            <div>
+              <h2 style={{ marginBottom: '15px' }}>เอกสารใบเสร็จรับเงิน (Receipt)</h2>
+              <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f2f2f2' }}>
+                    <th>เลขที่เอกสาร</th>
+                    <th>วันที่</th>
+                    <th>ยอดรวมทั้งสิ้น</th>
+                    <th>สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {receipts.length === 0 ? (
+                    <tr><td colSpan="4" align="center">ไม่มีข้อมูลใบเสร็จรับเงิน</td></tr>
+                  ) : (
+                    receipts.map(doc => (
+                      <tr key={doc.document_id}>
+                        <td>{doc.document_no}</td>
+                        <td>{doc.document_date ? new Date(doc.document_date).toLocaleDateString() : '-'}</td>
+                        <td>{Number(doc.grand_total).toLocaleString()} บาท</td>
+                        <td>{doc.status || 'รอดำเนินการ'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
         </div>
+
       </div>
     </div>
+    
+
   );
+  
 }
 
 export default App;
