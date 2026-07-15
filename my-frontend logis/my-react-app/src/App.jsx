@@ -21,7 +21,7 @@ function App() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // เพิ่ม 2 บรรทัดนี้เข้าไปในกลุ่ม useState ด้านบนสุดของ App()
+  
   const [services, setServices] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
 
@@ -52,7 +52,6 @@ function App() {
       fetch('http://localhost:3000/api/service').then(r => r.json()),       // [5] บริการ
       fetch('http://localhost:3000/api/service_type').then(r => r.json())   // [6] ประเภทบริการ
     ])
-      // ⚠️ ตรวจสอบตัวรับในวงเล็บนี้ให้เรียงตามลำดับด้านบนเป๊ะ ๆ ครับ:
       .then(([c, carsData, d, docData, itemsData, serviceData, typeData]) => {
         setCustomers(c);
         setCars(carsData);
@@ -68,52 +67,42 @@ function App() {
         setLoading(false);
       });
   };
+
   const quotations = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Quotation') : [];
   const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
   const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
+
   useEffect(() => {
     if (isLoggedIn) {
       fetchData();
     }
   }, [isLoggedIn]);
 
+  // ==========================================
+  // CUSTOMER ACTIONS
+  // ==========================================
+  const handleAddCustomer = (newCustomerData, resetForm) => {
+    const autoCustId = 'cust-' + Math.floor(10000 + Math.random() * 90000);
+    const dataToSend = { ...newCustomerData, customer_id: autoCustId };
 
-
-  // Customer Actions
-  // ค้นหาฟังก์ชันนี้ในไฟล์ src/App.jsx (มักจะอยู่ด้านบนก่อนสั่ง return แสดงหน้าเว็บ)
-const handleAddDocument = (docType, newDocData, resetForm) => {
-  
-  // 1. วางคำสั่งสร้าง ID อัตโนมัติตรงนี้ครับ
-  const autoDocId = 'doc-' + Math.floor(100000 + Math.random() * 900000);
-  
-  // 2. มัดรวมข้อมูลที่รับมาจากฟอร์ม พร้อมแนบ ID ที่สุ่มได้ และประเภทเอกสาร
-  const dataToSend = { 
-    ...newDocData, 
-    document_id: autoDocId,
-    document_type: docType 
+    fetch('http://localhost:3000/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSend)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
+        else {
+          alert(data.message);
+          resetForm();
+          fetchData();
+        }
+      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
 
-  // 3. ยิงข้อมูลไปที่หลังบ้าน (พอร์ต 3000)
-  fetch('http://localhost:3000/api/document', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(dataToSend)
-  })
-    .then(res => res.json())
-    .then(data => {
-      if (data.error) {
-        alert('บันทึกไม่สำเร็จ: ' + data.error);
-      } else {
-        alert(data.message);
-        resetForm(); // ล้างข้อมูลในช่องกรอกบนหน้าเว็บ
-        fetchData(); // ดึงข้อมูลใหม่จากฐานข้อมูลมาแสดงทันที
-      }
-    })
-    .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
-};
-
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
-    fetch(`/api/customers/${id}`, {
+    fetch(`http://localhost:3000/api/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editCustomerData)
@@ -125,13 +114,15 @@ const handleAddDocument = (docType, newDocData, resetForm) => {
 
   const handleDeleteCustomer = (id) => {
     if (!confirm('ยืนยันการลบลูกค้านี้?')) return;
-    fetch(`/api/customers/${id}`, { method: 'DELETE' })
+    fetch(`http://localhost:3000/api/customers/${id}`, { method: 'DELETE' })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
   };
 
-  // Car Actions
+  // ==========================================
+  // CAR ACTIONS
+  // ==========================================
   const handleAddCar = (newCarData, resetForm) => {
     const autoCarId = 'car-' + Math.floor(10000 + Math.random() * 90000);
     const dataToSend = { ...newCarData, car_id: autoCarId };
@@ -153,19 +144,21 @@ const handleAddDocument = (docType, newDocData, resetForm) => {
   };
 
   const handleSaveCarEdit = (id, editCarData, successCallback) => {
-    fetch(`/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
+    fetch(`http://localhost:3000/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
       .then(() => { successCallback(); fetchData(); });
   };
 
   const handleDeleteCar = (id) => {
     if (!confirm('ยืนยันการลบรถคันนี้?')) return;
-    fetch(`/api/cars/${id}`, { method: 'DELETE' })
+    fetch(`http://localhost:3000/api/cars/${id}`, { method: 'DELETE' })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
   };
 
-  // Driver Actions
+  // ==========================================
+  // DRIVER ACTIONS
+  // ==========================================
   const handleAddDriver = (newDriverData, resetForm) => {
     const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
     const dataToSend = { ...newDriverData, driver_id: autoDriverId };
@@ -187,23 +180,47 @@ const handleAddDocument = (docType, newDocData, resetForm) => {
   };
 
   const handleSaveDriverEdit = (id, editDriverData, successCallback) => {
-    fetch(`/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) })
+    fetch(`http://localhost:3000/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) })
       .then(() => { successCallback(); fetchData(); });
   };
 
   const handleDeleteDriver = (id) => {
     if (!confirm('ยืนยันการลบคนขับคนนี้?')) return;
-    fetch(`/api/driver/${id}`, { method: 'DELETE' })
+    fetch(`http://localhost:3000/api/driver/${id}`, { method: 'DELETE' })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
   };
 
-  if (!isLoggedIn) {
-    return <Login onLogin={handleLogin} loginError={loginError} />;
-  }
-  // 1. เพิ่มฟังก์ชันบันทึกข้อมูลเอกสาร (ไว้ข้างในฟังก์ชัน App ก่อนคำสั่ง return)
-  // 1. เพิ่มฟังก์ชัน PUT และ DELETE สำหรับเอกสารไว้ด้านบน (ใกล้ๆ กับ handleAddDocument เดิม)
+  // ==========================================
+  // DOCUMENT ACTIONS (รวมและแก้ไขตัวซ้ำให้เรียบร้อย)
+  // ==========================================
+  const handleAddDocument = (docType, newDocData, resetForm) => {
+    const autoDocId = 'doc-' + Math.floor(100000 + Math.random() * 900000);
+    const dataToSend = { 
+      ...newDocData, 
+      document_id: autoDocId,
+      document_type: docType 
+    };
+
+    fetch('http://localhost:3000/api/document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSend)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert('บันทึกไม่สำเร็จ: ' + data.error);
+        } else {
+          alert(data.message);
+          resetForm(); 
+          fetchData(); 
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
+
   const handleSaveDocumentEdit = (id, editDocData, successCallback) => {
     fetch(`http://localhost:3000/api/document/${id}`, {
       method: 'PUT',
@@ -226,26 +243,12 @@ const handleAddDocument = (docType, newDocData, resetForm) => {
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
   };
 
-  // Document Actions
-  const handleAddDocument = (docType, data, resetForm) => {
-    const autoDocId = 'doc-' + Math.floor(1000000 + Math.random() * 9000000);
-    const dataToSend = { ...data, document_id: autoDocId, document_type: docType };
-
-    fetch('http://localhost:3000/api/document', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dataToSend)
-    })
-      .then(res => res.json())
-      .then(result => {
-        if (result.error) alert('บันทึกไม่สำเร็จ: ' + result.error);
-        else {
-          alert(result.message);
-          resetForm();
-          fetchData();
-        }
-      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
-  };
+  // ==========================================
+  // RENDER SECTIONS
+  // ==========================================
+  if (!isLoggedIn) {
+    return <Login onLogin={handleLogin} loginError={loginError} />;
+  }
 
   if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}>⏳ กำลังโหลดข้อมูล...</div>;
   if (error) return <div style={{ padding: '30px', textAlign: 'center', color: 'red', fontSize: '18px' }}>{error}</div>;
