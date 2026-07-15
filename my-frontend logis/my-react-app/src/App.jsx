@@ -21,6 +21,9 @@ function App() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // เพิ่ม 2 บรรทัดนี้เข้าไปในกลุ่ม useState ด้านบนสุดของ App()
+  const [services, setServices] = useState([]);
+  const [serviceTypes, setServiceTypes] = useState([]);
 
   const handleLogin = (email, password) => {
     if (!email || !password) {
@@ -41,18 +44,23 @@ function App() {
     setLoading(true);
     setError(null);
     Promise.all([
-      fetch('http://localhost:3000/api/customers').then(r => r.json()),
-      fetch('http://localhost:3000/api/cars').then(r => r.json()),
-      fetch('http://localhost:3000/api/driver').then(r => r.json()),
-      fetch('http://localhost:3000/api/document').then(r => r.json()),
-      fetch('http://localhost:3000/api/document_items').then(r => r.json())
+      fetch('http://localhost:3000/api/customers').then(r => r.json()),     // [0] ลูกค้า
+      fetch('http://localhost:3000/api/cars').then(r => r.json()),          // [1] รถ
+      fetch('http://localhost:3000/api/driver').then(r => r.json()),        // [2] คนขับ
+      fetch('http://localhost:3000/api/document').then(r => r.json()),      // [3] เอกสาร
+      fetch('http://localhost:3000/api/document_items').then(r => r.json()), // [4] ไอเทมเอกสาร
+      fetch('http://localhost:3000/api/service').then(r => r.json()),       // [5] บริการ
+      fetch('http://localhost:3000/api/service_type').then(r => r.json())   // [6] ประเภทบริการ
     ])
-      .then(([c, carsData, d, docData, itemsData]) => {
+      // ⚠️ ตรวจสอบตัวรับในวงเล็บนี้ให้เรียงตามลำดับด้านบนเป๊ะ ๆ ครับ:
+      .then(([c, carsData, d, docData, itemsData, serviceData, typeData]) => {
         setCustomers(c);
         setCars(carsData);
         setDrivers(d);
         setDocuments(docData);
         setDocumentItems(itemsData);
+        setServices(serviceData);
+        setServiceTypes(typeData);
         setLoading(false);
       })
       .catch(err => {
@@ -60,33 +68,49 @@ function App() {
         setLoading(false);
       });
   };
-
+  const quotations = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Quotation') : [];
+  const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
+  const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
   useEffect(() => {
     if (isLoggedIn) {
       fetchData();
     }
   }, [isLoggedIn]);
 
-  // Customer Actions
-  const handleAddCustomer = (newCustomerData, resetForm) => {
-    const autoCustomerId = 'c-' + Math.floor(1000000 + Math.random() * 9000000);
-    const dataToSend = { ...newCustomerData, customer_id: autoCustomerId };
 
-    fetch('http://localhost:3000/api/customers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(dataToSend)
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
-        else {
-          alert(data.message);
-          resetForm();
-          fetchData();
-        }
-      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+
+  // Customer Actions
+  // ค้นหาฟังก์ชันนี้ในไฟล์ src/App.jsx (มักจะอยู่ด้านบนก่อนสั่ง return แสดงหน้าเว็บ)
+const handleAddDocument = (docType, newDocData, resetForm) => {
+  
+  // 1. วางคำสั่งสร้าง ID อัตโนมัติตรงนี้ครับ
+  const autoDocId = 'doc-' + Math.floor(100000 + Math.random() * 900000);
+  
+  // 2. มัดรวมข้อมูลที่รับมาจากฟอร์ม พร้อมแนบ ID ที่สุ่มได้ และประเภทเอกสาร
+  const dataToSend = { 
+    ...newDocData, 
+    document_id: autoDocId,
+    document_type: docType 
   };
+
+  // 3. ยิงข้อมูลไปที่หลังบ้าน (พอร์ต 3000)
+  fetch('http://localhost:3000/api/document', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dataToSend)
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        alert('บันทึกไม่สำเร็จ: ' + data.error);
+      } else {
+        alert(data.message);
+        resetForm(); // ล้างข้อมูลในช่องกรอกบนหน้าเว็บ
+        fetchData(); // ดึงข้อมูลใหม่จากฐานข้อมูลมาแสดงทันที
+      }
+    })
+    .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+};
 
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
     fetch(`/api/customers/${id}`, {
@@ -178,13 +202,53 @@ function App() {
   if (!isLoggedIn) {
     return <Login onLogin={handleLogin} loginError={loginError} />;
   }
+  // 1. เพิ่มฟังก์ชันบันทึกข้อมูลเอกสาร (ไว้ข้างในฟังก์ชัน App ก่อนคำสั่ง return)
+  // 1. เพิ่มฟังก์ชัน PUT และ DELETE สำหรับเอกสารไว้ด้านบน (ใกล้ๆ กับ handleAddDocument เดิม)
+  const handleSaveDocumentEdit = (id, editDocData, successCallback) => {
+    fetch(`http://localhost:3000/api/document/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editDocData)
+    })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message || 'แก้ไขสำเร็จ');
+        successCallback();
+        fetchData();
+      }).catch(err => alert('แก้ไขไม่สำเร็จ: ' + err.message));
+  };
+
+  const handleDeleteDocument = (id) => {
+    if (!confirm('ยืนยันการลบเอกสารนี้?')) return;
+    fetch(`http://localhost:3000/api/document/${id}`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => { alert(data.message); fetchData(); })
+      .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
+  };
+
+  // Document Actions
+  const handleAddDocument = (docType, data, resetForm) => {
+    const autoDocId = 'doc-' + Math.floor(1000000 + Math.random() * 9000000);
+    const dataToSend = { ...data, document_id: autoDocId, document_type: docType };
+
+    fetch('http://localhost:3000/api/document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSend)
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.error) alert('บันทึกไม่สำเร็จ: ' + result.error);
+        else {
+          alert(result.message);
+          resetForm();
+          fetchData();
+        }
+      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
 
   if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}>⏳ กำลังโหลดข้อมูล...</div>;
   if (error) return <div style={{ padding: '30px', textAlign: 'center', color: 'red', fontSize: '18px' }}>{error}</div>;
-
-  const quotations = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Quotation') : [];
-  const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
-  const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
 
   return (
     <div className="dashboard-layout-container">
@@ -196,9 +260,36 @@ function App() {
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} />}
           {activeTab === 'trucks' && <CarTable cars={cars} onAdd={handleAddCar} onUpdate={handleSaveCarEdit} onDelete={handleDeleteCar} />}
           {activeTab === 'driver' && <DriverTable drivers={drivers} onAdd={handleAddDriver} onUpdate={handleSaveDriverEdit} onDelete={handleDeleteDriver} />}
-          {activeTab === 'quotation' && <DocumentTable title="เอกสารใบเสนอราคา (Quotation)" documents={quotations} />}
-          {activeTab === 'invoice' && <DocumentTable title="เอกสารใบแจ้งหนี้ (Invoice)" documents={invoices} />}
-          {activeTab === 'receipt' && <DocumentTable title="เอกสารใบเสร็จรับเงิน (Receipt)" documents={receipts} />}
+          {activeTab === 'quotation' && (
+            <DocumentTable
+              title="เอกสารใบเสนอราคา (Quotation)"
+              documents={quotations}
+              customers={customers}
+              onAddDocument={(data, reset) => handleAddDocument('Quotation', data, reset)}
+              onUpdateDocument={handleSaveDocumentEdit}
+              onDeleteDocument={handleDeleteDocument}
+            />
+          )}
+          {activeTab === 'invoice' && (
+            <DocumentTable
+              title="เอกสารใบแจ้งหนี้ (Invoice)"
+              documents={invoices}
+              customers={customers}
+              onAddDocument={(data, reset) => handleAddDocument('Invoice', data, reset)}
+              onUpdateDocument={handleSaveDocumentEdit}
+              onDeleteDocument={handleDeleteDocument}
+            />
+          )}
+          {activeTab === 'receipt' && (
+            <DocumentTable
+              title="เอกสารใบเสร็จรับเงิน (Receipt)"
+              documents={receipts}
+              customers={customers}
+              onAddDocument={(data, reset) => handleAddDocument('Receipt', data, reset)}
+              onUpdateDocument={handleSaveDocumentEdit}
+              onDeleteDocument={handleDeleteDocument}
+            />
+          )}
         </div>
       </div>
     </div>

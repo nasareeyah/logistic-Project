@@ -114,3 +114,95 @@ const PORT = parseInt(process.env.PORT || '3000');
 app.listen(PORT, () => {
   console.log(`🚀 API Server running on http://localhost:${PORT}`);
 });
+
+// ====== API สำหรับ service_type ======
+app.get('/api/service_type', (req, res) => {
+    db.query('SELECT * FROM service_type', (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+app.post('/api/service_type', (req, res) => {
+    const { service_typeID, service_typeNAME } = req.body;
+    db.query('INSERT INTO service_type (service_typeID, service_typeNAME) VALUES (?, ?)', 
+    [service_typeID, service_typeNAME], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: '✅ เพิ่มประเภทบริการสำเร็จ!' });
+    });
+});
+
+// ====== API สำหรับ service ======
+app.get('/api/service', (req, res) => {
+    // JOIN กับ service_type เพื่อเอาชื่อประเภทบริการมาโชว์ด้วย
+    const sql = `
+        SELECT s.*, st.service_typeNAME 
+        FROM service s
+        LEFT JOIN service_type st ON s.service_typeID = st.service_typeID
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+
+app.post('/api/service', (req, res) => {
+    const { service_id, service_typeID, description, default_price, unit } = req.body;
+    db.query('INSERT INTO service (service_id, service_typeID, description, default_price, unit) VALUES (?, ?, ?, ?, ?)', 
+    [service_id, service_typeID, description, default_price, unit], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: '✅ เพิ่มข้อมูลบริการสำเร็จ!' });
+    });
+});
+// แก้ไขไฟล์หลังบ้าน (Backend)
+app.post('/api/document', (req, res) => {
+    // 1. รับค่าตัวแปรจากหน้าบ้านให้ครบ (รวมถึงรหัสคนขับและรหัสรถ)
+    const { document_id, document_no, document_type, customer_id, driver_id, car_id, document_date, grand_total, status } = req.body;
+    
+    // 2. โครงสร้างคำสั่ง INSERT (มีเครื่องหมาย ? ทั้งหมด 9 ตัว)
+    const sql = `INSERT INTO document 
+    (document_id, document_no, document_type, customer_id, driver_id, car_id, document_date, grand_total, status) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    
+    db.query(sql, [document_id, document_no, document_type, customer_id, driver_id, car_id, document_date, grand_total, status], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: '✅ บันทึกเอกสารสำเร็จ!' });
+    });
+});
+app.get('/api/document', (req, res) => {
+    const sql = `
+        SELECT d.*, c.customer_name, dr.full_name AS driver_name, car.car_number
+        FROM document d
+        LEFT JOIN customers c ON d.customer_id = c.customer_id
+        LEFT JOIN driver dr ON d.driver_id = dr.driver_id
+        LEFT JOIN cars car ON d.car_id = car.car_id
+        ORDER BY d.document_date DESC
+    `;
+    db.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(results);
+    });
+});
+// API แก้ไขเอกสาร (UPDATE)
+app.put('/api/document/:id', (req, res) => {
+    const { id } = req.params;
+    const { document_no, customer_id, driver_id, car_id, document_date, grand_total, status } = req.body;
+    
+    const sql = `UPDATE document 
+    SET document_no = ?, customer_id = ?, driver_id = ?, car_id = ?, document_date = ?, grand_total = ?, status = ? 
+    WHERE document_id = ?`;
+    
+    db.query(sql, [document_no, customer_id, driver_id, car_id, document_date, grand_total, status, id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: '✅ อัปเดตข้อมูลเอกสารสำเร็จ!' });
+    });
+});
+
+// API ลบเอกสาร (DELETE)
+app.delete('/api/document/:id', (req, res) => {
+    const { id } = req.params;
+    db.query('DELETE FROM document WHERE document_id = ?', [id], (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: '✅ ลบเอกสารเรียบร้อยแล้ว!' });
+    });
+});
