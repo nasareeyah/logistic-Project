@@ -1,3 +1,18 @@
+import React from 'react';
+import { 
+  LayoutDashboard, 
+  PlusCircle, 
+  FolderOpen, 
+  FileText, 
+  FileCheck, 
+  Receipt, 
+  Package, 
+  Users, 
+  Truck, 
+  UserSquare2,
+  LogOut 
+} from 'lucide-react'; 
+
 function Sidebar({ activeTab, setActiveTab, onLogout, pendingBadge }) {
   return (
     <div className="dashboard-sidebar">
@@ -22,70 +37,111 @@ function Sidebar({ activeTab, setActiveTab, onLogout, pendingBadge }) {
         <div className="sidebar-logo-title">S.T. TRAN EXPRESS</div>
       </div>
 
+      {/* กลุ่มเมนูหลัก (MAIN) */}
       <div className="sidebar-group">
         <div className="sidebar-group-title">MAIN</div>
         <ul className="sidebar-menu-list">
+          
+          {/* Dashboard */}
           <li className={`sidebar-menu-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
-            <span className="sidebar-menu-item-icon">📊</span>
+            <span className="sidebar-menu-item-icon">
+              <LayoutDashboard size={18} />
+            </span>
             <span>Dashboard</span>
             <span className="sidebar-menu-item-badge">{pendingBadge}</span>
           </li>
+
+          {/* Booking */}
           <li className="sidebar-menu-item" onClick={() => alert('ระบบ Booking ยังไม่เปิดให้บริการในเวอร์ชันนี้')}>
-            <span className="sidebar-menu-item-icon">➕</span>
+            <span className="sidebar-menu-item-icon">
+              <PlusCircle size={18} />
+            </span>
             <span>Booking</span>
           </li>
+
+          {/* Document Center & Sub-menus */}
           <li className="sidebar-menu-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className="sidebar-menu-item-icon">📄</span>
+              <span className="sidebar-menu-item-icon">
+                <FolderOpen size={18} />
+              </span>
               <span>Document Center</span>
             </div>
+            
             <ul className="sidebar-menu-list" style={{ marginTop: '4px' }}>
+              {/* Quotation */}
               <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'quotation' ? 'active' : ''}`} onClick={() => setActiveTab('quotation')}>
-                <span className="sidebar-menu-item-icon">📄</span>
+                <span className="sidebar-menu-item-icon">
+                  <FileText size={16} />
+                </span>
                 <span>Quotation</span>
               </li>
+              
+              {/* Invoice */}
               <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'invoice' ? 'active' : ''}`} onClick={() => setActiveTab('invoice')}>
-                <span className="sidebar-menu-item-icon">📄</span>
+                <span className="sidebar-menu-item-icon">
+                  <FileCheck size={16} />
+                </span>
                 <span>Invoice</span>
               </li>
+              
+              {/* Receipt */}
               <li className={`sidebar-menu-item sidebar-menu-sub-item ${activeTab === 'receipt' ? 'active' : ''}`} onClick={() => setActiveTab('receipt')}>
-                <span className="sidebar-menu-item-icon">📄</span>
+                <span className="sidebar-menu-item-icon">
+                  <Receipt size={16} />
+                </span>
                 <span>Receipt</span>
               </li>
             </ul>
           </li>
+
+          {/* Delivery Order */}
           <li className="sidebar-menu-item" onClick={() => alert('ระบบ Delivery Order ยังไม่เปิดให้บริการในเวอร์ชันนี้')}>
-            <span className="sidebar-menu-item-icon">📦</span>
+            <span className="sidebar-menu-item-icon">
+              <Package size={18} />
+            </span>
             <span>Delivery Order</span>
           </li>
+
         </ul>
       </div>
 
+      {/* กลุ่มเมนูข้อมูลหลัก (MASTER DATA) */}
       <div className="sidebar-group">
         <div className="sidebar-group-title">MASTER DATA</div>
         <ul className="sidebar-menu-list">
+          
+          {/* Customer Profile */}
           <li className={`sidebar-menu-item ${activeTab === 'customers' ? 'active' : ''}`} onClick={() => setActiveTab('customers')}>
-            <span className="sidebar-menu-item-icon">👤</span>
+            <span className="sidebar-menu-item-icon">
+              <Users size={18} />
+            </span>
             <span>Customer Profile</span>
           </li>
+
+          {/* Truck List */}
           <li className={`sidebar-menu-item ${activeTab === 'trucks' ? 'active' : ''}`} onClick={() => setActiveTab('trucks')}>
-            <span className="sidebar-menu-item-icon">🚚</span>
+            <span className="sidebar-menu-item-icon">
+              <Truck size={18} />
+            </span>
             <span>Truck List</span>
           </li>
+
+          {/* Driver Profile */}
           <li className={`sidebar-menu-item ${activeTab === 'driver' ? 'active' : ''}`} onClick={() => setActiveTab('driver')}>
-            <span className="sidebar-menu-item-icon">👮</span>
+            <span className="sidebar-menu-item-icon">
+              <UserSquare2 size={18} />
+            </span>
             <span>Driver Profile</span>
           </li>
+
         </ul>
       </div>
 
+      {/* ปุ่ม Logout ด้านล่างสุด */}
       <button className="sidebar-logout-btn" onClick={onLogout}>
         <span className="sidebar-logout-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
+          <LogOut size={18} />
         </span>
         <span>Log out</span>
       </button>
@@ -94,3 +150,4 @@ function Sidebar({ activeTab, setActiveTab, onLogout, pendingBadge }) {
 }
 
 export default Sidebar;
+
