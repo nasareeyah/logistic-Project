@@ -193,7 +193,7 @@ function App() {
   };
 
   // ==========================================
-  // DOCUMENT ACTIONS (รวมและแก้ไขตัวซ้ำให้เรียบร้อย)
+  // DOCUMENT ACTIONS
   // ==========================================
   const handleAddDocument = (docType, newDocData, resetForm) => {
     const autoDocId = 'doc-' + Math.floor(100000 + Math.random() * 900000);
@@ -263,11 +263,15 @@ function App() {
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} />}
           {activeTab === 'trucks' && <CarTable cars={cars} onAdd={handleAddCar} onUpdate={handleSaveCarEdit} onDelete={handleDeleteCar} />}
           {activeTab === 'driver' && <DriverTable drivers={drivers} onAdd={handleAddDriver} onUpdate={handleSaveDriverEdit} onDelete={handleDeleteDriver} />}
+          
+          {/* ส่ง services และ serviceTypes เข้าไปในตารางเอกสารด้านล่างนี้ */}
           {activeTab === 'quotation' && (
             <DocumentTable
               title="เอกสารใบเสนอราคา (Quotation)"
               documents={quotations}
               customers={customers}
+              services={services}
+              serviceTypes={serviceTypes}
               onAddDocument={(data, reset) => handleAddDocument('Quotation', data, reset)}
               onUpdateDocument={handleSaveDocumentEdit}
               onDeleteDocument={handleDeleteDocument}
@@ -278,6 +282,8 @@ function App() {
               title="เอกสารใบแจ้งหนี้ (Invoice)"
               documents={invoices}
               customers={customers}
+              services={services}
+              serviceTypes={serviceTypes}
               onAddDocument={(data, reset) => handleAddDocument('Invoice', data, reset)}
               onUpdateDocument={handleSaveDocumentEdit}
               onDeleteDocument={handleDeleteDocument}
@@ -288,6 +294,8 @@ function App() {
               title="เอกสารใบเสร็จรับเงิน (Receipt)"
               documents={receipts}
               customers={customers}
+              services={services}
+              serviceTypes={serviceTypes}
               onAddDocument={(data, reset) => handleAddDocument('Receipt', data, reset)}
               onUpdateDocument={handleSaveDocumentEdit}
               onDeleteDocument={handleDeleteDocument}

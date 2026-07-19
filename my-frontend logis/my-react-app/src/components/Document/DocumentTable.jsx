@@ -1,10 +1,24 @@
 import { useState } from 'react';
 
-function DocumentTable({ title, documents, customers = [], onAddDocument, onUpdateDocument, onDeleteDocument }) {
-    // State สำหรับเพิ่มข้อมูลใหม่
-    const [newDoc, setNewDoc] = useState({ document_no: '', document_date: '', grand_total: '', status: 'รอดำเนินการ', customer_id: '' });
+function DocumentTable({ 
+    title, 
+    documents, 
+    customers = [], 
+    services = [],       
+    serviceTypes = [],   
+    onAddDocument, 
+    onUpdateDocument, 
+    onDeleteDocument 
+}) {
+    const [newDoc, setNewDoc] = useState({ 
+        document_no: '', 
+        document_date: '', 
+        grand_total: '', 
+        status: 'รอดำเนินการ', 
+        customer_id: '',
+        service_name: '' 
+    });
 
-    // State สำหรับแก้ไขข้อมูลแถวเดิม Inline
     const [editingId, setEditingId] = useState(null);
     const [editData, setEditData] = useState({});
 
@@ -13,7 +27,15 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
             alert('กรุณากรอกข้อมูลและเลือกลูกค้าให้ครบถ้วน');
             return;
         }
-        onAddDocument(newDoc, () => setNewDoc({ document_no: '', document_date: '', grand_total: '', status: 'รอดำเนินการ', customer_id: '' }));
+        
+        onAddDocument(newDoc, () => setNewDoc({ 
+            document_no: '', 
+            document_date: '', 
+            grand_total: '', 
+            status: 'รอดำเนินการ', 
+            customer_id: '',
+            service_name: ''
+        }));
     };
 
     const handleSaveClick = (id) => {
@@ -30,7 +52,13 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
             <table border="1" cellPadding="10" style={{ width: '100%', borderCollapse: 'collapse', borderColor: '#f0f0f0', textAlign: 'left' }}>
                 <thead>
                     <tr style={{ backgroundColor: '#f2f2f2' }}>
-                        <th>เลขที่เอกสาร</th><th>ลูกค้า</th><th>วันที่</th><th>ยอดรวมทั้งสิ้น</th><th>สถานะ</th><th>การจัดการ</th>
+                        <th>เลขที่เอกสาร</th>
+                        <th>ลูกค้า</th>
+                        <th>ข้อมูลบริการ</th>
+                        <th>วันที่</th>
+                        <th>ยอดรวมทั้งสิ้น</th>
+                        <th>สถานะ</th>
+                        <th>การจัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,6 +75,7 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
                                         doc.document_no
                                     )}
                                 </td>
+                                
                                 <td>
                                     {isEditing ? (
                                         <select value={editData.customer_id || ''} onChange={e => setEditData({ ...editData, customer_id: e.target.value })} style={{ width: '95%' }}>
@@ -57,6 +86,27 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
                                         </select>
                                     ) : (
                                         currentCustomer ? currentCustomer.customer_name : doc.customer_id
+                                    )}
+                                </td>
+
+                                {/* เพิ่ม onChange ในโหมดแก้ไขแถวเดิม */}
+                                <td>
+                                    {isEditing ? (
+                                        <>
+                                            <input 
+                                                list={`edit-services-${doc.document_id}`}
+                                                value={editData.service_name || ''} 
+                                                onChange={e => setEditData({ ...editData, service_name: e.target.value })} 
+                                                style={{ width: '90%', padding: '4px' }}
+                                            />
+                                            <datalist id={`edit-services-${doc.document_id}`}>
+                                                {services.map(s => (
+                                                    <option key={s.service_id} value={s.service_name} />
+                                                ))}
+                                            </datalist>
+                                        </>
+                                    ) : (
+                                        doc.service_name || '-'
                                     )}
                                 </td>
                                 <td>
@@ -101,8 +151,10 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
                         );
                     })}
 
+                    {/* แถวเพิ่มข้อมูลใหม่ */}
                     <tr style={{ backgroundColor: '#e6f7ff' }}>
                         <td><input type="text" placeholder="เช่น QT-2026001" value={newDoc.document_no} onChange={e => setNewDoc({ ...newDoc, document_no: e.target.value })} style={{ width: '90%' }} /></td>
+                        
                         <td>
                             <select value={newDoc.customer_id} onChange={e => setNewDoc({ ...newDoc, customer_id: e.target.value })} style={{ width: '95%', padding: '4px' }}>
                                 <option value="">-- เลือกลูกค้า --</option>
@@ -111,6 +163,26 @@ function DocumentTable({ title, documents, customers = [], onAddDocument, onUpda
                                 ))}
                             </select>
                         </td>
+                        
+                        {/* เพิ่ม onChange ตรงนี้เพื่อให้พิมพ์ได้สำเร็จ */}
+                        <td>
+                            <input 
+                                list="services-list" 
+                                placeholder="เลือกหรือพิมพ์บริการใหม่..." 
+                                value={newDoc.service_name} 
+                                onChange={e => setNewDoc({ ...newDoc, service_name: e.target.value })} 
+                                style={{ width: '90%', padding: '4px' }} 
+                            />
+                            <datalist id="services-list">
+                                {services.map(s => (
+                                    <option key={s.service_id} value={s.service_name} />
+                                ))}
+                                {serviceTypes.map(st => (
+                                    <option key={st.service_type_id} value={st.service_type_name} />
+                                ))}
+                            </datalist>
+                        </td>
+
                         <td><input type="date" value={newDoc.document_date} onChange={e => setNewDoc({ ...newDoc, document_date: e.target.value })} style={{ width: '90%' }} /></td>
                         <td><input type="number" placeholder="จำนวนเงิน" value={newDoc.grand_total} onChange={e => setNewDoc({ ...newDoc, grand_total: e.target.value })} style={{ width: '90%' }} /></td>
                         <td>
