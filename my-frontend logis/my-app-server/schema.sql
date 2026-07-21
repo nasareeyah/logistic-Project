@@ -1,6 +1,4 @@
--- Database for S.T. TRAN EXPRESS Logistics
--- สร้าง database ก่อน: CREATE DATABASE back_logistic;
--- แล้วรัน: \c back_logistic;
+
 
 CREATE TABLE IF NOT EXISTS bank (
   bank_id VARCHAR(10) PRIMARY KEY,

@@ -6,7 +6,8 @@ import Dashboard from './views/Dashboard';
 import CustomerTable from './components/MasterData/CustomerTable';
 import CarTable from './components/MasterData/CarTable';
 import DriverTable from './components/MasterData/DriverTable';
-import DocumentTable from './components/Document/DocumentTable';
+// import DocumentTable from './components/Document/DocumentTable';
+import QoutationFrom from './components/Quotation/QuotationForm';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -81,7 +82,7 @@ function App() {
   // ==========================================
   // CUSTOMER ACTIONS
   // ==========================================
-  const handleAddCustomer = (newCustomerData, resetForm) => {
+ const handleAddCustomer = (newCustomerData, resetForm) => {
     const autoCustId = 'cust-' + Math.floor(10000 + Math.random() * 90000);
     const dataToSend = { ...newCustomerData, customer_id: autoCustId };
 
@@ -90,16 +91,28 @@ function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dataToSend)
     })
-      .then(res => res.json())
+      .then(async (res) => {
+        // เช็คว่า response ที่ตอบกลับมาเป็นสถานะ OK (200-299) หรือไม่
+        if (!res.ok) {
+          const errorText = await res.text(); // อ่านข้อความจาก HTML หรือ Text Error ที่ส่งกลับมา
+          throw new Error(`Server ตอบกลับสถานะ ${res.status}: ${errorText.slice(0, 100)}...`);
+        }
+        return res.json();
+      })
       .then(data => {
-        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
-        else {
-          alert(data.message);
+        if (data.error) {
+          alert('บันทึกไม่สำเร็จ: ' + data.error);
+        } else {
+          alert(data.message || 'บันทึกสำเร็จ');
           resetForm();
           fetchData();
         }
-      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
-  };
+      })
+      .catch(err => {
+        console.error('Add Customer Error:', err);
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      });
+};
 
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
     fetch(`http://localhost:3000/api/customers/${id}`, {
@@ -277,7 +290,7 @@ function App() {
               onDeleteDocument={handleDeleteDocument}
             />
           )}
-          {activeTab === 'invoice' && (
+          {/* {activeTab === 'invoice' && (
             <DocumentTable
               title="เอกสารใบแจ้งหนี้ (Invoice)"
               documents={invoices}
@@ -300,7 +313,7 @@ function App() {
               onUpdateDocument={handleSaveDocumentEdit}
               onDeleteDocument={handleDeleteDocument}
             />
-          )}
+          )} */}
         </div>
       </div>
     </div>
