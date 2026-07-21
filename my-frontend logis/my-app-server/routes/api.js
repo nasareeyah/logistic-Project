@@ -141,9 +141,10 @@ router.delete('/driver/:id', async (req, res) => {
 router.get('/document', async (req, res) => {
     try {
         const query = `
-            SELECT s.description AS service_name
+            SELECT d.*, s.description AS service_name
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
+            ORDER BY d.document_date DESC
         `;
         const result = await db.query(query);
         res.json(result.rows);
@@ -163,21 +164,21 @@ router.post('/document', async (req, res) => {
         st_no, st_date,
         re_no, re_date,
         withholding_percent, withholding_amount,
-        grand_total, net_total,
+        grand_total, net_total, total_amount,
         status,
         remark,
         driver_id, car_id,
         do_no, do_date,
         consigner_id, consignee_id,
         service_id,
-        service_typename
+        service_typename,
+        sale_name, job_name, valid_until, currency
     } = req.body;
 
     try {
         let resolvedServiceId = service_id || null;
         
         if (service_typename && !service_id) {
-            // 1. หา service_type ที่ชื่อตรงกัน
             const stResult = await db.query(
                 `SELECT service_typeid FROM service_type WHERE service_typename = $1`,
                 [service_typename]
@@ -192,7 +193,6 @@ router.post('/document', async (req, res) => {
                 );
             }
 
-            // 2. หา service ที่มี service_typeid นี้
             const svResult = await db.query(
                 `SELECT service_id FROM service WHERE service_typeid = $1`,
                 [typeId]
@@ -208,6 +208,7 @@ router.post('/document', async (req, res) => {
             }
         }
         const finalDocId = document_id || ('doc-' + Math.floor(100000 + Math.random() * 900000));
+        const finalGrandTotal = grand_total || total_amount || null;
         const sql = `
             INSERT INTO document (
                 document_id, document_type, document_no, document_date,
@@ -216,7 +217,8 @@ router.post('/document', async (req, res) => {
                 withholding_percent, withholding_amount,
                 grand_total, net_total, status, remark,
                 driver_id, car_id, do_no, do_date,
-                consigner_id, consignee_id, service_id
+                consigner_id, consignee_id, service_id,
+                sale_name, job_name, valid_until, currency
             ) VALUES (
                 $1, $2, $3, $4,
                 $5, $6,
@@ -224,7 +226,8 @@ router.post('/document', async (req, res) => {
                 $11, $12,
                 $13, $14, $15, $16,
                 $17, $18, $19, $20,
-                $21, $22, $23
+                $21, $22, $23,
+                $24, $25, $26, $27
             )
         `;
         await db.query(sql, [
@@ -237,16 +240,18 @@ router.post('/document', async (req, res) => {
             st_no || null, st_date || null,
             re_no || null, re_date || null,
             withholding_percent || null, withholding_amount || null,
-            grand_total || null, net_total || null,
+            finalGrandTotal, net_total || null,
             status || 'รอดำเนินการ',
             remark || null,
             driver_id || null, car_id || null,
             do_no || null, do_date || null,
             consigner_id || null, consignee_id || null,
-            resolvedServiceId
+            resolvedServiceId,
+            sale_name || null, job_name || null,
+            valid_until || null, currency || 'THB'
         ]);
 
-        res.json({ message: 'บันทึกเอกสารสำเร็จ' });
+        res.json({ message: 'บันทึกเอกสารสำเร็จ', data: { document_id: finalDocId } });
     } catch (err) {
         console.error('POST document error:', err);
         res.status(500).json({ error: err.message });
@@ -262,7 +267,8 @@ router.put('/document/:id', async (req, res) => {
             withholding_percent, withholding_amount,
             grand_total, net_total, status, remark,
             driver_id, car_id, do_no, do_date,
-            consigner_id, consignee_id, service_id
+            consigner_id, consignee_id, service_id,
+            sale_name, job_name, valid_until, currency
         } = req.body;
 
         const sql = `
@@ -273,8 +279,9 @@ router.put('/document/:id', async (req, res) => {
                 withholding_percent=$10, withholding_amount=$11,
                 grand_total=$12, net_total=$13, status=$14, remark=$15,
                 driver_id=$16, car_id=$17, do_no=$18, do_date=$19,
-                consigner_id=$20, consignee_id=$21, service_id=$22
-            WHERE document_id=$23
+                consigner_id=$20, consignee_id=$21, service_id=$22,
+                sale_name=$23, job_name=$24, valid_until=$25, currency=$26
+            WHERE document_id=$27
         `;
         await db.query(sql, [
             document_type, document_no, document_date,
@@ -284,6 +291,7 @@ router.put('/document/:id', async (req, res) => {
             grand_total, net_total, status, remark,
             driver_id, car_id, do_no, do_date,
             consigner_id, consignee_id, service_id,
+            sale_name, job_name, valid_until, currency,
             req.params.id
         ]);
         res.json({ message: 'แก้ไขเอกสารสำเร็จ' });
@@ -305,6 +313,20 @@ router.get('/document_items', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM document_items');
         res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/document_items', async (req, res) => {
+    try {
+        const { document_id, description, quantity, unit, price_per_unit, total_price } = req.body;
+        const itemId = 'di-' + Math.floor(100000 + Math.random() * 900000);
+        await db.query(
+            `INSERT INTO document_items (document_items_id, document_id, description, quantity, unit, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [itemId, document_id, description, quantity, unit, price_per_unit, total_price]
+        );
+        res.json({ message: 'บันทึกรายการสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
