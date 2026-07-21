@@ -6,8 +6,7 @@ import Dashboard from './views/Dashboard';
 import CustomerTable from './components/MasterData/CustomerTable';
 import CarTable from './components/MasterData/CarTable';
 import DriverTable from './components/MasterData/DriverTable';
-// import DocumentTable from './components/Document/DocumentTable';
-import QoutationFrom from './components/Quotation/QuotationForm';
+import QuotationForm from './components/Quotation/QuotationForm';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -279,16 +278,7 @@ function App() {
           
           {/* ส่ง services และ serviceTypes เข้าไปในตารางเอกสารด้านล่างนี้ */}
           {activeTab === 'quotation' && (
-            <DocumentTable
-              title="เอกสารใบเสนอราคา (Quotation)"
-              documents={quotations}
-              customers={customers}
-              services={services}
-              serviceTypes={serviceTypes}
-              onAddDocument={(data, reset) => handleAddDocument('Quotation', data, reset)}
-              onUpdateDocument={handleSaveDocumentEdit}
-              onDeleteDocument={handleDeleteDocument}
-            />
+            <QuotationForm />
           )}
           {/* {activeTab === 'invoice' && (
             <DocumentTable
