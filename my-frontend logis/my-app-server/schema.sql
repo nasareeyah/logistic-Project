@@ -1,22 +1,12 @@
-
-
-CREATE TABLE IF NOT EXISTS bank (
+--1.bank
+CREATE TABLE bank (
   bank_id VARCHAR(10) PRIMARY KEY,
   bank_name VARCHAR(100)
 );
-
--- 2. account
-CREATE TABLE IF NOT EXISTS account (
-  account_no VARCHAR(50) PRIMARY KEY,
-  account_name VARCHAR(255),
-  bank_branch VARCHAR(100),
-  bank_id VARCHAR(10) REFERENCES bank(bank_id)
-);
-
--- 3. customers
-CREATE TABLE IF NOT EXISTS customers (
+--2.customers
+CREATE TABLE customers (
   customer_id VARCHAR(10) PRIMARY KEY,
-  customer_name VARCHAR(255) NOT NULL,
+  customer_name VARCHAR(255),
   tax_id VARCHAR(20),
   address TEXT,
   phone VARCHAR(50),
@@ -24,72 +14,88 @@ CREATE TABLE IF NOT EXISTS customers (
   contact_person VARCHAR(100)
 );
 
--- 4. cars
-CREATE TABLE IF NOT EXISTS cars (
+-- 3. cars 
+CREATE TABLE cars (
   car_id VARCHAR(10) PRIMARY KEY,
-  car_number VARCHAR(50) NOT NULL,
+  car_number VARCHAR(50),
   car_type VARCHAR(50)
 );
 
--- 5. driver
-CREATE TABLE IF NOT EXISTS driver (
-  driver_id VARCHAR(10) PRIMARY KEY,
-  full_name VARCHAR(100) NOT NULL,
-  phone VARCHAR(50)
-);
 
--- 6. employee
-CREATE TABLE IF NOT EXISTS employee (
-  employee_id VARCHAR(10) PRIMARY KEY,
-  full_name VARCHAR(100) NOT NULL,
-  position VARCHAR(100),
-  phone VARCHAR(50),
-  email VARCHAR(100)
-);
-
--- 7. status
-CREATE TABLE IF NOT EXISTS status (
+-- 5. status
+CREATE TABLE status (
   status_id VARCHAR(10) PRIMARY KEY,
   status_name VARCHAR(100)
 );
 
--- 8. service_type
-CREATE TABLE IF NOT EXISTS service_type (
+-- 6. driver
+CREATE TABLE driver (
+  driver_id VARCHAR(10) PRIMARY KEY,
+  full_name VARCHAR(100),
+  phone VARCHAR(50)
+);
+
+-- 7. service_type 
+CREATE TABLE service_type (
   service_typeID VARCHAR(10) PRIMARY KEY,
   service_typeNAME VARCHAR(100)
 );
 
--- 9. service
-CREATE TABLE IF NOT EXISTS service (
-  service_id VARCHAR(10) PRIMARY KEY,
-  service_typeID VARCHAR(10) REFERENCES service_type(service_typeID),
-  description TEXT,
-  default_price DECIMAL(12,2),
-  unit VARCHAR(50)
+-- 8. location
+CREATE TABLE location (
+  location_id VARCHAR(10) PRIMARY KEY,
+  load_from VARCHAR(255),
+  destination VARCHAR(255),
+  country VARCHAR(100)
 );
 
--- 10. consigner
-CREATE TABLE IF NOT EXISTS consigner (
+-- 9. consigner
+CREATE TABLE consigner (
   consigner_id VARCHAR(10) PRIMARY KEY,
   consigner_name VARCHAR(255),
   address TEXT
 );
 
--- 11. consignee
-CREATE TABLE IF NOT EXISTS consignee (
+-- 10. consignee 
+create table consignee(
   consignee_id VARCHAR(10) PRIMARY KEY,
   consignee_name VARCHAR(255),
   address TEXT
 );
 
--- 12. document
-CREATE TABLE IF NOT EXISTS document (
+
+
+-- 11. account
+CREATE TABLE account (
+  account_no VARCHAR(50) PRIMARY KEY,
+  account_name VARCHAR(255),
+  bank_branch VARCHAR(100),
+  bank_id VARCHAR(10),
+  FOREIGN KEY (bank_id) REFERENCES bank(bank_id)
+);
+
+-- 12. service
+
+-- 2. สร้างตารางใหม่ที่มีคอลัมน์ครบถ้วน
+CREATE TABLE service (
+    service_id VARCHAR(10) PRIMARY KEY,
+    service_typeID VARCHAR(10),
+    description TEXT,
+    quantity INT,
+    unit_quantity VARCHAR(50),
+    default_price DECIMAL(12,2),
+    unit VARCHAR(50),
+    FOREIGN KEY (service_typeID) REFERENCES service_type(service_typeID)
+);
+
+-- 13. document
+CREATE TABLE document (
   document_id VARCHAR(10) PRIMARY KEY,
   document_type VARCHAR(50),
   document_no VARCHAR(50),
   document_date DATE,
   account_no VARCHAR(50),
-  customer_id VARCHAR(10) REFERENCES customers(customer_id),
+  customer_id VARCHAR(10),
   st_no VARCHAR(50),
   st_date DATE,
   re_no VARCHAR(50),
@@ -100,39 +106,37 @@ CREATE TABLE IF NOT EXISTS document (
   net_total DECIMAL(12,2),
   status VARCHAR(50),
   remark TEXT,
-  driver_id VARCHAR(10) REFERENCES driver(driver_id),
-  car_id VARCHAR(10) REFERENCES cars(car_id),
+  driver_id VARCHAR(10),
+  car_id VARCHAR(10),
   do_no VARCHAR(50),
   do_date DATE,
-  consigner_id VARCHAR(10) REFERENCES consigner(consigner_id),
-  consignee_id VARCHAR(10) REFERENCES consignee(consignee_id)
+  consigner_id VARCHAR(10),
+  consignee_id VARCHAR(10),
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id), 
+  FOREIGN KEY (driver_id) REFERENCES driver(driver_id),
+  FOREIGN KEY (car_id) REFERENCES cars(car_id),                
+  FOREIGN KEY (consigner_id) REFERENCES consigner(consigner_id),
+  FOREIGN KEY (consignee_id) REFERENCES consignee(consignee_id)
 );
 
--- 13. document_items
-CREATE TABLE IF NOT EXISTS document_items (
+-- 14. document_items
+DROP TABLE document_items CASCADE;
+CREATE TABLE document_items (
   document_items_id VARCHAR(10) PRIMARY KEY,
-  document_id VARCHAR(10) REFERENCES document(document_id),
-  service_id VARCHAR(10) REFERENCES service(service_id),
-  description TEXT,
-  quantity DECIMAL(10,2),
-  unit_price DECIMAL(12,2),
-  total_price DECIMAL(12,2)
+  document_id VARCHAR(10),
+  service_id VARCHAR(10),
+  FOREIGN KEY (document_id) REFERENCES document(document_id),
+  FOREIGN KEY (service_id) REFERENCES service(service_id)
 );
 
--- 14. delivery_orders
-CREATE TABLE IF NOT EXISTS delivery_orders (
+-- 15. delivery_orders
+CREATE TABLE delivery_orders (
   delivery_orders_id VARCHAR(10) PRIMARY KEY,
-  document_id VARCHAR(10) REFERENCES document(document_id),
-  service_id VARCHAR(10) REFERENCES service(service_id),
+  document_id VARCHAR(10),
+  service_id VARCHAR(10),
   description TEXT,
   quantity DECIMAL(10,2),
-  unit VARCHAR(50)
-);
-
--- 15. location
-CREATE TABLE IF NOT EXISTS location (
-  location_id VARCHAR(10) PRIMARY KEY,
-  load_from VARCHAR(255),
-  destination VARCHAR(255),
-  country VARCHAR(100)
+  unit VARCHAR(50),
+  FOREIGN KEY (document_id) REFERENCES document(document_id),
+  FOREIGN KEY (service_id) REFERENCES service(service_id)
 );
