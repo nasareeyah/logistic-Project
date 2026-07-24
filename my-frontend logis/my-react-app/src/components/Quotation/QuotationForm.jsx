@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { createQuotation, fetchCustomerList } from '../Quotation/apiQuotation';
 
 // =========================================================================
-// 🛠️ HELPER FUNCTIONS (ฟังก์ชันช่วยจัดการเกี่ยวกับวันที่)
+// 🛠️ HELPER FUNCTIONS
 // =========================================================================
-
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
 const getFutureDate = (days) => {
@@ -16,26 +16,26 @@ export default function QuotationForm() {
   // =========================================================================
   // 📦 STATE MANAGEMENT
   // =========================================================================
-
   const [customerList, setCustomerList] = useState([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-    documentNo: '',                  
-    issueDate: getTodayDate(),        
-    validUntil: getFutureDate(15),   
-    saleName: '',                    
-    jobName: '',                     
-    currency: 'บาท (THB)',                 
-    
-    customerId: '',                  
-    customerName: '',                
-    address: '',                     
-    taxId: '',                       
-    contactPerson: '',               
-    phone: '',                       
-    email: '',                       
-    
+    documentNo: '',
+    issueDate: getTodayDate(),
+    validUntil: getFutureDate(15),
+    saleName: '',
+    jobName: '',
+    currency: 'บาท (THB)',
+
+    customerId: '',
+    customerName: '',
+    address: '',
+    taxId: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+
     remark: 'กรณีกระดกตู้สินค้าคิดค่าเสียเวลาวันละ 3,000 บาท/คัน'
   });
 
@@ -43,35 +43,38 @@ export default function QuotationForm() {
     { id: 1, origin: '', destination: '' }
   ]);
 
-  const [items, setItems] = useState([
-    { id: 1, description: 'เช่น ค่าขนส่งไทย-มาเลเซีย ฟรีการไทย-มาเลเซีย', quantity: 1, unit: 'คัน', pricePerUnit: 75000, total: 75000 }
-  ]);
+ const [items, setItems] = useState([{
+    id: 1,
+    description: '',
+    quantity: 1,
+    unit: 'คัน',
+    pricePerUnit: 0,
+    total: 0
+}]);
 
   // =========================================================================
   // 🌐 API CALLS & HANDLERS
   // =========================================================================
 
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const loadCustomers = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/customers'); 
-        if (response.ok) {
-          const data = await response.json();
-          setCustomerList(data);
-        }
+        setLoadingCustomers(true);
+        const data = await fetchCustomerList();
+        setCustomerList(data);
       } catch (error) {
-        console.error('Error connecting to backend:', error);
+        console.error('Error loading customers:', error);
       } finally {
         setLoadingCustomers(false);
       }
     };
 
-    fetchCustomers();
+    loadCustomers();
   }, []);
 
   const handleCustomerSelect = (e) => {
     const selectedId = e.target.value;
-    
+
     if (!selectedId) {
       setFormData(prev => ({
         ...prev, customerId: '', customerName: '', address: '', taxId: '', contactPerson: '', phone: '', email: ''
@@ -80,7 +83,7 @@ export default function QuotationForm() {
     }
 
     const customer = customerList.find(c => String(c.customer_id || c.id) === String(selectedId));
-    
+
     if (customer) {
       setFormData(prev => ({
         ...prev,
@@ -108,9 +111,17 @@ export default function QuotationForm() {
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now(), description: '', quantity: 1, unit: 'คัน', pricePerUnit: 0, total: 0 }]);
-  };
-
+    setItems([...items, {
+        id: Date.now(),
+        serviceTypeId: 'st-25658',
+        description: '',
+        quantity: 1,
+        unit: 'คัน',
+        pricePerUnit: 0,
+        total: 0
+    }]);
+};
+ 
   const handleRemoveItem = (id) => {
     if (items.length > 1) setItems(items.filter(i => i.id !== id));
   };
@@ -134,57 +145,22 @@ export default function QuotationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const documentPayload = {
-      customer_id: formData.customerId || null,
-      sale_name: formData.saleName,
-      job_name: formData.jobName,
-      document_date: formData.issueDate,
-      valid_until: formData.validUntil,
-      currency: formData.currency,
-      remark: formData.remark,
-      total_amount: grandTotal
-    };
+    setIsSubmitting(true);
 
     try {
-      const docRes = await fetch('http://localhost:3000/api/document', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(documentPayload)
+      await createQuotation({
+        formData,
+        routes,
+        items,
+        grandTotal
       });
 
-      const docResult = await docRes.json();
-
-      if (!docRes.ok) {
-        throw new Error(docResult.error || 'เกิดข้อผิดพลาดในการบันทึกเอกสาร');
-      }
-
-      const newDocumentId = docResult.data?.document_id || docResult.data?.id;
-
-      if (newDocumentId && items.length > 0) {
-        for (const item of items) {
-          const itemPayload = {
-            document_id: newDocumentId,
-            description: item.description,
-            quantity: Number(item.quantity),
-            unit: item.unit,
-            price_per_unit: Number(item.pricePerUnit),
-            total_price: Number(item.total)
-          };
-
-          await fetch('http://localhost:3000/api/document_items', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(itemPayload)
-          });
-        }
-      }
-
-      alert('✅ บันทึกใบเสนอราคาสำเร็จ!');
-      
+      alert('บันทึกใบเสนอราคาสำเร็จ!');
     } catch (error) {
       console.error('Error saving quotation:', error);
-      alert('❌ เกิดข้อผิดพลาด: ' + error.message);
+      alert(' เกิดข้อผิดพลาด: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -193,18 +169,18 @@ export default function QuotationForm() {
   // =========================================================================
   return (
     <div className="max-w-4xl mx-auto space-y-4 pb-12 font-sans text-slate-700 text-xs">
-      
+
       {/* 🟢 TOP HEADER CARD: Title & Stepper */}
       <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
         <div className="flex items-center space-x-2 text-slate-800 mb-0.5">
           <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h1 className="text-base font-bold text-slate-800">สร้างใบเสนอราคา</h1>
+          <h2 className="text-base font-bold text-slate-800">สร้างใบเสนอราคา</h2>
         </div>
         <p className="text-[11px] text-slate-400 mb-6">กรอกรายละเอียดงานขนส่งเพื่อออกใบเสนอราคาให้ลูกค้า</p>
 
-        {/* Stepper (01 ── 02 ── 03 ── 04 ── 05) */}
+        {/* Stepper */}
         <div className="flex items-center justify-center space-x-2 md:space-x-4 py-1">
           {['01', '02', '03', '04', '05'].map((step, idx) => (
             <React.Fragment key={step}>
@@ -219,90 +195,84 @@ export default function QuotationForm() {
 
       {/* 🟢 FORM */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        
-        {/* ==================== SECTION 01: ข้อมูลเอกสาร ==================== */}
+
+        {/* SECTION 01: ข้อมูลเอกสาร */}
         <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">01</span>
             <h2 className="text-xs font-bold text-slate-800">ข้อมูลเอกสาร</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* เลขที่ใบเสนอราคา */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">เลขที่ใบเสนอราคา</label>
-              <input 
-                type="text" 
-                value={formData.documentNo || 'QT202607060001'} 
-                disabled 
-                className="w-full p-2 bg-slate-100 border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs" 
+              <input
+                type="text"
+                value={formData.documentNo || 'QT202607060001'}
+                disabled
+                className="w-full p-2 bg-slate-100 border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs"
               />
               <span className="text-[10px] text-slate-400 mt-1 block">สร้างอัตโนมัติเมื่อกดบันทึก</span>
             </div>
 
-            {/* วันที่ออกเอกสาร */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 วันที่ออกเอกสาร <span className="text-red-500">*</span>
               </label>
-              <input 
-                type="date" 
-                value={formData.issueDate} 
-                onChange={e => setFormData({...formData, issueDate: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white" 
-                required 
+              <input
+                type="date"
+                value={formData.issueDate}
+                onChange={e => setFormData({ ...formData, issueDate: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
+                required
               />
             </div>
 
-            {/* ใช้ได้ถึงวันที่ */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">ใช้ได้ถึงวันที่</label>
-              <input 
-                type="date" 
-                value={formData.validUntil} 
-                onChange={e => setFormData({...formData, validUntil: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white" 
+              <input
+                type="date"
+                value={formData.validUntil}
+                onChange={e => setFormData({ ...formData, validUntil: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
               />
             </div>
 
-            {/* พนักงานขาย (ผู้ขาย) */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 พนักงานขาย (ผู้ขาย) <span className="text-red-500">*</span>
               </label>
-              <input 
-                type="text" 
-                placeholder="ชื่อ-นามสกุล" 
-                value={formData.saleName} 
-                onChange={e => setFormData({...formData, saleName: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                required 
+              <input
+                type="text"
+                placeholder="ชื่อ-นามสกุล"
+                value={formData.saleName}
+                onChange={e => setFormData({ ...formData, saleName: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                required
               />
             </div>
 
-            {/* ชื่องาน */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 ชื่องาน <span className="text-red-500">*</span>
               </label>
-              <input 
-                type="text" 
-                placeholder="เช่น ชิ้นงานหล่อ UHPC DURA" 
-                value={formData.jobName} 
-                onChange={e => setFormData({...formData, jobName: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                required 
+              <input
+                type="text"
+                placeholder="เช่น ชิ้นงานหล่อ UHPC DURA"
+                value={formData.jobName}
+                onChange={e => setFormData({ ...formData, jobName: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                required
               />
             </div>
 
-            {/* สกุลเงินที่เสนอราคา */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 สกุลเงินที่เสนอราคา <span className="text-red-500">*</span>
               </label>
-              <select 
-                value={formData.currency} 
-                onChange={e => setFormData({...formData, currency: e.target.value})} 
+              <select
+                value={formData.currency}
+                onChange={e => setFormData({ ...formData, currency: e.target.value })}
                 className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
               >
                 <option value="บาท (THB)">บาท (THB)</option>
@@ -315,7 +285,7 @@ export default function QuotationForm() {
           </div>
         </div>
 
-        {/* ==================== SECTION 02: ข้อมูลลูกค้า ==================== */}
+        {/* SECTION 02: ข้อมูลลูกค้า */}
         <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">02</span>
@@ -323,15 +293,14 @@ export default function QuotationForm() {
           </div>
 
           <div className="space-y-3">
-            {/* ชื่อบริษัท / ข้อมูลลูกค้า */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 ชื่อบริษัท / ข้อมูลลูกค้า <span className="text-red-500">*</span>
               </label>
               {customerList.length > 0 && (
-                <select 
-                  value={formData.customerId} 
-                  onChange={handleCustomerSelect} 
+                <select
+                  value={formData.customerId}
+                  onChange={handleCustomerSelect}
                   disabled={loadingCustomers}
                   className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white mb-2 text-slate-700"
                 >
@@ -343,91 +312,88 @@ export default function QuotationForm() {
                   ))}
                 </select>
               )}
-              <input 
-                type="text" 
-                placeholder="บริษัท ตัวอย่าง จำกัด" 
-                value={formData.customerName} 
-                onChange={e => setFormData({...formData, customerName: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                required 
+              <input
+                type="text"
+                placeholder="บริษัท ตัวอย่าง จำกัด"
+                value={formData.customerName}
+                onChange={e => setFormData({ ...formData, customerName: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                required
               />
             </div>
 
-            {/* ที่อยู่ */}
             <div>
               <label className="block text-slate-600 mb-1 text-[11px]">
                 ที่อยู่ <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
               </label>
-              <input 
-                type="text" 
-                placeholder="เลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์" 
-                value={formData.address} 
-                onChange={e => setFormData({...formData, address: e.target.value})} 
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
+              <input
+                type="text"
+                placeholder="เลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"
+                value={formData.address}
+                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
               />
             </div>
 
-            {/* Tax ID & ผู้ติดต่อ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-slate-600 mb-1 text-[11px]">
                   เลขประจำตัวผู้เสียภาษี <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="0-0000-00000-00-0" 
-                  value={formData.taxId} 
-                  onChange={e => setFormData({...formData, taxId: e.target.value})} 
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
+                <input
+                  type="text"
+                  placeholder="0-0000-00000-00-0"
+                  value={formData.taxId}
+                  onChange={e => setFormData({ ...formData, taxId: e.target.value })}
+                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
                 />
               </div>
               <div>
                 <label className="block text-slate-600 mb-1 text-[11px]">
                   ผู้ติดต่อ <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="ชื่อผู้ติดต่อ" 
-                  value={formData.contactPerson} 
-                  onChange={e => setFormData({...formData, contactPerson: e.target.value})} 
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                  required 
+                <input
+                  type="text"
+                  placeholder="ชื่อผู้ติดต่อ"
+                  value={formData.contactPerson}
+                  onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
+                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                  required
                 />
               </div>
             </div>
 
-            {/* เบอร์โทร & อีเมล */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-slate-600 mb-1 text-[11px]">
                   เบอร์โทร <span className="text-red-500">*</span>
                 </label>
-                <input 
-                  type="text" 
-                  placeholder="0X-XXXX-XXXX" 
-                  value={formData.phone} 
-                  onChange={e => setFormData({...formData, phone: e.target.value})} 
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                  required 
+                <input
+                  type="text"
+                  placeholder="0X-XXXX-XXXX"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                  required
                 />
               </div>
               <div>
                 <label className="block text-slate-600 mb-1 text-[11px]">
                   อีเมล <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
                 </label>
-                <input 
-                  type="email" 
-                  placeholder="name@company.com" 
-                  value={formData.email} 
-                  onChange={e => setFormData({...formData, email: e.target.value})} 
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
+                <input
+                  type="email"
+                  placeholder="name@company.com"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ==================== SECTION 03: เส้นทางขนส่ง ==================== */}
+        {/* SECTION 03: เส้นทางขนส่ง */}
         <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">03</span>
@@ -441,33 +407,33 @@ export default function QuotationForm() {
                   <label className="block text-slate-600 mb-1 text-[11px]">
                     ต้นทาง <span className="text-red-500">*</span>
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="เช่น สงขลา, ไทย" 
-                    value={route.origin} 
-                    onChange={e => handleRouteChange(route.id, 'origin', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                    required 
+                  <input
+                    type="text"
+                    placeholder="เช่น สงขลา, ไทย"
+                    value={route.origin}
+                    onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                    required
                   />
                 </div>
                 <div className={routes.length > 1 ? "md:col-span-5" : "md:col-span-6"}>
                   <label className="block text-slate-600 mb-1 text-[11px]">
                     ปลายทาง <span className="text-red-500">*</span>
                   </label>
-                  <input 
-                    type="text" 
-                    placeholder="เช่น ชลบุรี, ไทย" 
-                    value={route.destination} 
-                    onChange={e => handleRouteChange(route.id, 'destination', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                    required 
+                  <input
+                    type="text"
+                    placeholder="เช่น ชลบุรี, ไทย"
+                    value={route.destination}
+                    onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                    required
                   />
                 </div>
                 {routes.length > 1 && (
                   <div className="md:col-span-2 pt-5">
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveRoute(route.id)} 
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRoute(route.id)}
                       className="w-full py-2 bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100 transition text-[11px] font-medium"
                     >
                       ลบรายการ
@@ -477,10 +443,9 @@ export default function QuotationForm() {
               </div>
             ))}
 
-            {/* ปุ่มเพิ่มรายการเส้นทาง */}
-            <button 
-              type="button" 
-              onClick={handleAddRoute} 
+            <button
+              type="button"
+              onClick={handleAddRoute}
               className="w-full py-2 bg-[#e6f4f1]/60 hover:bg-[#e6f4f1] border border-dashed border-[#aadae0] rounded-lg text-xs text-[#0d9488] transition font-medium flex items-center justify-center space-x-1 mt-2"
             >
               <span>+ เพิ่มรายการ</span>
@@ -488,14 +453,13 @@ export default function QuotationForm() {
           </div>
         </div>
 
-        {/* ==================== SECTION 04: รายการค่าบริการ ==================== */}
+        {/* SECTION 04: รายการค่าบริการ */}
         <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">04</span>
             <h2 className="text-xs font-bold text-slate-800">รายการค่าบริการ</h2>
           </div>
 
-          {/* Table Headers */}
           <div className="hidden md:grid grid-cols-12 gap-2 text-[11px] font-normal text-slate-400 mb-2 px-1">
             <div className="col-span-5">รายละเอียด</div>
             <div className="col-span-2 text-center">จำนวน</div>
@@ -507,55 +471,50 @@ export default function QuotationForm() {
           <div className="space-y-3">
             {items.map((item) => (
               <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
-                {/* รายละเอียด */}
                 <div className="col-span-12 md:col-span-5">
-                  <input 
-                    type="text" 
-                    placeholder="เช่น ค่าขนส่งไทย-มาเลเซีย..." 
-                    value={item.description} 
-                    onChange={e => handleItemChange(item.id, 'description', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300" 
-                    required 
+                  <input
+                    type="text"
+                    placeholder="เช่น ค่าขนส่งไทย-มาเลเซีย..."
+                    value={item.description}
+                    onChange={e => handleItemChange(item.id, 'description', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
+                    required
                   />
                 </div>
-                {/* จำนวน */}
                 <div className="col-span-3 md:col-span-2">
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={item.quantity} 
-                    onChange={e => handleItemChange(item.id, 'quantity', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center" 
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.quantity}
+                    onChange={e => handleItemChange(item.id, 'quantity', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center"
                   />
                 </div>
-                {/* หน่วย */}
                 <div className="col-span-3 md:col-span-2">
-                  <input 
-                    type="text" 
-                    value={item.unit} 
-                    onChange={e => handleItemChange(item.id, 'unit', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center" 
+                  <input
+                    type="text"
+                    value={item.unit}
+                    onChange={e => handleItemChange(item.id, 'unit', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center"
                   />
                 </div>
-                {/* ราคาต่อหน่วย */}
                 <div className="col-span-4 md:col-span-2">
-                  <input 
-                    type="number" 
-                    min="0" 
-                    value={item.pricePerUnit} 
-                    onChange={e => handleItemChange(item.id, 'pricePerUnit', e.target.value)} 
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-right font-medium" 
+                  <input
+                    type="number"
+                    min="0"
+                    value={item.pricePerUnit}
+                    onChange={e => handleItemChange(item.id, 'pricePerUnit', e.target.value)}
+                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-right font-medium"
                   />
                 </div>
-                {/* ยอดรวม + ปุ่มลบ */}
                 <div className="col-span-2 md:col-span-1 flex items-center justify-end space-x-2">
                   <span className="text-slate-400 text-xs">
-                    {item.total ? item.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '75,000.00'}
+                    {item.total ? item.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
                   </span>
                   {items.length > 1 && (
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveItem(item.id)} 
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item.id)}
                       className="w-5 h-5 rounded border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-300 flex items-center justify-center transition text-[10px]"
                     >
                       ✕
@@ -565,10 +524,9 @@ export default function QuotationForm() {
               </div>
             ))}
 
-            {/* ปุ่มเพิ่มรายการบริการ */}
-            <button 
-              type="button" 
-              onClick={handleAddItem} 
+            <button
+              type="button"
+              onClick={handleAddItem}
               className="w-full py-2 bg-[#e6f4f1]/60 hover:bg-[#e6f4f1] border border-dashed border-[#aadae0] rounded-lg text-xs text-[#0d9488] transition font-medium flex items-center justify-center space-x-1 mt-2"
             >
               <span>+ เพิ่มรายการ</span>
@@ -576,40 +534,41 @@ export default function QuotationForm() {
           </div>
         </div>
 
-        {/* ==================== SECTION 05: เงื่อนไขและหมายเหตุ ==================== */}
+        {/* SECTION 05: เงื่อนไขและหมายเหตุ */}
         <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
           <div className="flex items-center space-x-2 mb-4">
             <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">05</span>
             <h2 className="text-xs font-bold text-slate-800">เงื่อนไขและหมายเหตุ</h2>
           </div>
-          
+
           <div>
             <label className="block text-slate-600 mb-1 text-[11px]">หมายเหตุ</label>
-            <textarea 
-              rows="3" 
-              placeholder="เช่น กรณีกระดกตู้สินค้าคิดค่าเสียเวลาวันละ 3,000 บาท/คัน" 
-              value={formData.remark} 
-              onChange={e => setFormData({...formData, remark: e.target.value})} 
+            <textarea
+              rows="3"
+              placeholder="เช่น กรณีกระดกตู้สินค้าคิดค่าเสียเวลาวันละ 3,000 บาท/คัน"
+              value={formData.remark}
+              onChange={e => setFormData({ ...formData, remark: e.target.value })}
               className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
             ></textarea>
           </div>
         </div>
 
-        {/* ==================== ACTION BUTTONS (BOTTOM RIGHT) ==================== */}
+        {/* ACTION BUTTONS */}
         <div className="flex justify-end items-center space-x-3 text-xs pt-2">
-          <button 
-            type="submit" 
-            className="px-6 py-2.5 bg-[#0f2d5c] hover:bg-[#0a2044] text-white rounded-full transition font-medium shadow-xs flex items-center space-x-2 cursor-pointer"
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-[#0f2d5c] hover:bg-[#0a2044] disabled:bg-slate-400 text-white rounded-full transition font-medium shadow-xs flex items-center space-x-2 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
             </svg>
-            <span>บันทึก</span>
+            <span>{isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}</span>
           </button>
-          
-          <button 
-            type="button" 
-            onClick={() => alert('แสดงตัวอย่างใบเสนอราคา (Preview)')} 
+
+          <button
+            type="button"
+            onClick={() => alert('แสดงตัวอย่างใบเสนอราคา (Preview)')}
             className="px-6 py-2.5 bg-[#0f2d5c] hover:bg-[#0a2044] text-white rounded-full transition font-medium shadow-xs flex items-center space-x-2 cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
+console.log("api route loaded");
 // --- CUSTOMERS ---
 router.get('/customers', async (req, res) => {
     try {
@@ -177,7 +178,7 @@ router.post('/document', async (req, res) => {
 
     try {
         let resolvedServiceId = service_id || null;
-        
+
         if (service_typename && !service_id) {
             const stResult = await db.query(
                 `SELECT service_typeid FROM service_type WHERE service_typename = $1`,
@@ -320,45 +321,53 @@ router.get('/document_items', async (req, res) => {
 
 router.post('/document_items', async (req, res) => {
     try {
-        const { document_id, description, quantity, unit, price_per_unit, total_price } = req.body;
+        const { document_id, service_id, description, quantity, unit, price_per_unit, total_price } = req.body;
         const itemId = 'di-' + Math.floor(100000 + Math.random() * 900000);
         await db.query(
-            `INSERT INTO document_items (document_items_id, document_id, description, quantity, unit, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [itemId, document_id, description, quantity, unit, price_per_unit, total_price]
+            `INSERT INTO document_items (document_items_id, document_id, service_id, description, quantity, unit, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [itemId, document_id, service_id || null, description || null, quantity || null, unit || null, price_per_unit || null, total_price || null]
         );
         res.json({ message: 'บันทึกรายการสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+router.post('/service', async (req, res) => {
+    try {
+        const { service_id, service_typeID, description, quantity, unit_quantity, default_price, unit } = req.body;
+        
+        // ถ้า service_typeID ไม่มีในตาราง ให้สร้างใหม่อัตโนมัติ
+        const stCheck = await db.query('SELECT service_typeid FROM service_type WHERE service_typeid = $1', [service_typeID]);
+        if (stCheck.rows.length === 0) {
+            await db.query('INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)', [service_typeID, description || 'ทั่วไป']);
+        }
 
-// --- SERVICES & SERVICE TYPES ---
+        await db.query(
+            `INSERT INTO service (service_id, service_typeID, description, quantity, unit_quantity, default_price, unit) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [service_id, service_typeID || null, description || null, quantity || null, unit_quantity || null, default_price || null, unit || null]
+        );
+        res.json({ message: 'สร้าง service สำเร็จ', service_id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.get('/service', async (req, res) => {
     try {
-        // ใช้ JOIN เพื่อดึง service_typename ออกมาจากตาราง servicetype (หรือ service_type)
-        const query = `
-            SELECT 
-                s.service_id,
-                s.service_typeid,
-                st.service_typename,
-                s.description,
-                s.default_price,
-                s.unit
-            FROM service s
-            LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
-        `;
-        const result = await db.query(query);
+        const result = await db.query('select * from service');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-router.get('/service_type',async(RegExp,res)=>{try{
-    const result = await db.query('select * from service_type');
-    res.json(result.rows);
-    }catch (err){
-        res.status(500).json({error : err.message});
+router.get('/service_type', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM service_type');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
+
 
 module.exports = router;

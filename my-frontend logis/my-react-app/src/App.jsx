@@ -276,7 +276,6 @@ function App() {
           {activeTab === 'trucks' && <CarTable cars={cars} onAdd={handleAddCar} onUpdate={handleSaveCarEdit} onDelete={handleDeleteCar} />}
           {activeTab === 'driver' && <DriverTable drivers={drivers} onAdd={handleAddDriver} onUpdate={handleSaveDriverEdit} onDelete={handleDeleteDriver} />}
           
-          {/* ส่ง services และ serviceTypes เข้าไปในตารางเอกสารด้านล่างนี้ */}
           {activeTab === 'quotation' && (
             <QuotationForm />
           )}
