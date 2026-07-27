@@ -11,7 +11,7 @@ import QuotationForm from './components/Quotation/QuotationForm';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [loginError, setLoginError] = useState('');
-  const [activeTab, setActiveTab] = useState('customers');
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   const [customers, setCustomers] = useState([]);
   const [cars, setCars] = useState([]);
