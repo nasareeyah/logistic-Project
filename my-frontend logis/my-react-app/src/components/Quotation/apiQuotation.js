@@ -58,9 +58,9 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
                     service_typeID: 'st-25658',
                     description: item.description,
                     quantity: Number(item.quantity) || null,
-                    unit_quantity: null,
+                    unit_quantity: item.unit, // ส่งหน่วยของจำนวนมาที่นี่ (เช่น 'คัน')
                     default_price: Number(item.pricePerUnit) || 0,
-                    unit: item.unit
+                    unit: item.priceUnit || item.unit // ส่งหน่วยของราคามาที่นี่ (ใช้ item.priceUnit ถ้ามี)
                 })
             });
 
