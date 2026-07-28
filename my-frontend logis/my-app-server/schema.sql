@@ -36,7 +36,12 @@ CREATE TABLE status (
 CREATE TABLE driver (
   driver_id VARCHAR(10) PRIMARY KEY,
   full_name VARCHAR(100),
-  phone VARCHAR(50)
+  phone VARCHAR(50),
+  email VARCHAR(100),
+  license_number VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Available',
+  assigned_car_id VARCHAR(10),
+  notes TEXT
 );
 
 -- 7. service_type 

@@ -282,7 +282,15 @@ function App() {
               onDelete={handleDeleteCar} 
             />
           )}
-          {activeTab === 'driver' && <DriverTable drivers={drivers} onAdd={handleAddDriver} onUpdate={handleSaveDriverEdit} onDelete={handleDeleteDriver} />}
+          {activeTab === 'driver' && (
+            <DriverTable 
+              drivers={drivers} 
+              cars={cars}
+              onAdd={handleAddDriver} 
+              onUpdate={handleSaveDriverEdit} 
+              onDelete={handleDeleteDriver} 
+            />
+          )}
           
           {activeTab === 'quotation' && (
             <QuotationForm />

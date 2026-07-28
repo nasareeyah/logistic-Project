@@ -117,8 +117,11 @@ router.get('/driver', async (req, res) => {
 
 router.post('/driver', async (req, res) => {
     try {
-        const { driver_id, full_name, phone } = req.body;
-        await db.query('INSERT INTO driver (driver_id, full_name, phone) VALUES ($1, $2, $3)', [driver_id, full_name, phone]);
+        const { driver_id, full_name, phone, email, license_number, status, assigned_car_id, notes } = req.body;
+        await db.query(
+            'INSERT INTO driver (driver_id, full_name, phone, email, license_number, status, assigned_car_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [driver_id, full_name, phone, email || null, license_number || null, status || 'Available', assigned_car_id || null, notes || null]
+        );
         res.json({ message: 'เพิ่มคนขับสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -127,8 +130,11 @@ router.post('/driver', async (req, res) => {
 
 router.put('/driver/:id', async (req, res) => {
     try {
-        const { full_name, phone } = req.body;
-        await db.query('UPDATE driver SET full_name=$1, phone=$2 WHERE driver_id=$3', [full_name, phone, req.params.id]);
+        const { full_name, phone, email, license_number, status, assigned_car_id, notes } = req.body;
+        await db.query(
+            'UPDATE driver SET full_name=$1, phone=$2, email=$3, license_number=$4, status=$5, assigned_car_id=$6, notes=$7 WHERE driver_id=$8',
+            [full_name, phone, email || null, license_number || null, status || 'Available', assigned_car_id || null, notes || null, req.params.id]
+        );
         res.json({ message: 'แก้ไขคนขับสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
