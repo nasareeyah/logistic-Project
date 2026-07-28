@@ -38,7 +38,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
       </div>
 
       {/* 2. Menu Items Container */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', paddingRight: '4px' }}>
+      <div className="sidebar-menu-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', paddingRight: '4px' }}>
         
         {/* --- MAIN GROUP --- */}
         <div className="sidebar-group">
@@ -181,11 +181,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
 
       </div>
 
-      {/* 3. Footer Help Card & Logout */}
-      <div className="sidebar-help-card">
-        <div className="sidebar-help-title">Need help?</div>
-        <div className="sidebar-help-text">Contact your system admin</div>
-      </div>
+
 
       <button className="sidebar-logout-btn" onClick={onLogout}>
         <LogOut size={16} />
