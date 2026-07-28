@@ -14,11 +14,15 @@ CREATE TABLE customers (
   contact_person VARCHAR(100)
 );
 
--- 3. cars 
 CREATE TABLE cars (
   car_id VARCHAR(10) PRIMARY KEY,
   car_number VARCHAR(50),
-  car_type VARCHAR(50)
+  car_type VARCHAR(50),
+  capacity NUMERIC,
+  capacity_unit VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Available',
+  assigned_driver_id VARCHAR(10),
+  notes TEXT
 );
 
 

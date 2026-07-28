@@ -273,7 +273,15 @@ function App() {
         <div className="dashboard-content-area">
           {activeTab === 'dashboard' && <Dashboard customersCount={customers.length} carsCount={cars.length} driversCount={drivers.length} />}
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} />}
-          {activeTab === 'trucks' && <CarTable cars={cars} onAdd={handleAddCar} onUpdate={handleSaveCarEdit} onDelete={handleDeleteCar} />}
+          {activeTab === 'trucks' && (
+            <CarTable 
+              cars={cars} 
+              drivers={drivers}
+              onAdd={handleAddCar} 
+              onUpdate={handleSaveCarEdit} 
+              onDelete={handleDeleteCar} 
+            />
+          )}
           {activeTab === 'driver' && <DriverTable drivers={drivers} onAdd={handleAddDriver} onUpdate={handleSaveDriverEdit} onDelete={handleDeleteDriver} />}
           
           {activeTab === 'quotation' && (

@@ -72,8 +72,11 @@ router.get('/cars', async (req, res) => {
 
 router.post('/cars', async (req, res) => {
     try {
-        const { car_id, car_number, car_type } = req.body;
-        await db.query('INSERT INTO cars (car_id, car_number, car_type) VALUES ($1, $2, $3)', [car_id, car_number, car_type]);
+        const { car_id, car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes } = req.body;
+        await db.query(
+            'INSERT INTO cars (car_id, car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [car_id, car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, status || 'Available', assigned_driver_id || null, notes || null]
+        );
         res.json({ message: 'เพิ่มข้อมูลรถสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -82,8 +85,11 @@ router.post('/cars', async (req, res) => {
 
 router.put('/cars/:id', async (req, res) => {
     try {
-        const { car_number, car_type } = req.body;
-        await db.query('UPDATE cars SET car_number=$1, car_type=$2 WHERE car_id=$3', [car_number, car_type, req.params.id]);
+        const { car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes } = req.body;
+        await db.query(
+            'UPDATE cars SET car_number=$1, car_type=$2, capacity=$3, capacity_unit=$4, status=$5, assigned_driver_id=$6, notes=$7 WHERE car_id=$8',
+            [car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, status || 'Available', assigned_driver_id || null, notes || null, req.params.id]
+        );
         res.json({ message: 'แก้ไขข้อมูลรถสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
