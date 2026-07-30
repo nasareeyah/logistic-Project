@@ -1,33 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { createQuotation, fetchCustomerList } from '../Quotation/apiQuotation';
+import { useState, useEffect } from 'react';
+import { 
+  Search, 
+  Plus, 
+  Trash2, 
+  Eye, 
+  Pencil, 
+  Check, 
+  ArrowLeft, 
+  ArrowRight,
+  FolderOpen
+} from 'lucide-react';
+import { createQuotation, fetchCustomerList } from './apiQuotation';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
 // =========================================================================
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
-const getFutureDate = (days) => {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().split('T')[0];
+const getFutureDate = (fromDateStr, days = 30) => {
+  const d = fromDateStr ? new Date(fromDateStr) : new Date();
+  d.setDate(d.getDate() + days);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
-export default function QuotationForm() {
-  // =========================================================================
-  // 📦 STATE MANAGEMENT
-  // =========================================================================
-  const [customerList, setCustomerList] = useState([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
+const generateQuotationNo = (dateStr) => {
+  let d = new Date();
+  if (dateStr) {
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const randomSeq = Math.floor(1000 + Math.random() * 9000);
+  return `QT-${year}${month}${day}-${randomSeq}`;
+};
+
+export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData }) {
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
+  const [currentStep, setCurrentStep] = useState(1); // 1..5
+
+  const [customerList, setCustomerList] = useState(propCustomers);
+  const [quotationList, setQuotationList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [formData, setFormData] = useState({
-    documentNo: '',
-    issueDate: getTodayDate(),
-    validUntil: getFutureDate(15),
-    saleName: '',
-    jobName: '',
-    currency: 'บาท (THB)',
+  // Sync props
+  useEffect(() => {
+    if (propCustomers && propCustomers.length > 0) {
+      setCustomerList(propCustomers);
+    } else {
+      fetchCustomerList().then(data => setCustomerList(data)).catch(console.error);
+    }
+  }, [propCustomers]);
 
+  useEffect(() => {
+    if (propDocuments && Array.isArray(propDocuments)) {
+      setQuotationList(propDocuments.filter(d => d.document_type === 'Quotation'));
+    }
+  }, [propDocuments]);
+
+  // Form State
+  const initialIssueDate = getTodayDate();
+  const [formData, setFormData] = useState({
+    documentNo: generateQuotationNo(initialIssueDate),
+    issueDate: initialIssueDate,
+    expiryDate: getFutureDate(initialIssueDate, 30),
+    salesperson: '',
+    projectName: '',
+    currency: 'THB',
+
+    // Step 2 Customer fields
     customerId: '',
     customerName: '',
     address: '',
@@ -36,98 +82,115 @@ export default function QuotationForm() {
     phone: '',
     email: '',
 
-    remark: 'กรณีกระดกตู้สินค้าคิดค่าเสียเวลาวันละ 3,000 บาท/คัน'
+    // Step 5 Remark
+    remark: ''
   });
 
+  // Step 3 Routes
   const [routes, setRoutes] = useState([
     { id: 1, origin: '', destination: '' }
   ]);
 
- const [items, setItems] = useState([{
-    id: 1,
-    description: '',
-    quantity: 1,
-    unit: 'คัน',
-    pricePerUnit: 0,
-    total: 0
-}]);
+  // Step 4 Service Items
+  const [items, setItems] = useState([
+    { id: 1, serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+  ]);
 
-  // =========================================================================
-  // 🌐 API CALLS & HANDLERS
-  // =========================================================================
+  // Update Quotation No and Expiry Date when Issue Date changes
+  const handleIssueDateChange = (newDate) => {
+    setFormData(prev => ({
+      ...prev,
+      issueDate: newDate,
+      documentNo: generateQuotationNo(newDate),
+      expiryDate: getFutureDate(newDate, 30)
+    }));
+  };
 
-  useEffect(() => {
-    const loadCustomers = async () => {
-      try {
-        setLoadingCustomers(true);
-        const data = await fetchCustomerList();
-        setCustomerList(data);
-      } catch (error) {
-        console.error('Error loading customers:', error);
-      } finally {
-        setLoadingCustomers(false);
-      }
-    };
+  // Open Create Form Mode
+  const startCreateNew = () => {
+    const today = getTodayDate();
+    setFormData({
+      documentNo: generateQuotationNo(today),
+      issueDate: today,
+      expiryDate: getFutureDate(today, 30),
+      salesperson: '',
+      projectName: '',
+      currency: 'THB',
 
-    loadCustomers();
-  }, []);
+      customerId: '',
+      customerName: '',
+      address: '',
+      taxId: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
 
+      remark: ''
+    });
+    setRoutes([{ id: 1, origin: '', destination: '' }]);
+    setItems([{ id: 1, serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+    setCurrentStep(1);
+    setViewMode('create');
+  };
+
+  // Step 2 Customer Selection Handler
   const handleCustomerSelect = (e) => {
     const selectedId = e.target.value;
-
     if (!selectedId) {
       setFormData(prev => ({
-        ...prev, customerId: '', customerName: '', address: '', taxId: '', contactPerson: '', phone: '', email: ''
+        ...prev,
+        customerId: '',
+        customerName: '',
+        address: '',
+        taxId: '',
+        contactPerson: '',
+        phone: '',
+        email: ''
       }));
       return;
     }
 
-    const customer = customerList.find(c => String(c.customer_id || c.id) === String(selectedId));
+    const selectedCust = customerList.find(
+      c => String(c.customer_id) === String(selectedId) || String(c.id) === String(selectedId)
+    );
 
-    if (customer) {
+    if (selectedCust) {
       setFormData(prev => ({
         ...prev,
-        customerId: customer.customer_id || customer.id,
-        customerName: customer.customer_name || customer.name || '',
-        address: customer.address || '',
-        taxId: customer.tax_id || customer.taxId || '',
-        contactPerson: customer.contact_person || customer.contactPerson || '',
-        phone: customer.phone || '',
-        email: customer.email || ''
+        customerId: selectedCust.customer_id || selectedCust.id,
+        customerName: selectedCust.customer_name || selectedCust.name || '',
+        address: selectedCust.address || '',
+        taxId: selectedCust.tax_id || selectedCust.taxId || '',
+        contactPerson: selectedCust.contact_person || selectedCust.contactPerson || '',
+        phone: selectedCust.phone || '',
+        email: selectedCust.email || ''
       }));
     }
   };
 
+  // Route Handlers
   const handleAddRoute = () => {
-    setRoutes([...routes, { id: Date.now(), origin: '', destination: '' }]);
+    setRoutes(prev => [...prev, { id: Date.now(), origin: '', destination: '' }]);
   };
-
   const handleRemoveRoute = (id) => {
-    if (routes.length > 1) setRoutes(routes.filter(r => r.id !== id));
+    if (routes.length > 1) setRoutes(prev => prev.filter(r => r.id !== id));
   };
-
   const handleRouteChange = (id, field, value) => {
-    setRoutes(routes.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setRoutes(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
+  // Service Item Handlers
   const handleAddItem = () => {
-    setItems([...items, {
-        id: Date.now(),
-        serviceTypeId: 'st-25658',
-        description: '',
-        quantity: 1,
-        unit: 'คัน',
-        pricePerUnit: 0,
-        total: 0
-    }]);
-};
- 
-  const handleRemoveItem = (id) => {
-    if (items.length > 1) setItems(items.filter(i => i.id !== id));
+    setItems(prev => [
+      ...prev,
+      { id: Date.now(), serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+    ]);
   };
-
+  const handleRemoveItem = (id) => {
+    if (items.length > 1) setItems(prev => prev.filter(i => i.id !== id));
+  };
   const handleItemChange = (id, field, value) => {
-    setItems(items.map(item => {
+    setItems(prev => prev.map(item => {
       if (item.id === id) {
         const updated = { ...item, [field]: value };
         if (field === 'quantity' || field === 'pricePerUnit') {
@@ -141,12 +204,15 @@ export default function QuotationForm() {
     }));
   };
 
-  const grandTotal = items.reduce((sum, item) => sum + (item.total || 0), 0);
+  // Subtotal & Grand Total
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+  const vatAmount = subtotal * 0.07;
+  const grandTotal = subtotal + vatAmount;
 
+  // Submit Handler
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setIsSubmitting(true);
-
     try {
       await createQuotation({
         formData,
@@ -154,432 +220,649 @@ export default function QuotationForm() {
         items,
         grandTotal
       });
-
-      alert('บันทึกใบเสนอราคาสำเร็จ!');
-    } catch (error) {
-      console.error('Error saving quotation:', error);
-      alert(' เกิดข้อผิดพลาด: ' + error.message);
+      alert('สร้างใบเสนอราคาเรียบร้อยแล้ว!');
+      if (fetchData) fetchData();
+      setViewMode('list');
+    } catch (err) {
+      console.error('Submit Quotation Error:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // =========================================================================
-  // 🖥️ UI RENDER
-  // =========================================================================
-  return (
-    <div className="max-w-4xl mx-auto space-y-4 pb-12 font-sans text-slate-700 text-xs">
+  // Helper for customer name in list view
+  const getCustomerName = (custObjOrId) => {
+    if (!custObjOrId) return '-';
+    if (typeof custObjOrId === 'object' && custObjOrId.customer_name) return custObjOrId.customer_name;
+    const found = customerList.find(c => String(c.customer_id) === String(custObjOrId));
+    return found ? found.customer_name : String(custObjOrId);
+  };
 
-      {/* 🟢 TOP HEADER CARD: Title & Stepper */}
-      <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-        <div className="flex items-center space-x-2 text-slate-800 mb-0.5">
-          <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <h2 className="text-base font-bold text-slate-800">สร้างใบเสนอราคา</h2>
+  // Filtered List for Table
+  const filteredQuotations = quotationList.filter(doc => {
+    const qNo = doc.document_no || doc.document_id || '';
+    const job = doc.job_name || doc.project || '';
+    const custName = getCustomerName(doc.customer_id);
+    const q = searchQuery.toLowerCase();
+    return qNo.toLowerCase().includes(q) || job.toLowerCase().includes(q) || custName.toLowerCase().includes(q);
+  });
+
+  // Steps configuration
+  const steps = [
+    { number: 1, title: 'Document Info' },
+    { number: 2, title: 'Customer' },
+    { number: 3, title: 'Route' },
+    { number: 4, title: 'Service Items' },
+    { number: 5, title: 'Terms & Notes' }
+  ];
+
+  // =========================================================================
+  // RENDER LIST VIEW (Image 1)
+  // =========================================================================
+  if (viewMode === 'list') {
+    return (
+      <div>
+        {/* Breadcrumb */}
+        <div className="dashboard-breadcrumb">
+          <span>Main</span>
+          <span className="dashboard-breadcrumb-separator">&gt;</span>
+          <span>Document Center</span>
+          <span className="dashboard-breadcrumb-separator">&gt;</span>
+          <span style={{ color: '#64748b' }}>Quotation</span>
         </div>
-        <p className="text-[11px] text-slate-400 mb-6">กรอกรายละเอียดงานขนส่งเพื่อออกใบเสนอราคาให้ลูกค้า</p>
 
-        {/* Stepper */}
-        <div className="flex items-center justify-center space-x-2 md:space-x-4 py-1">
-          {['01', '02', '03', '04', '05'].map((step, idx) => (
-            <React.Fragment key={step}>
-              <div className="flex items-center justify-center px-4 py-1 rounded-full bg-[#e6f4f1] text-[#0d9488] text-xs font-semibold border border-[#c4e8e3] min-w-[50px] text-center">
-                {step}
-              </div>
-              {idx < 4 && <div className="w-8 md:w-16 h-[1.5px] bg-slate-300"></div>}
-            </React.Fragment>
-          ))}
+        {/* Page Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+          <div style={{ textAlign: 'left' }}>
+            <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Quotation</h2>
+            <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Create and manage quotations</p>
+          </div>
+          <button className="btn-primary" onClick={startCreateNew}>
+            <Plus size={16} />
+            <span>Create New Quotation</span>
+          </button>
+        </div>
+
+        {/* Table Panel */}
+        <div className="dashboard-card-panel" style={{ padding: '24px 0 0 0' }}>
+          <div style={{ padding: '0 24px' }}>
+            <div className="panel-search-bar">
+              <Search size={16} className="panel-search-icon" />
+              <input 
+                type="text" 
+                placeholder="Search quotations..." 
+                className="panel-search-input"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table className="custom-clean-table">
+              <thead>
+                <tr>
+                  <th style={{ paddingLeft: '24px' }}>Quotation #</th>
+                  <th>Project</th>
+                  <th>Customer</th>
+                  <th>Issue Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th style={{ width: '110px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredQuotations.map(doc => (
+                  <tr key={doc.document_id || doc._id}>
+                    <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7' }}>
+                      {doc.document_no || doc.document_id}
+                    </td>
+                    <td style={{ color: '#334155' }}>{doc.job_name || doc.project || '-'}</td>
+                    <td style={{ color: '#334155' }}>{getCustomerName(doc.customer_id)}</td>
+                    <td style={{ color: '#64748b' }}>{doc.document_date || '-'}</td>
+                    <td style={{ fontWeight: '600', color: '#0f172a' }}>
+                      {doc.total_amount ? `THB ${Number(doc.total_amount).toLocaleString()}` : 'THB 0'}
+                    </td>
+                    <td>
+                      <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
+                        <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
+                        {doc.status || 'Draft'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="View">
+                        <Eye size={16} />
+                      </button>
+                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="Edit">
+                        <Pencil size={16} />
+                      </button>
+                      <button className="btn-action-delete" title="Delete">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {filteredQuotations.length === 0 && (
+            <div className="empty-state-wrapper">
+              <FolderOpen size={48} className="empty-state-icon" />
+              <p className="empty-state-text">No quotations found. Click 'Create New Quotation' to generate one.</p>
+            </div>
+          )}
         </div>
       </div>
+    );
+  }
 
-      {/* 🟢 FORM */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+  // =========================================================================
+  // RENDER CREATE NEW QUOTATION MULTI-STEP WIZARD (Images 2-5)
+  // =========================================================================
+  return (
+    <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* Back link */}
+      <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+        <button 
+          type="button"
+          onClick={() => setViewMode('list')}
+          style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
+        >
+          <ArrowLeft size={16} />
+          <span>Back to quotations</span>
+        </button>
+      </div>
 
-        {/* SECTION 01: ข้อมูลเอกสาร */}
-        <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">01</span>
-            <h2 className="text-xs font-bold text-slate-800">ข้อมูลเอกสาร</h2>
-          </div>
+      <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
+        Create New Quotation
+      </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">เลขที่ใบเสนอราคา</label>
-              <input
-                type="text"
-                value={formData.documentNo || 'QT202607060001'}
-                disabled
-                className="w-full p-2 bg-slate-100 border border-slate-200 rounded text-slate-400 cursor-not-allowed text-xs"
-              />
-              <span className="text-[10px] text-slate-400 mt-1 block">สร้างอัตโนมัติเมื่อกดบันทึก</span>
-            </div>
+      {/* Main Form Container Card */}
+      <div className="dashboard-card-panel" style={{ padding: '32px' }}>
+        
+        {/* Stepper Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', overflowX: 'auto', paddingBottom: '8px' }}>
+          {steps.map((step, idx) => {
+            const isCompleted = step.number < currentStep;
+            const isActive = step.number === currentStep;
 
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                วันที่ออกเอกสาร <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                value={formData.issueDate}
-                onChange={e => setFormData({ ...formData, issueDate: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">ใช้ได้ถึงวันที่</label>
-              <input
-                type="date"
-                value={formData.validUntil}
-                onChange={e => setFormData({ ...formData, validUntil: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                พนักงานขาย (ผู้ขาย) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="ชื่อ-นามสกุล"
-                value={formData.saleName}
-                onChange={e => setFormData({ ...formData, saleName: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                ชื่องาน <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="เช่น ชิ้นงานหล่อ UHPC DURA"
-                value={formData.jobName}
-                onChange={e => setFormData({ ...formData, jobName: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                สกุลเงินที่เสนอราคา <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.currency}
-                onChange={e => setFormData({ ...formData, currency: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white"
+            return (
+              <div 
+                key={step.number} 
+                onClick={() => setCurrentStep(step.number)}
+                style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '160px', cursor: 'pointer' }}
               >
-                <option value="บาท (THB)">บาท (THB)</option>
-                <option value="ดอลลาร์ (USD)">ดอลลาร์ (USD)</option>
-                <option value="ริงกิต (MYR)">ริงกิต (MYR)</option>
-                <option value="หยวน (CNY)">หยวน (CNY)</option>
-                <option value="ยูโร (EUR)">ยูโร (EUR)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 02: ข้อมูลลูกค้า */}
-        <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">02</span>
-            <h2 className="text-xs font-bold text-slate-800">ข้อมูลลูกค้า</h2>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                ชื่อบริษัท / ข้อมูลลูกค้า <span className="text-red-500">*</span>
-              </label>
-              {customerList.length > 0 && (
-                <select
-                  value={formData.customerId}
-                  onChange={handleCustomerSelect}
-                  disabled={loadingCustomers}
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white mb-2 text-slate-700"
-                >
-                  <option value="">-- เลือกลูกค้าเดิมจากระบบ --</option>
-                  {customerList.map(c => (
-                    <option key={c.customer_id || c.id} value={c.customer_id || c.id}>
-                      {c.customer_name || c.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <input
-                type="text"
-                placeholder="บริษัท ตัวอย่าง จำกัด"
-                value={formData.customerName}
-                onChange={e => setFormData({ ...formData, customerName: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-slate-600 mb-1 text-[11px]">
-                ที่อยู่ <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
-              </label>
-              <input
-                type="text"
-                placeholder="เลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"
-                value={formData.address}
-                onChange={e => setFormData({ ...formData, address: e.target.value })}
-                className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-600 mb-1 text-[11px]">
-                  เลขประจำตัวผู้เสียภาษี <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="0-0000-00000-00-0"
-                  value={formData.taxId}
-                  onChange={e => setFormData({ ...formData, taxId: e.target.value })}
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-600 mb-1 text-[11px]">
-                  ผู้ติดต่อ <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="ชื่อผู้ติดต่อ"
-                  value={formData.contactPerson}
-                  onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-slate-600 mb-1 text-[11px]">
-                  เบอร์โทร <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="0X-XXXX-XXXX"
-                  value={formData.phone}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-slate-600 mb-1 text-[11px]">
-                  อีเมล <span className="text-slate-400 font-normal">(ไม่บังคับ)</span>
-                </label>
-                <input
-                  type="email"
-                  placeholder="name@company.com"
-                  value={formData.email}
-                  onChange={e => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 03: เส้นทางขนส่ง */}
-        <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">03</span>
-            <h2 className="text-xs font-bold text-slate-800">เส้นทางขนส่ง</h2>
-          </div>
-
-          <div className="space-y-3">
-            {routes.map((route) => (
-              <div key={route.id} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                <div className={routes.length > 1 ? "md:col-span-5" : "md:col-span-6"}>
-                  <label className="block text-slate-600 mb-1 text-[11px]">
-                    ต้นทาง <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="เช่น สงขลา, ไทย"
-                    value={route.origin}
-                    onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                    required
-                  />
-                </div>
-                <div className={routes.length > 1 ? "md:col-span-5" : "md:col-span-6"}>
-                  <label className="block text-slate-600 mb-1 text-[11px]">
-                    ปลายทาง <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="เช่น ชลบุรี, ไทย"
-                    value={route.destination}
-                    onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                    required
-                  />
-                </div>
-                {routes.length > 1 && (
-                  <div className="md:col-span-2 pt-5">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRoute(route.id)}
-                      className="w-full py-2 bg-red-50 text-red-600 rounded border border-red-200 hover:bg-red-100 transition text-[11px] font-medium"
-                    >
-                      ลบรายการ
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Step Circle */}
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    backgroundColor: isCompleted || isActive ? '#0284c7' : '#f1f5f9',
+                    color: isCompleted || isActive ? '#ffffff' : '#64748b',
+                    border: isCompleted || isActive ? 'none' : '1px solid #cbd5e1'
+                  }}>
+                    {isCompleted ? <Check size={18} /> : step.number}
                   </div>
+                  {/* Step Label */}
+                  <span style={{ 
+                    fontSize: '14px', 
+                    fontWeight: isActive ? '700' : '500', 
+                    color: isActive ? '#0f172a' : isCompleted ? '#334155' : '#94a3b8',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {step.title}
+                  </span>
+                </div>
+
+                {/* Line connector between steps */}
+                {idx < steps.length - 1 && (
+                  <div style={{
+                    flex: 1,
+                    height: '2px',
+                    backgroundColor: step.number < currentStep ? '#0284c7' : '#e2e8f0',
+                    margin: '0 12px',
+                    minWidth: '20px'
+                  }} />
                 )}
               </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={handleAddRoute}
-              className="w-full py-2 bg-[#e6f4f1]/60 hover:bg-[#e6f4f1] border border-dashed border-[#aadae0] rounded-lg text-xs text-[#0d9488] transition font-medium flex items-center justify-center space-x-1 mt-2"
-            >
-              <span>+ เพิ่มรายการ</span>
-            </button>
-          </div>
+            );
+          })}
         </div>
 
-        {/* SECTION 04: รายการค่าบริการ */}
-        <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">04</span>
-            <h2 className="text-xs font-bold text-slate-800">รายการค่าบริการ</h2>
-          </div>
+        {/* STEP 1: Document Info (Image 2) */}
+        {currentStep === 1 && (
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div className="form-group">
+                <label className="form-label">Quotation No. (auto)</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={formData.documentNo || ''} 
+                  disabled 
+                  style={{ backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed' }}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Issue Date</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={formData.issueDate || ''}
+                  onChange={e => handleIssueDateChange(e.target.value)}
+                />
+              </div>
+            </div>
 
-          <div className="hidden md:grid grid-cols-12 gap-2 text-[11px] font-normal text-slate-400 mb-2 px-1">
-            <div className="col-span-5">รายละเอียด</div>
-            <div className="col-span-2 text-center">จำนวน</div>
-            <div className="col-span-2 text-center">หน่วย</div>
-            <div className="col-span-2 text-center">ราคาต่อหน่วย</div>
-            <div className="col-span-1 text-right">ยอดรวม</div>
-          </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div className="form-group">
+                <label className="form-label">Expiry Date</label>
+                <input 
+                  type="date" 
+                  className="form-input" 
+                  value={formData.expiryDate || ''}
+                  onChange={e => setFormData({ ...formData, expiryDate: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Salesperson</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="ชื่อพนักงานขาย..." 
+                  value={formData.salesperson || ''}
+                  onChange={e => setFormData({ ...formData, salesperson: e.target.value })}
+                />
+              </div>
+            </div>
 
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-12 md:col-span-5">
-                  <input
-                    type="text"
-                    placeholder="เช่น ค่าขนส่งไทย-มาเลเซีย..."
-                    value={item.description}
-                    onChange={e => handleItemChange(item.id, 'description', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-                    required
-                  />
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="form-label">Project Name</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="ชื่องาน / โครงการ..." 
+                value={formData.projectName || ''}
+                onChange={e => setFormData({ ...formData, projectName: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Customer (Image 3) */}
+        {currentStep === 2 && (
+          <div style={{ textAlign: 'left' }}>
+            {/* Customer Dropdown */}
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="form-label">Select existing customer (optional)</label>
+              <select 
+                className="form-select"
+                value={formData.customerId || ''}
+                onChange={handleCustomerSelect}
+              >
+                <option value="">— Select customer —</option>
+                {Array.isArray(customerList) && customerList.map(c => (
+                  <option key={c.customer_id || c.id} value={c.customer_id || c.id}>
+                    {c.customer_name || c.name} {c.tax_id ? `(${c.tax_id})` : ''}
+                  </option>
+                ))}
+              </select>
+              <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                * หากไม่มีข้อมูลลูกค้า กรุณาไปเพิ่มข้อมูลลูกค้าใน Master Data &gt; Customers ก่อน
+              </span>
+            </div>
+
+            {/* Customer Details */}
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label">Company / Customer Name</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="ชื่อบริษัทหรือลูกค้า..." 
+                value={formData.customerName || ''}
+                onChange={e => setFormData({ ...formData, customerName: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label className="form-label">Address</label>
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="ที่อยู่..." 
+                value={formData.address || ''}
+                onChange={e => setFormData({ ...formData, address: e.target.value })}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div className="form-group">
+                <label className="form-label">Tax ID</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="เลขประจำตัวผู้เสียภาษี..." 
+                  value={formData.taxId || ''}
+                  onChange={e => setFormData({ ...formData, taxId: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Contact Person</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="ผู้ติดต่อ..." 
+                  value={formData.contactPerson || ''}
+                  onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+              <div className="form-group">
+                <label className="form-label">Phone</label>
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  placeholder="เบอร์โทร..." 
+                  value={formData.phone || ''}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input 
+                  type="email" 
+                  className="form-input" 
+                  placeholder="อีเมล..." 
+                  value={formData.email || ''}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Route (Image 4) */}
+        {currentStep === 3 && (
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>Transportation Routes</h3>
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={handleAddRoute}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '6px 14px' }}
+              >
+                <Plus size={16} />
+                <span>Add Route</span>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              {routes.map((route, idx) => (
+                <div key={route.id} style={{ 
+                  backgroundColor: '#f8fafc', 
+                  border: '1px solid #e2e8f0', 
+                  borderRadius: '10px', 
+                  padding: '20px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 40px',
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Origin</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="ต้นทาง (เช่น สงขลา)..." 
+                      value={route.origin}
+                      onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Destination</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="ปลายทาง (เช่น ชลบุรี)..." 
+                      value={route.destination}
+                      onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '18px' }}>
+                    {routes.length > 1 && (
+                      <button 
+                        type="button" 
+                        className="btn-action-delete"
+                        onClick={() => handleRemoveRoute(route.id)}
+                        title="Delete route"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-3 md:col-span-2">
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.quantity}
-                    onChange={e => handleItemChange(item.id, 'quantity', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center"
-                  />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Service Items (Image 5) */}
+        {currentStep === 4 && (
+          <div style={{ textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>Service Items</h3>
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={handleAddItem}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '6px 14px' }}
+              >
+                <Plus size={16} />
+                <span>Add Item</span>
+              </button>
+            </div>
+
+            {/* Service Items Table Header */}
+            <div style={{ overflowX: 'auto', marginBottom: '24px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px', textAlign: 'left' }}>
+                    <th style={{ padding: '8px 12px', width: '20%' }}>Service Type</th>
+                    <th style={{ padding: '8px 12px' }}>Description</th>
+                    <th style={{ padding: '8px 12px', width: '8%', textAlign: 'center' }}>Qty</th>
+                    <th style={{ padding: '8px 12px', width: '13%', textAlign: 'center' }}>Unit Quantity</th>
+                    <th style={{ padding: '8px 12px', width: '13%', textAlign: 'right' }}>Unit Price</th>
+                    <th style={{ padding: '8px 12px', width: '10%', textAlign: 'center' }}>Unit</th>
+                    <th style={{ padding: '8px 12px', width: '14%', textAlign: 'right' }}>Total</th>
+                    <th style={{ padding: '8px 12px', width: '40px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => (
+                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px 6px' }}>
+                        <select 
+                          className="form-select"
+                          style={{ fontSize: '13px', padding: '8px' }}
+                          value={item.serviceType}
+                          onChange={e => handleItemChange(item.id, 'serviceType', e.target.value)}
+                        >
+                          <option value="Inland Transport">Inland Transport</option>
+                          <option value="Sea Freight">Sea Freight</option>
+                          <option value="Air Freight">Air Freight</option>
+                          <option value="Customs Clearance">Customs Clearance</option>
+                          <option value="Warehousing">Warehousing</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input 
+                          type="text"
+                          className="form-input"
+                          style={{ fontSize: '13px', padding: '8px' }}
+                          placeholder="รายละเอียดบริการ..."
+                          value={item.description}
+                          onChange={e => handleItemChange(item.id, 'description', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input 
+                          type="number"
+                          min="1"
+                          className="form-input"
+                          style={{ fontSize: '13px', padding: '8px', textAlign: 'center' }}
+                          value={item.quantity}
+                          onChange={e => handleItemChange(item.id, 'quantity', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input 
+                          type="text"
+                          className="form-input"
+                          style={{ fontSize: '13px', padding: '8px', textAlign: 'center' }}
+                          placeholder="เช่น trip, คัน"
+                          value={item.unitQuantity}
+                          onChange={e => handleItemChange(item.id, 'unitQuantity', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <input 
+                          type="number"
+                          min="0"
+                          className="form-input"
+                          style={{ fontSize: '13px', padding: '8px', textAlign: 'right' }}
+                          value={item.pricePerUnit}
+                          onChange={e => handleItemChange(item.id, 'pricePerUnit', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <select 
+                          className="form-select"
+                          style={{ fontSize: '13px', padding: '8px', textAlign: 'center' }}
+                          value={item.unit}
+                          onChange={e => handleItemChange(item.id, 'unit', e.target.value)}
+                        >
+                          <option value="THB">THB</option>
+                          <option value="USD">USD</option>
+                          <option value="MYR">MYR</option>
+                          <option value="CNY">CNY</option>
+                          <option value="EUR">EUR</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>
+                        {Number(item.total).toLocaleString(undefined, { minimumFractionDigits: 0 })}
+                      </td>
+                      <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                        {items.length > 1 && (
+                          <button 
+                            type="button" 
+                            className="btn-action-delete"
+                            onClick={() => handleRemoveItem(item.id)}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Totals Summary */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+              <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                  <span>Subtotal</span>
+                  <span>THB {subtotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
-                <div className="col-span-3 md:col-span-2">
-                  <input
-                    type="text"
-                    value={item.unit}
-                    onChange={e => handleItemChange(item.id, 'unit', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-center"
-                  />
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                  <span>VAT 7%</span>
+                  <span>THB {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
-                <div className="col-span-4 md:col-span-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={item.pricePerUnit}
-                    onChange={e => handleItemChange(item.id, 'pricePerUnit', e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white text-right font-medium"
-                  />
-                </div>
-                <div className="col-span-2 md:col-span-1 flex items-center justify-end space-x-2">
-                  <span className="text-slate-400 text-xs">
-                    {item.total ? item.total.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
-                  </span>
-                  {items.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="w-5 h-5 rounded border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-300 flex items-center justify-center transition text-[10px]"
-                    >
-                      ✕
-                    </button>
-                  )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#0284c7', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
+                  <span>Grand Total</span>
+                  <span>THB {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
               </div>
-            ))}
-
-            <button
-              type="button"
-              onClick={handleAddItem}
-              className="w-full py-2 bg-[#e6f4f1]/60 hover:bg-[#e6f4f1] border border-dashed border-[#aadae0] rounded-lg text-xs text-[#0d9488] transition font-medium flex items-center justify-center space-x-1 mt-2"
-            >
-              <span>+ เพิ่มรายการ</span>
-            </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* SECTION 05: เงื่อนไขและหมายเหตุ */}
-        <div className="bg-white rounded-xl shadow-xs p-5 border border-slate-200">
-          <div className="flex items-center space-x-2 mb-4">
-            <span className="bg-[#e6f4f1] text-[#0d9488] text-[11px] px-2 py-0.5 rounded font-semibold border border-[#c4e8e3]">05</span>
-            <h2 className="text-xs font-bold text-slate-800">เงื่อนไขและหมายเหตุ</h2>
+        {/* STEP 5: Terms & Notes */}
+        {currentStep === 5 && (
+          <div style={{ textAlign: 'left' }}>
+            <div className="form-group" style={{ marginBottom: '24px' }}>
+              <label className="form-label">Notes (หมายเหตุ)</label>
+              <textarea 
+                className="form-textarea"
+                rows="5"
+                placeholder="ระบุเงื่อนไขการขนส่ง หรือหมายเหตุเพิ่มเติม..."
+                value={formData.remark}
+                onChange={e => setFormData({ ...formData, remark: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Navigation Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', marginTop: '16px' }}>
+          <div>
+            <button 
+              type="button" 
+              className="btn-secondary"
+              disabled={currentStep === 1}
+              onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+              style={{ 
+                opacity: currentStep === 1 ? 0.5 : 1, 
+                cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <ArrowLeft size={16} />
+              <span>Back</span>
+            </button>
           </div>
 
           <div>
-            <label className="block text-slate-600 mb-1 text-[11px]">หมายเหตุ</label>
-            <textarea
-              rows="3"
-              placeholder="เช่น กรณีกระดกตู้สินค้าคิดค่าเสียเวลาวันละ 3,000 บาท/คัน"
-              value={formData.remark}
-              onChange={e => setFormData({ ...formData, remark: e.target.value })}
-              className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
-            ></textarea>
+            {currentStep < 5 ? (
+              <button 
+                type="button" 
+                className="btn-primary"
+                onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <span>Next</span>
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button 
+                type="button" 
+                className="btn-primary"
+                disabled={isSubmitting}
+                onClick={handleSubmit}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Check size={16} />
+                <span>{isSubmitting ? 'Submitting...' : 'Create Quotation'}</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* ACTION BUTTONS */}
-        <div className="flex justify-end items-center space-x-3 text-xs pt-2">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-6 py-2.5 bg-[#0f2d5c] hover:bg-[#0a2044] disabled:bg-slate-400 text-white rounded-full transition font-medium shadow-xs flex items-center space-x-2 cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-            </svg>
-            <span>{isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => alert('แสดงตัวอย่างใบเสนอราคา (Preview)')}
-            className="px-6 py-2.5 bg-[#0f2d5c] hover:bg-[#0a2044] text-white rounded-full transition font-medium shadow-xs flex items-center space-x-2 cursor-pointer"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <span>Preview</span>
-          </button>
-        </div>
-
-      </form>
+      </div>
     </div>
   );
 }

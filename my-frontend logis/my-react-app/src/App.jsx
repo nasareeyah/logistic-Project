@@ -293,7 +293,11 @@ function App() {
           )}
           
           {activeTab === 'quotation' && (
-            <QuotationForm />
+            <QuotationForm 
+              customers={customers}
+              documents={documents}
+              fetchData={fetchData}
+            />
           )}
           {/* {activeTab === 'invoice' && (
             <DocumentTable

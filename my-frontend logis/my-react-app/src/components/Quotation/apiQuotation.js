@@ -27,14 +27,17 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+            document_no: formData.documentNo || null,
+            document_type: 'Quotation',
             customer_id: formData.customerId || null,
-            sale_name: formData.saleName,
-            job_name: formData.jobName,
-            document_date: formData.issueDate,
-            valid_until: formData.validUntil,
-            currency: formData.currency,
-            remark: formData.remark,
-            total_amount: grandTotal
+            sale_name: formData.salesperson || formData.saleName || '',
+            job_name: formData.projectName || formData.jobName || '',
+            document_date: formData.issueDate || null,
+            valid_until: formData.expiryDate || formData.validUntil || null,
+            currency: formData.currency || 'THB',
+            remark: formData.remark || '',
+            total_amount: grandTotal || 0,
+            status: 'Draft'
         })
     });
 
@@ -58,9 +61,9 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
                     service_typeID: 'st-25658',
                     description: item.description,
                     quantity: Number(item.quantity) || null,
-                    unit_quantity: item.unit, // ส่งหน่วยของจำนวนมาที่นี่ (เช่น 'คัน')
+                    unit_quantity: item.unitQuantity || item.unit_quantity || 'trip', // แมปเข้า unit_quantity ใน DB
                     default_price: Number(item.pricePerUnit) || 0,
-                    unit: item.priceUnit || item.unit // ส่งหน่วยของราคามาที่นี่ (ใช้ item.priceUnit ถ้ามี)
+                    unit: item.unit || 'THB' // แมปเข้า unit ใน DB (ย้ายมาจากขั้นที่ 1)
                 })
             });
 
@@ -73,7 +76,7 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
                     service_id: serviceId,
                     description: item.description,
                     quantity: Number(item.quantity),
-                    unit: item.unit,
+                    unit: item.unitQuantity || item.unit_quantity || 'trip',
                     price_per_unit: Number(item.pricePerUnit),
                     total_price: Number(item.total)
                 })
