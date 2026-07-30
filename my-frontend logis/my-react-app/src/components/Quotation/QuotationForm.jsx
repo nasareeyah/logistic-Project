@@ -15,7 +15,13 @@ import { createQuotation, fetchCustomerList } from './apiQuotation';
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
 // =========================================================================
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+const getTodayDate = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const getFutureDate = (fromDateStr, days = 30) => {
   const d = fromDateStr ? new Date(fromDateStr) : new Date();
@@ -43,22 +49,27 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
-  const [customerList, setCustomerList] = useState(propCustomers);
+  const [customerList, setCustomerList] = useState(Array.isArray(propCustomers) ? propCustomers : []);
   const [quotationList, setQuotationList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync props
   useEffect(() => {
-    if (propCustomers && propCustomers.length > 0) {
+    if (Array.isArray(propCustomers) && propCustomers.length > 0) {
       setCustomerList(propCustomers);
     } else {
-      fetchCustomerList().then(data => setCustomerList(data)).catch(console.error);
+      fetchCustomerList()
+        .then(data => {
+          if (Array.isArray(data)) setCustomerList(data);
+          else setCustomerList([]);
+        })
+        .catch(console.error);
     }
   }, [propCustomers]);
 
   useEffect(() => {
-    if (propDocuments && Array.isArray(propDocuments)) {
+    if (Array.isArray(propDocuments)) {
       setQuotationList(propDocuments.filter(d => d.document_type === 'Quotation'));
     }
   }, [propDocuments]);
@@ -71,7 +82,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     expiryDate: getFutureDate(initialIssueDate, 30),
     salesperson: '',
     projectName: '',
-    currency: 'THB',
 
     // Step 2 Customer fields
     customerId: '',
@@ -115,7 +125,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       expiryDate: getFutureDate(today, 30),
       salesperson: '',
       projectName: '',
-      currency: 'THB',
 
       customerId: '',
       customerName: '',
@@ -150,9 +159,9 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       return;
     }
 
-    const selectedCust = customerList.find(
-      c => String(c.customer_id) === String(selectedId) || String(c.id) === String(selectedId)
-    );
+    const selectedCust = Array.isArray(customerList)
+      ? customerList.find(c => String(c.customer_id) === String(selectedId) || String(c.id) === String(selectedId))
+      : null;
 
     if (selectedCust) {
       setFormData(prev => ({
@@ -235,7 +244,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const getCustomerName = (custObjOrId) => {
     if (!custObjOrId) return '-';
     if (typeof custObjOrId === 'object' && custObjOrId.customer_name) return custObjOrId.customer_name;
-    const found = customerList.find(c => String(c.customer_id) === String(custObjOrId));
+    const found = Array.isArray(customerList) ? customerList.find(c => String(c.customer_id) === String(custObjOrId)) : null;
     return found ? found.customer_name : String(custObjOrId);
   };
 
@@ -437,7 +446,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           })}
         </div>
 
-        {/* STEP 1: Document Info (Image 2) */}
+        {/* STEP 1: Document Info */}
         {currentStep === 1 && (
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
@@ -497,7 +506,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           </div>
         )}
 
-        {/* STEP 2: Customer (Image 3) */}
+        {/* STEP 2: Customer */}
         {currentStep === 2 && (
           <div style={{ textAlign: 'left' }}>
             {/* Customer Dropdown */}
@@ -591,7 +600,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           </div>
         )}
 
-        {/* STEP 3: Route (Image 4) */}
+        {/* STEP 3: Route */}
         {currentStep === 3 && (
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -608,7 +617,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-              {routes.map((route, idx) => (
+              {routes.map((route) => (
                 <div key={route.id} style={{ 
                   backgroundColor: '#f8fafc', 
                   border: '1px solid #e2e8f0', 
@@ -657,7 +666,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           </div>
         )}
 
-        {/* STEP 4: Service Items (Image 5) */}
+        {/* STEP 4: Service Items */}
         {currentStep === 4 && (
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -803,7 +812,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {currentStep === 5 && (
           <div style={{ textAlign: 'left' }}>
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label">Notes (หมายเหตุ)</label>
+              <label className="form-label">Terms & Notes (หมายเหตุ / เงื่อนไข)</label>
               <textarea 
                 className="form-textarea"
                 rows="5"

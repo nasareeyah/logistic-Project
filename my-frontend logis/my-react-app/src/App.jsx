@@ -24,6 +24,8 @@ function App() {
   
   const [services, setServices] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
+  const [consigners, setConsigners] = useState([]);
+  const [consignees, setConsignees] = useState([]);
 
   const handleLogin = (email, password) => {
     if (!email || !password) {
@@ -50,9 +52,11 @@ function App() {
       fetch('http://localhost:3000/api/document').then(r => r.json()),      // [3] เอกสาร
       fetch('http://localhost:3000/api/document_items').then(r => r.json()), // [4] ไอเทมเอกสาร
       fetch('http://localhost:3000/api/service').then(r => r.json()),       // [5] บริการ
-      fetch('http://localhost:3000/api/service_type').then(r => r.json())   // [6] ประเภทบริการ
+      fetch('http://localhost:3000/api/service_type').then(r => r.json()),
+      fetch('http://localhost:3000/api/consigner').then(r => r.json()),     // [7] ผู้ส่ง
+      fetch('http://localhost:3000/api/consignee').then(r => r.json())      // [8] ผู้รับ
     ])
-      .then(([c, carsData, d, docData, itemsData, serviceData, typeData]) => {
+      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData]) => {
         setCustomers(c);
         setCars(carsData);
         setDrivers(d);
@@ -60,6 +64,8 @@ function App() {
         setDocumentItems(itemsData);
         setServices(serviceData);
         setServiceTypes(typeData);
+        setConsigners(consignerData);
+        setConsignees(consigneeData);
         setLoading(false);
       })
       .catch(err => {
