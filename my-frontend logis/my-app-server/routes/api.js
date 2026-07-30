@@ -154,9 +154,13 @@ router.delete('/driver/:id', async (req, res) => {
 router.get('/document', async (req, res) => {
     try {
         const query = `
-            SELECT d.*, s.description AS service_name
+            SELECT d.*, s.description AS service_name,
+                   cgr.address AS consigner_address,
+                   cge.address AS consignee_address
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
+            LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
+            LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
             ORDER BY d.document_date DESC
         `;
         const result = await db.query(query);
@@ -324,7 +328,13 @@ router.delete('/document/:id', async (req, res) => {
 
 router.get('/document_items', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM document_items');
+        const { document_id } = req.query;
+        let result;
+        if (document_id) {
+            result = await db.query('SELECT * FROM document_items WHERE document_id = $1', [document_id]);
+        } else {
+            result = await db.query('SELECT * FROM document_items');
+        }
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -340,6 +350,15 @@ router.post('/document_items', async (req, res) => {
             [itemId, document_id, service_id || null, description || null, quantity || null, unit || null, price_per_unit || null, total_price || null]
         );
         res.json({ message: 'บันทึกรายการสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/document_items/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM document_items WHERE document_items_id = $1', [req.params.id]);
+        res.json({ message: 'ลบรายการสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -381,5 +400,108 @@ router.get('/service_type', async (req, res) => {
     }
 });
 
+// --- CONSIGNER ---
+router.get('/consigner', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM consigner ORDER BY address');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/consigner', async (req, res) => {
+    try {
+        const { consigner_id, consigner_name, address } = req.body;
+        if (address) {
+            const existing = await db.query('SELECT consigner_id FROM consigner WHERE address = $1', [address]);
+            if (existing.rows.length > 0) {
+                return res.json({ consigner_id: existing.rows[0].consigner_id, address });
+            }
+        }
+        const finalId = consigner_id || ('cgr-' + Math.floor(10000 + Math.random() * 90000));
+        await db.query(
+            'INSERT INTO consigner (consigner_id, consigner_name, address) VALUES ($1,$2,$3)',
+            [finalId, consigner_name || null, address || null]
+        );
+        res.json({ consigner_id: finalId, address });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/consigner/:id', async (req, res) => {
+    try {
+        const { consigner_name, address } = req.body;
+        await db.query(
+            'UPDATE consigner SET consigner_name=$1, address=$2 WHERE consigner_id=$3',
+            [consigner_name || null, address || null, req.params.id]
+        );
+        res.json({ message: 'แก้ไขผู้ส่งสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/consigner/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM consigner WHERE consigner_id = $1', [req.params.id]);
+        res.json({ message: 'ลบผู้ส่งสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- CONSIGNEE ---
+router.get('/consignee', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM consignee ORDER BY address');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/consignee', async (req, res) => {
+    try {
+        const { consignee_id, consignee_name, address } = req.body;
+        if (address) {
+            const existing = await db.query('SELECT consignee_id FROM consignee WHERE address = $1', [address]);
+            if (existing.rows.length > 0) {
+                return res.json({ consignee_id: existing.rows[0].consignee_id, address });
+            }
+        }
+        const finalId = consignee_id || ('cge-' + Math.floor(10000 + Math.random() * 90000));
+        await db.query(
+            'INSERT INTO consignee (consignee_id, consignee_name, address) VALUES ($1,$2,$3)',
+            [finalId, consignee_name || null, address || null]
+        );
+        res.json({ consignee_id: finalId, address });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/consignee/:id', async (req, res) => {
+    try {
+        const { consignee_name, address } = req.body;
+        await db.query(
+            'UPDATE consignee SET consignee_name=$1, address=$2 WHERE consignee_id=$3',
+            [consignee_name || null, address || null, req.params.id]
+        );
+        res.json({ message: 'แก้ไขผู้รับสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/consignee/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM consignee WHERE consignee_id = $1', [req.params.id]);
+        res.json({ message: 'ลบผู้รับสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 module.exports = router;

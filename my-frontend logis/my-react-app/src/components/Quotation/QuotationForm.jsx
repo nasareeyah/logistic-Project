@@ -10,7 +10,7 @@ import {
   ArrowRight,
   FolderOpen
 } from 'lucide-react';
-import { createQuotation, fetchCustomerList } from './apiQuotation';
+import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
@@ -45,7 +45,7 @@ const generateQuotationNo = (dateStr) => {
   return `QT-${year}${month}${day}-${randomSeq}`;
 };
 
-export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData }) {
+export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [] }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
@@ -53,6 +53,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [quotationList, setQuotationList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingDocId, setEditingDocId] = useState(null);
 
   // Sync props
   useEffect(() => {
@@ -138,6 +139,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     });
     setRoutes([{ id: 1, origin: '', destination: '' }]);
     setItems([{ id: 1, serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+    setEditingDocId(null);
     setCurrentStep(1);
     setViewMode('create');
   };
@@ -218,18 +220,80 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const vatAmount = subtotal * 0.07;
   const grandTotal = subtotal + vatAmount;
 
+  // Edit Handler — โหลดข้อมูลเอกสารมาใส่ในฟอร์ม
+  const handleEditQuotation = async (doc) => {
+    const origin = doc.consigner_address || '';
+    const destination = doc.consignee_address || '';
+
+    setFormData({
+      documentNo: doc.document_no || '',
+      issueDate: doc.document_date || getTodayDate(),
+      expiryDate: doc.valid_until || getFutureDate(doc.document_date, 30),
+      salesperson: doc.sale_name || '',
+      projectName: doc.job_name || '',
+      customerId: doc.customer_id || '',
+      customerName: '',
+      address: '',
+      taxId: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
+      remark: doc.remark || ''
+    });
+    setRoutes([{ id: 1, origin, destination }]);
+    setEditingDocId(doc.document_id);
+
+    // โหลด items จาก document_items
+    try {
+      const res = await fetch(`http://localhost:3000/api/document_items?document_id=${doc.document_id}`);
+      const docItems = await res.json();
+      if (docItems.length > 0) {
+        setItems(docItems.map((di, idx) => ({
+          id: Date.now() + idx,
+          serviceType: 'Inland Transport',
+          description: di.description || '',
+          quantity: Number(di.quantity) || 1,
+          unitQuantity: di.unit || 'trip',
+          pricePerUnit: Number(di.unit_price) || 0,
+          unit: 'THB',
+          total: Number(di.total_price) || 0
+        })));
+      } else {
+        setItems([{ id: Date.now(), serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+      }
+    } catch (e) {
+      console.error('Load items error:', e);
+    }
+
+    setCurrentStep(1);
+    setViewMode('create');
+  };
+
+  // Delete Handler
+  const handleDeleteQuotation = async (docId) => {
+    if (!confirm('ยืนยันการลบเอกสารนี้?')) return;
+    try {
+      await deleteQuotation(docId);
+      alert('ลบเอกสารสำเร็จ');
+      if (fetchData) fetchData();
+    } catch (err) {
+      alert('ลบไม่สำเร็จ: ' + err.message);
+    }
+  };
+
   // Submit Handler
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setIsSubmitting(true);
     try {
-      await createQuotation({
-        formData,
-        routes,
-        items,
-        grandTotal
-      });
-      alert('สร้างใบเสนอราคาเรียบร้อยแล้ว!');
+      if (editingDocId) {
+        await updateQuotation(editingDocId, { formData, routes, items, grandTotal });
+        alert('แก้ไขใบเสนอราคาเรียบร้อยแล้ว!');
+        setEditingDocId(null);
+      } else {
+        await createQuotation({ formData, routes, items, grandTotal });
+        alert('สร้างใบเสนอราคาเรียบร้อยแล้ว!');
+      }
       if (fetchData) fetchData();
       setViewMode('list');
     } catch (err) {
@@ -343,10 +407,10 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                       <button className="btn-action-edit" style={{ marginRight: '6px' }} title="View">
                         <Eye size={16} />
                       </button>
-                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="Edit">
+                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="Edit" onClick={() => handleEditQuotation(doc)}>
                         <Pencil size={16} />
                       </button>
-                      <button className="btn-action-delete" title="Delete">
+                      <button className="btn-action-delete" title="Delete" onClick={() => handleDeleteQuotation(doc.document_id)}>
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -385,7 +449,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       </div>
 
       <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
-        Create New Quotation
+        {editingDocId ? 'Edit Quotation' : 'Create New Quotation'}
       </h2>
 
       {/* Main Form Container Card */}
@@ -631,22 +695,34 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Origin</label>
                     <input 
+                      list="origin-list"
                       type="text" 
                       className="form-input" 
                       placeholder="ต้นทาง (เช่น สงขลา)..." 
                       value={route.origin}
                       onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
                     />
+                    <datalist id="origin-list">
+                      {consigners.map(c => (
+                        <option key={c.consigner_id} value={c.address} />
+                      ))}
+                    </datalist>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Destination</label>
                     <input 
+                      list="destination-list"
                       type="text" 
                       className="form-input" 
                       placeholder="ปลายทาง (เช่น ชลบุรี)..." 
                       value={route.destination}
                       onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
                     />
+                    <datalist id="destination-list">
+                      {consignees.map(c => (
+                        <option key={c.consignee_id} value={c.address} />
+                      ))}
+                    </datalist>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '18px' }}>
                     {routes.length > 1 && (
