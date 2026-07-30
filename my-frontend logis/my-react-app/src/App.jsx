@@ -303,6 +303,8 @@ function App() {
               customers={customers}
               documents={documents}
               fetchData={fetchData}
+              consigners={consigners}
+              consignees={consignees}
             />
           )}
           {/* {activeTab === 'invoice' && (
