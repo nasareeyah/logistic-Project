@@ -154,9 +154,13 @@ router.delete('/driver/:id', async (req, res) => {
 router.get('/document', async (req, res) => {
     try {
         const query = `
-            SELECT d.*, s.description AS service_name
+            SELECT d.*, s.description AS service_name,
+                   cgr.address AS consigner_address,
+                   cge.address AS consignee_address
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
+            LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
+            LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
             ORDER BY d.document_date DESC
         `;
         const result = await db.query(query);
@@ -380,6 +384,68 @@ router.get('/service_type', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// --- CONSIGNER ---
+router.get('/consigner', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM consigner');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
+router.post('/consigner', async (req, res) => {
+    try {
+        const { consigner_id, consigner_name, address } = req.body;
 
+        // เช็คว่า address นี้มีอยู่แล้วหรือยัง
+        if (address) {
+            const existing = await db.query('SELECT consigner_id FROM consigner WHERE address = $1', [address]);
+            if (existing.rows.length > 0) {
+                return res.json({ consigner_id: existing.rows[0].consigner_id, address });
+            }
+        }
+
+        const finalId = consigner_id || ('cgr-' + Math.floor(10000 + Math.random() * 90000));
+        await db.query(
+            'INSERT INTO consigner (consigner_id, consigner_name, address) VALUES ($1,$2,$3)',
+            [finalId, consigner_name || null, address || null]
+        );
+        res.json({ consigner_id: finalId, address });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// --- consignee ---
+router.get('/consignee', async (req, res) => {
+    try {
+        const result = await db.query('SELECT * FROM consignee');
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/consignee', async (req, res) => {
+    try {
+        const { consignee_id, consignee_name, address } = req.body;
+
+        // เช็คว่า address นี้มีอยู่แล้วหรือยัง
+        if (address) {
+            const existing = await db.query('SELECT consignee_id FROM consignee WHERE address = $1', [address]);
+            if (existing.rows.length > 0) {
+                return res.json({ consignee_id: existing.rows[0].consignee_id, address });
+            }
+        }
+
+        const finalId = consignee_id || ('cge-' + Math.floor(10000 + Math.random() * 90000));
+        await db.query(
+            'INSERT INTO consignee (consignee_id, consignee_name, address) VALUES ($1,$2,$3)',
+            [finalId, consignee_name || null, address || null]
+        );
+        res.json({ consignee_id: finalId, address });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 module.exports = router;

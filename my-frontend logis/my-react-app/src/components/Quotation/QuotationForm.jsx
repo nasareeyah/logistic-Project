@@ -12,7 +12,7 @@ const getFutureDate = (days) => {
   return date.toISOString().split('T')[0];
 };
 
-export default function QuotationForm() {
+export default function QuotationForm({ consigners = [], consignees = [] }) {
   // =========================================================================
   // 📦 STATE MANAGEMENT
   // =========================================================================
@@ -408,6 +408,7 @@ export default function QuotationForm() {
                     ต้นทาง <span className="text-red-500">*</span>
                   </label>
                   <input
+                    list="origin-list"
                     type="text"
                     placeholder="เช่น สงขลา, ไทย"
                     value={route.origin}
@@ -415,12 +416,18 @@ export default function QuotationForm() {
                     className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
                     required
                   />
+                  <datalist id="origin-list">
+                    {consigners.map(c => (
+                      <option key={c.consigner_id} value={c.address} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className={routes.length > 1 ? "md:col-span-5" : "md:col-span-6"}>
                   <label className="block text-slate-600 mb-1 text-[11px]">
                     ปลายทาง <span className="text-red-500">*</span>
                   </label>
                   <input
+                    list="destination-list"
                     type="text"
                     placeholder="เช่น ชลบุรี, ไทย"
                     value={route.destination}
@@ -428,6 +435,11 @@ export default function QuotationForm() {
                     className="w-full p-2 border border-slate-200 rounded text-xs focus:outline-none focus:border-teal-500 bg-white placeholder-slate-300"
                     required
                   />
+                  <datalist id="destination-list">
+                    {consignees.map(c => (
+                      <option key={c.consignee_id} value={c.address} />
+                    ))}
+                  </datalist>
                 </div>
                 {routes.length > 1 && (
                   <div className="md:col-span-2 pt-5">

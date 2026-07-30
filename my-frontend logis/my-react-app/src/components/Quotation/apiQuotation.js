@@ -22,6 +22,31 @@ export const fetchCustomerList = async () => {
  * บันทึกใบเสนอราคา (สร้าง Document, Service และ Document Items)
  */
 export const createQuotation = async ({ formData, routes, items, grandTotal }) => {
+    // 0. บันทึก consigner/consignee จากเส้นทางขนส่ง
+    const route = routes?.[0] || {};
+    let consignerId = null;
+    let consigneeId = null;
+
+    if (route.origin) {
+        const res = await fetch(`${BASE_URL}/consigner`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: route.origin })
+        });
+        const data = await res.json();
+        if (data.consigner_id) consignerId = data.consigner_id;
+    }
+
+    if (route.destination) {
+        const res = await fetch(`${BASE_URL}/consignee`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: route.destination })
+        });
+        const data = await res.json();
+        if (data.consignee_id) consigneeId = data.consignee_id;
+    }
+
     // 1. บันทึกเอกสารหลัก
     const docRes = await fetch(`${BASE_URL}/document`, {
         method: 'POST',
@@ -34,7 +59,9 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
             valid_until: formData.validUntil,
             currency: formData.currency,
             remark: formData.remark,
-            total_amount: grandTotal
+            total_amount: grandTotal,
+            consigner_id: consignerId,
+            consignee_id: consigneeId
         })
     });
 
@@ -71,11 +98,7 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
                 body: JSON.stringify({
                     document_id: newDocumentId,
                     service_id: serviceId,
-                    description: item.description,
-                    quantity: Number(item.quantity),
-                    unit: item.unit,
-                    price_per_unit: Number(item.pricePerUnit),
-                    total_price: Number(item.total)
+                 
                 })
             });
         }
