@@ -281,7 +281,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       onChange={e => setFormData({ ...formData, license_number: e.target.value })}
                     />
                   </div>
-                  <div className="form-group">
+                  {/* <div className="form-group">
                     <label className="form-label">Status</label>
                     <select
                       className="form-select"
@@ -292,7 +292,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       <option value="Busy">Busy</option>
                       <option value="Leave">Leave</option>
                     </select>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Assigned Truck Plate */}

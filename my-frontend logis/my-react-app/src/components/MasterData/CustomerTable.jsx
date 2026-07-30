@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { 
-  Search, 
-  Plus, 
-  X, 
-  FolderOpen, 
-  Pencil, 
-  Trash2 
+import {
+  Search,
+  Plus,
+  X,
+  FolderOpen,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 
 function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
@@ -13,7 +13,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCustomerId, setEditingCustomerId] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     customer_name: '',
     contact_person: '',
@@ -21,7 +21,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
     email: '',
     tax_id: '',
     address: '',
-    status: 'Active'
+    // status: 'Active'
   });
 
   const handleCreateOrSave = (e) => {
@@ -30,7 +30,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
       alert('กรุณากรอกชื่อลูกค้า');
       return;
     }
-    
+
     if (modalMode === 'add') {
       onAdd(formData, () => {
         closeModal();
@@ -86,12 +86,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
   };
 
   const filteredCustomers = Array.isArray(customers)
-    ? customers.filter(c => 
-        (c.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.contact_person || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.phone || '').includes(searchQuery) ||
-        (c.email || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
+    ? customers.filter(c =>
+      (c.customer_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.contact_person || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.phone || '').includes(searchQuery) ||
+      (c.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : [];
 
   return (
@@ -121,9 +121,9 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
         <div style={{ padding: '0 24px' }}>
           <div className="panel-search-bar">
             <Search size={16} className="panel-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search customers..." 
+            <input
+              type="text"
+              placeholder="Search customers..."
               className="panel-search-input"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -192,7 +192,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                 <X size={18} />
               </button>
             </div>
-            
+
             <form onSubmit={handleCreateOrSave}>
               <div className="modal-body">
                 {/* Company Name */}
@@ -271,7 +271,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                 </div>
 
                 {/* Status */}
-                <div className="form-group" style={{ width: '50%' }}>
+                {/* <div className="form-group" style={{ width: '50%' }}>
                   <label className="form-label">Status</label>
                   <select
                     className="form-select"
@@ -281,7 +281,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
                   </select>
-                </div>
+                </div> */}
               </div>
 
               <div className="modal-footer">

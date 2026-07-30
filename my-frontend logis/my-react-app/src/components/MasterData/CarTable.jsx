@@ -20,7 +20,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
     car_type: '10-Wheeler',
     capacity: '',
     capacity_unit: 'Ton',
-    status: 'Available',
+    // status: 'Available',
     assigned_driver_id: '',
     notes: ''
   });
@@ -289,7 +289,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                 </div> */}
 
                 {/* Status & Assigned Driver */}
-                <div className="form-row">
+                {/* <div className="form-row">
                   <div className="form-group" style={{ width: '100%' }}>
                     <label className="form-label">Status</label>
                     <select
@@ -302,7 +302,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                       <option value="Maintenance">Maintenance</option>
                     </select>
                   </div>
-                  {/* <div className="form-group">
+                  <div className="form-group">
                     <label className="form-label">Assigned Driver</label>
                     <select
                       className="form-select"
@@ -316,8 +316,8 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                         </option>
                       ))}
                     </select>
-                  </div> */}
-                </div>
+                  </div>
+                </div> */}
 
                 {/* Notes */}
                 <div className="form-group">
