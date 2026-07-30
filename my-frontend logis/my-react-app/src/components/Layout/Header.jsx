@@ -4,8 +4,10 @@ import { Bell, ChevronDown } from 'lucide-react';
 function Header() {
   return (
     <div className="dashboard-header">
-      {/* Left section (Blank) */}
-      <div></div>
+      {/* Left section: Header Title */}
+      <div className="header-brand-title">
+        S.T.TRANS EXPRESS MANAGEMENT
+      </div>
 
       {/* User Actions on the Right */}
       <div className="header-actions">

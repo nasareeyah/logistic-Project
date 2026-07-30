@@ -1,4 +1,5 @@
 import React from 'react';
+import logoImg from '../../assets/LOGO.svg';
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -15,25 +16,13 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
   return (
     <div className="dashboard-sidebar">
       {/* 1. Header Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '32px', gap: '12px', paddingLeft: '8px' }}>
-        <div className="sidebar-logo-container">
-          <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="8" fill="#1872b2" />
-            <circle cx="16" cy="10" r="2.5" fill="white" />
-            <circle cx="10" cy="20" r="2.5" fill="white" />
-            <circle cx="22" cy="20" r="2.5" fill="white" />
-            <line x1="16" y1="10" x2="10" y2="20" stroke="white" strokeWidth="1.5" />
-            <line x1="16" y1="10" x2="22" y2="20" stroke="white" strokeWidth="1.5" />
-            <line x1="10" y1="20" x2="22" y2="20" stroke="white" strokeWidth="1.5" />
-            <circle cx="16" cy="16.5" r="1.5" fill="white" />
-            <line x1="16" y1="10" x2="16" y2="16.5" stroke="white" strokeWidth="1.5" />
-            <line x1="10" y1="20" x2="16" y2="16.5" stroke="white" strokeWidth="1.5" />
-            <line x1="22" y1="20" x2="16" y2="16.5" stroke="white" strokeWidth="1.5" />
-          </svg>
-          <div className="sidebar-logo-text">
-            <span className="sidebar-logo-brand">LogiFlow</span>
-            <span className="sidebar-logo-sub">Logistics ERP</span>
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: '24px' }}>
+        <div className="sidebar-logo-container" style={{ justifyContent: 'center' }}>
+          <img 
+            src={logoImg} 
+            alt="ST TRAN EXPRESS" 
+            style={{ height: '65px', maxWidth: '100%', objectFit: 'contain' }} 
+          />
         </div>
       </div>
 
@@ -78,7 +67,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
                   borderRadius: '8px',
                   fontSize: '0.95rem',
                   fontWeight: '500',
-                  color: '#475569',
+                  color: '#475569ff',
                   cursor: 'pointer'
                 }}
               >
