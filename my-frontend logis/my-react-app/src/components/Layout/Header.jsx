@@ -1,18 +1,11 @@
 import React from 'react';
-import { Search, Bell, ChevronDown } from 'lucide-react';
+import { Bell, ChevronDown } from 'lucide-react';
 
 function Header() {
   return (
     <div className="dashboard-header">
-      {/* Search Input on the Left */}
-      <div className="header-search-container">
-        <Search className="header-search-icon" size={18} />
-        <input 
-          type="text" 
-          placeholder="Search bookings, customers, documents..." 
-          className="header-search-input"
-        />
-      </div>
+      {/* Left section (Blank) */}
+      <div></div>
 
       {/* User Actions on the Right */}
       <div className="header-actions">

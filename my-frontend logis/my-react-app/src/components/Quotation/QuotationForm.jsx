@@ -812,7 +812,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {currentStep === 5 && (
           <div style={{ textAlign: 'left' }}>
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label">Terms & Notes (หมายเหตุ / เงื่อนไข)</label>
+              <label className="form-label">Notes (หมายเหตุ)</label>
               <textarea 
                 className="form-textarea"
                 rows="5"
