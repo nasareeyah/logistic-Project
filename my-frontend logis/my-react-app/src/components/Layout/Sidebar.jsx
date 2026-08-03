@@ -94,21 +94,21 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
                   onClick={() => setActiveTab('quotation')}
                   style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                 >
-                  ใบเสนอราคา
+                  Quotation
                 </li>
                 <li 
                   className={`sidebar-menu-item ${activeTab === 'invoice' ? 'active' : ''}`}
                   onClick={() => setActiveTab('invoice')}
                   style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                 >
-                  ใบแจ้งหนี้
+                  Invoice
                 </li>
                 <li 
                   className={`sidebar-menu-item ${activeTab === 'receipt' ? 'active' : ''}`}
                   onClick={() => setActiveTab('receipt')}
                   style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                 >
-                  ใบเสร็จ
+                  Receipt
                 </li>
               </ul>
             </li>
