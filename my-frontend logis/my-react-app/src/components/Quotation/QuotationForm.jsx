@@ -380,7 +380,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   <th>Project</th>
                   <th>Customer</th>
                   <th>Issue Date</th>
-                  <th>Amount</th>
                   <th>Status</th>
                   <th style={{ width: '110px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
                 </tr>
@@ -394,9 +393,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     <td style={{ color: '#334155' }}>{doc.job_name || doc.project || '-'}</td>
                     <td style={{ color: '#334155' }}>{getCustomerName(doc.customer_id)}</td>
                     <td style={{ color: '#64748b' }}>{doc.document_date || '-'}</td>
-                    <td style={{ fontWeight: '600', color: '#0f172a' }}>
-                      {doc.total_amount ? `THB ${Number(doc.total_amount).toLocaleString()}` : 'THB 0'}
-                    </td>
                     <td>
                       <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
                         <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
@@ -703,8 +699,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                       onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
                     />
                     <datalist id="origin-list">
-                      {consigners.map(c => (
-                        <option key={c.consigner_id} value={c.address} />
+                      {Array.isArray(consigners) && consigners.map(c => (
+                        <option key={c.consigner_id || c.id} value={c.address} />
                       ))}
                     </datalist>
                   </div>
@@ -719,8 +715,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                       onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
                     />
                     <datalist id="destination-list">
-                      {consignees.map(c => (
-                        <option key={c.consignee_id} value={c.address} />
+                      {Array.isArray(consignees) && consignees.map(c => (
+                        <option key={c.consignee_id || c.id} value={c.address} />
                       ))}
                     </datalist>
                   </div>

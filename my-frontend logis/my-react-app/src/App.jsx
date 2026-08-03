@@ -57,15 +57,15 @@ function App() {
       fetch('http://localhost:3000/api/consignee').then(r => r.json())      // [8] ผู้รับ
     ])
       .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData]) => {
-        setCustomers(c);
-        setCars(carsData);
-        setDrivers(d);
-        setDocuments(docData);
-        setDocumentItems(itemsData);
-        setServices(serviceData);
-        setServiceTypes(typeData);
-        setConsigners(consignerData);
-        setConsignees(consigneeData);
+        setCustomers(Array.isArray(c) ? c : []);
+        setCars(Array.isArray(carsData) ? carsData : []);
+        setDrivers(Array.isArray(d) ? d : []);
+        setDocuments(Array.isArray(docData) ? docData : []);
+        setDocumentItems(Array.isArray(itemsData) ? itemsData : []);
+        setServices(Array.isArray(serviceData) ? serviceData : []);
+        setServiceTypes(Array.isArray(typeData) ? typeData : []);
+        setConsigners(Array.isArray(consignerData) ? consignerData : []);
+        setConsignees(Array.isArray(consigneeData) ? consigneeData : []);
         setLoading(false);
       })
       .catch(err => {
