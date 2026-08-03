@@ -14,6 +14,23 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCustomerId, setEditingCustomerId] = useState(null);
 
+  const countries = [
+    'Thailand',
+    'Malaysia',
+    'Singapore',
+    'Laos',
+    'Cambodia',
+    'Vietnam',
+    'Myanmar',
+    'China',
+    'Japan',
+    'South Korea',
+    'United States',
+    'United Kingdom',
+    'Australia',
+    'Other'
+  ];
+
   const [formData, setFormData] = useState({
     customer_name: '',
     contact_person: '',
@@ -21,7 +38,13 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
     email: '',
     tax_id: '',
     address: '',
-    // status: 'Active'
+    streetAddress: '',
+    addressLine2: '',
+    country: 'Thailand',
+    postalCode: '',
+    province: '',
+    city: '',
+    status: 'Active'
   });
 
   const handleCreateOrSave = (e) => {
@@ -31,12 +54,33 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
       return;
     }
 
+    // Combine address sub-fields into single address string for database
+    const addressParts = [];
+    if (formData.streetAddress) addressParts.push(formData.streetAddress);
+    if (formData.addressLine2) addressParts.push(formData.addressLine2);
+    
+    const locationParts = [formData.city, formData.province, formData.postalCode].filter(Boolean).join(' ');
+    if (locationParts) addressParts.push(locationParts);
+    if (formData.country) addressParts.push(formData.country);
+
+    const combinedAddress = addressParts.length > 0 ? addressParts.join(', ') : formData.address;
+
+    const dataToSave = {
+      customer_name: formData.customer_name,
+      contact_person: formData.contact_person,
+      phone: formData.phone,
+      email: formData.email,
+      tax_id: formData.tax_id,
+      address: combinedAddress,
+      status: formData.status
+    };
+
     if (modalMode === 'add') {
-      onAdd(formData, () => {
+      onAdd(dataToSave, () => {
         closeModal();
       });
     } else {
-      onUpdate(editingCustomerId, formData, () => {
+      onUpdate(editingCustomerId, dataToSave, () => {
         closeModal();
       });
     }
@@ -51,6 +95,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
       email: '',
       tax_id: '',
       address: '',
+      streetAddress: '',
+      addressLine2: '',
+      country: 'Thailand',
+      postalCode: '',
+      province: '',
+      city: '',
       status: 'Active'
     });
     setShowModal(true);
@@ -66,6 +116,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
       email: c.email || '',
       tax_id: c.tax_id || '',
       address: c.address || '',
+      streetAddress: c.address || '',
+      addressLine2: '',
+      country: 'Thailand',
+      postalCode: '',
+      province: '',
+      city: '',
       status: c.status || 'Active'
     });
     setShowModal(true);
@@ -80,6 +136,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
       email: '',
       tax_id: '',
       address: '',
+      streetAddress: '',
+      addressLine2: '',
+      country: 'Thailand',
+      postalCode: '',
+      province: '',
+      city: '',
       status: 'Active'
     });
     setEditingCustomerId(null);
@@ -259,15 +321,87 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                   </div>
                 </div>
 
-                {/* Address */}
+                {/* Street Address */}
                 <div className="form-group">
-                  <label className="form-label">Address</label>
-                  <textarea
-                    placeholder="ที่อยู่บริษัท..."
-                    className="form-textarea"
-                    value={formData.address}
-                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                  <label className="form-label">
+                    Street Address
+                    <span className="form-label-required">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="House No., Building, Street"
+                    className="form-input"
+                    value={formData.streetAddress}
+                    onChange={e => setFormData({ ...formData, streetAddress: e.target.value })}
                   />
+                </div>
+
+                {/* Address Line 2 */}
+                <div className="form-group">
+                  <label className="form-label">Address Line 2</label>
+                  <input
+                    type="text"
+                    placeholder="Apartment, Suite, Building, Floor"
+                    className="form-input"
+                    value={formData.addressLine2}
+                    onChange={e => setFormData({ ...formData, addressLine2: e.target.value })}
+                  />
+                </div>
+
+                {/* Country & Postal Code */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">
+                      Country
+                      <span className="form-label-required">*</span>
+                    </label>
+                    <select
+                      className="form-select"
+                      value={formData.country}
+                      onChange={e => setFormData({ ...formData, country: e.target.value })}
+                    >
+                      {countries.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Postal Code
+                      <span className="form-label-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="50000"
+                      className="form-input"
+                      value={formData.postalCode}
+                      onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Province & City */}
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Province</label>
+                    <input
+                      type="text"
+                      placeholder="State / Province"
+                      className="form-input"
+                      value={formData.province}
+                      onChange={e => setFormData({ ...formData, province: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">City</label>
+                    <input
+                      type="text"
+                      placeholder="City"
+                      className="form-input"
+                      value={formData.city}
+                      onChange={e => setFormData({ ...formData, city: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 {/* Status */}
