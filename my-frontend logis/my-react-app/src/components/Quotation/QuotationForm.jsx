@@ -217,8 +217,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Subtotal & Grand Total
   const subtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
-  const vatAmount = subtotal * 0.07;
-  const grandTotal = subtotal + vatAmount;
+  // const vatAmount = subtotal * 0.07;
+  const grandTotal = subtotal;
 
   // Edit Handler — โหลดข้อมูลเอกสารมาใส่ในฟอร์ม
   const handleEditQuotation = async (doc) => {
@@ -428,7 +428,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   }
 
   // =========================================================================
-  // RENDER CREATE NEW QUOTATION MULTI-STEP WIZARD (Images 2-5)
+  // RENDER CREATE NEW QUOTATION MULTI-STEP WIZARD
   // =========================================================================
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -864,10 +864,10 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   <span>Subtotal</span>
                   <span>THB {subtotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                {/* <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                   <span>VAT 7%</span>
                   <span>THB {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
-                </div>
+                </div> */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#0284c7', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
                   <span>Grand Total</span>
                   <span>THB {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
