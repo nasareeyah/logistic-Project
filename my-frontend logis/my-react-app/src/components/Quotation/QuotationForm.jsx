@@ -376,39 +376,41 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: '24px' }}>Quotation #</th>
-                  <th>Project</th>
-                  <th>Customer</th>
-                  <th>Issue Date</th>
-                  <th>Status</th>
-                  <th style={{ width: '110px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                  <th style={{ paddingLeft: '24px', whiteSpace: 'nowrap' }}>Quotation #</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Project</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Customer</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Issue Date</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Status</th>
+                  <th style={{ width: '130px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredQuotations.map(doc => (
                   <tr key={doc.document_id || doc._id}>
-                    <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7' }}>
+                    <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
                       {doc.document_no || doc.document_id}
                     </td>
-                    <td style={{ color: '#334155' }}>{doc.job_name || doc.project || '-'}</td>
-                    <td style={{ color: '#334155' }}>{getCustomerName(doc.customer_id)}</td>
-                    <td style={{ color: '#64748b' }}>{doc.document_date || '-'}</td>
-                    <td>
+                    <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
+                    <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{doc.document_date || '-'}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
                         <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
                         {doc.status || 'Draft'}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="View">
-                        <Eye size={16} />
-                      </button>
-                      <button className="btn-action-edit" style={{ marginRight: '6px' }} title="Edit" onClick={() => handleEditQuotation(doc)}>
-                        <Pencil size={16} />
-                      </button>
-                      <button className="btn-action-delete" title="Delete" onClick={() => handleDeleteQuotation(doc.document_id)}>
-                        <Trash2 size={16} />
-                      </button>
+                    <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                        <button className="btn-action-edit" title="View">
+                          <Eye size={16} />
+                        </button>
+                        <button className="btn-action-edit" title="Edit" onClick={() => handleEditQuotation(doc)}>
+                          <Pencil size={16} />
+                        </button>
+                        <button className="btn-action-delete" title="Delete" onClick={() => handleDeleteQuotation(doc.document_id)}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
