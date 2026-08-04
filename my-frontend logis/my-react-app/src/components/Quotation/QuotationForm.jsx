@@ -104,7 +104,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Step 4 Service Items
   const [items, setItems] = useState([
-    { id: 1, serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+    { id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
   ]);
 
   // Update Quotation No and Expiry Date when Issue Date changes
@@ -138,7 +138,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       remark: ''
     });
     setRoutes([{ id: 1, origin: '', destination: '' }]);
-    setItems([{ id: 1, serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+    setItems([{ id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
     setEditingDocId(null);
     setCurrentStep(1);
     setViewMode('create');
@@ -194,7 +194,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const handleAddItem = () => {
     setItems(prev => [
       ...prev,
-      { id: Date.now(), serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+      { id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
     ]);
   };
   const handleRemoveItem = (id) => {
@@ -250,7 +250,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       if (docItems.length > 0) {
         setItems(docItems.map((di, idx) => ({
           id: Date.now() + idx,
-          serviceType: 'Inland Transport',
+          serviceType: di.service_type || di.service_typename || '',
           description: di.description || '',
           quantity: Number(di.quantity) || 1,
           unitQuantity: di.unit || 'trip',
@@ -259,7 +259,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           total: Number(di.total_price) || 0
         })));
       } else {
-        setItems([{ id: Date.now(), serviceType: 'Inland Transport', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+        setItems([{ id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
       }
     } catch (e) {
       console.error('Load items error:', e);
@@ -773,19 +773,16 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   {items.map(item => (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '8px 6px' }}>
-                        <select 
-                          className="form-select"
+                        <input 
+                          type="text"
+                          className="form-input"
                           style={{ fontSize: '13px', padding: '8px' }}
+                          placeholder="ระบุประเภทบริการ..."
                           value={item.serviceType}
                           onChange={e => handleItemChange(item.id, 'serviceType', e.target.value)}
-                        >
-                          <option value="Inland Transport">Inland Transport</option>
-                          <option value="Sea Freight">Sea Freight</option>
-                          <option value="Air Freight">Air Freight</option>
-                          <option value="Customs Clearance">Customs Clearance</option>
-                          <option value="Warehousing">Warehousing</option>
-                        </select>
+                        />
                       </td>
+
                       <td style={{ padding: '8px 6px' }}>
                         <input 
                           type="text"
