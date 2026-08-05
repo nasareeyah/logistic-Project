@@ -154,11 +154,12 @@ router.delete('/driver/:id', async (req, res) => {
 router.get('/document', async (req, res) => {
     try {
         const query = `
-            SELECT d.*, s.description AS service_name,
+            SELECT d.*, s.description AS service_name, st.service_typename,
                    cgr.address AS consigner_address,
                    cge.address AS consignee_address
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
+            LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
             LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
             LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
             ORDER BY d.document_date DESC
@@ -319,6 +320,7 @@ router.put('/document/:id', async (req, res) => {
 
 router.delete('/document/:id', async (req, res) => {
     try {
+        await db.query('DELETE FROM document_items WHERE document_id = $1', [req.params.id]);
         await db.query('DELETE FROM document WHERE document_id = $1', [req.params.id]);
         res.json({ message: 'ลบเอกสารสำเร็จ' });
     } catch (err) {
@@ -329,11 +331,16 @@ router.delete('/document/:id', async (req, res) => {
 router.get('/document_items', async (req, res) => {
     try {
         const { document_id } = req.query;
+        const sql = `SELECT di.*, s.description, s.quantity AS item_quantity, s.unit_quantity AS unit,
+                            s.default_price AS unit_price, st.service_typename
+                     FROM document_items di
+                     LEFT JOIN service s ON di.service_id = s.service_id
+                     LEFT JOIN service_type st ON s.service_typeid = st.service_typeid`;
         let result;
         if (document_id) {
-            result = await db.query('SELECT * FROM document_items WHERE document_id = $1', [document_id]);
+            result = await db.query(sql + ' WHERE di.document_id = $1', [document_id]);
         } else {
-            result = await db.query('SELECT * FROM document_items');
+            result = await db.query(sql);
         }
         res.json(result.rows);
     } catch (err) {
@@ -343,11 +350,11 @@ router.get('/document_items', async (req, res) => {
 
 router.post('/document_items', async (req, res) => {
     try {
-        const { document_id, service_id, description, quantity, unit, price_per_unit, total_price } = req.body;
+        const { document_id, service_id } = req.body;
         const itemId = 'di-' + Math.floor(100000 + Math.random() * 900000);
         await db.query(
-            `INSERT INTO document_items (document_items_id, document_id, service_id, description, quantity, unit, unit_price, total_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [itemId, document_id, service_id || null, description || null, quantity || null, unit || null, price_per_unit || null, total_price || null]
+            `INSERT INTO document_items (document_items_id, document_id, service_id) VALUES ($1, $2, $3)`,
+            [itemId, document_id, service_id || null]
         );
         res.json({ message: 'บันทึกรายการสำเร็จ' });
     } catch (err) {
@@ -385,7 +392,11 @@ router.post('/service', async (req, res) => {
 
 router.get('/service', async (req, res) => {
     try {
-        const result = await db.query('select * from service');
+        const result = await db.query(
+            `SELECT s.*, st.service_typename
+             FROM service s
+             LEFT JOIN service_type st ON s.service_typeid = st.service_typeid`
+        );
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -395,6 +406,59 @@ router.get('/service_type', async (req, res) => {
     try {
         const result = await db.query('SELECT * FROM service_type');
         res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.post('/service_type', async (req, res) => {
+    try {
+        const { service_typename } = req.body;
+        if (!service_typename) {
+            return res.status(400).json({ error: 'กรุณาระบุชื่อประเภทบริการ' });
+        }
+        const existing = await db.query(
+            'SELECT service_typeid FROM service_type WHERE service_typename = $1',
+            [service_typename]
+        );
+        if (existing.rows.length > 0) {
+            return res.json({ service_typeid: existing.rows[0].service_typeid, service_typename });
+        }
+        const newId = 'st-' + Math.floor(10000 + Math.random() * 90000);
+        await db.query(
+            'INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)',
+            [newId, service_typename]
+        );
+        res.json({ service_typeid: newId, service_typename });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.put('/service_type/:id', async (req, res) => {
+    try {
+        const { service_typename } = req.body;
+        await db.query(
+            'UPDATE service_type SET service_typename = $1 WHERE service_typeid = $2',
+            [service_typename, req.params.id]
+        );
+        res.json({ message: 'แก้ไขประเภทบริการสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/service_type/:id', async (req, res) => {
+    try {
+        const check = await db.query(
+            'SELECT service_id FROM service WHERE service_typeid = $1',
+            [req.params.id]
+        );
+        if (check.rows.length > 0) {
+            return res.status(400).json({ error: 'ไม่สามารถลบได้ มีบริการที่ใช้ประเภทนี้อยู่' });
+        }
+        await db.query('DELETE FROM service_type WHERE service_typeid = $1', [req.params.id]);
+        res.json({ message: 'ลบประเภทบริการสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

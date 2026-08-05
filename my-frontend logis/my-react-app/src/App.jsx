@@ -305,6 +305,7 @@ function App() {
               fetchData={fetchData}
               consigners={consigners}
               consignees={consignees}
+              serviceTypes={serviceTypes}
             />
           )}
           {/* {activeTab === 'invoice' && (

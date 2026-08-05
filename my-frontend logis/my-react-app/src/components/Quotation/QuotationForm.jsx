@@ -45,7 +45,7 @@ const generateQuotationNo = (dateStr) => {
   return `QT-${year}${month}${day}-${randomSeq}`;
 };
 
-export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [] }) {
+export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [], serviceTypes = [] }) {
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
@@ -250,13 +250,13 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       if (docItems.length > 0) {
         setItems(docItems.map((di, idx) => ({
           id: Date.now() + idx,
-          serviceType: di.service_type || di.service_typename || '',
+          serviceType: di.service_typename || '',
           description: di.description || '',
-          quantity: Number(di.quantity) || 1,
+          quantity: Number(di.item_quantity) || 1,
           unitQuantity: di.unit || 'trip',
           pricePerUnit: Number(di.unit_price) || 0,
           unit: 'THB',
-          total: Number(di.total_price) || 0
+          total: (Number(di.item_quantity) || 1) * (Number(di.unit_price) || 0)
         })));
       } else {
         setItems([{ id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
@@ -775,14 +775,20 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   {items.map(item => (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '8px 6px' }}>
-                        <input 
+                        <input
+                          list={`service-type-${item.id}`}
                           type="text"
                           className="form-input"
                           style={{ fontSize: '13px', padding: '8px' }}
-                          placeholder="ระบุประเภทบริการ..."
+                          placeholder="เลือกหรือพิมพ์ประเภทบริการ..."
                           value={item.serviceType}
                           onChange={e => handleItemChange(item.id, 'serviceType', e.target.value)}
                         />
+                        <datalist id={`service-type-${item.id}`}>
+                          {(Array.isArray(serviceTypes) ? serviceTypes : []).map(st => (
+                            <option key={st.service_typeid} value={st.service_typename} />
+                          ))}
+                        </datalist>
                       </td>
 
                       <td style={{ padding: '8px 6px' }}>

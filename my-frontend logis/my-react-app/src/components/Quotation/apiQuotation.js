@@ -2,26 +2,12 @@
 
 const BASE_URL = 'http://localhost:3000/api';
 
-/**
- * ดึงรายชื่อลูกค้าทั้งหมด
- */
 export const fetchCustomerList = async () => {
-    try {
-        const response = await fetch(`${BASE_URL}/customers`);
-        if (!response.ok) {
-            throw new Error('ไม่สามารถดึงข้อมูลลูกค้าได้');
-        }
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching customer list:', error);
-        throw error;
-    }
+    const response = await fetch(`${BASE_URL}/customers`);
+    if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลลูกค้าได้');
+    return await response.json();
 };
 
-/**
- * บันทึกใบเสนอราคา (สร้าง Document, Service และ Document Items)
- */
-// Helper: บันทึก consigner/consignee จาก origin/destination
 const saveConsignerIfNeeded = async (origin) => {
     if (!origin) return null;
     const res = await fetch(`${BASE_URL}/consigner`, {
@@ -30,6 +16,7 @@ const saveConsignerIfNeeded = async (origin) => {
         body: JSON.stringify({ address: origin })
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'บันทึกผู้ส่งไม่สำเร็จ');
     return data.consigner_id || null;
 };
 
@@ -41,134 +28,156 @@ const saveConsigneeIfNeeded = async (destination) => {
         body: JSON.stringify({ address: destination })
     });
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'บันทึกผู้รับไม่สำเร็จ');
     return data.consignee_id || null;
 };
 
-const buildDocPayload = async (formData, routes, items, grandTotal) => {
+const saveServiceTypeIfNeeded = async (typeName) => {
+    if (!typeName) return null;
+    const res = await fetch(`${BASE_URL}/service_type`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_typename: typeName })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'บันทึกประเภทบริการไม่สำเร็จ');
+    return data.service_typeid || null;
+};
+
+const createServiceRecord = async (serviceId, serviceTypeId, item) => {
+    const res = await fetch(`${BASE_URL}/service`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            service_id: serviceId,
+            service_typeID: serviceTypeId,
+            description: item.description,
+            quantity: Number(item.quantity) || null,
+            unit_quantity: item.unitQuantity || 'trip',
+            default_price: Number(item.pricePerUnit) || 0,
+            unit: item.unit || 'THB'
+        })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'บันทึก service ไม่สำเร็จ');
+    return data;
+};
+
+const createDocItemRecord = async (documentId, serviceId) => {
+    const res = await fetch(`${BASE_URL}/document_items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            document_id: documentId,
+            service_id: serviceId
+        })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'บันทึก document_items ไม่สำเร็จ');
+    return data;
+};
+
+export const createQuotation = async ({ formData, routes, items, grandTotal }) => {
     const route = routes?.[0] || {};
     const consignerId = await saveConsignerIfNeeded(route.origin);
     const consigneeId = await saveConsigneeIfNeeded(route.destination);
 
-    return {
-        document_no: formData.documentNo || null,
-        document_type: 'Quotation',
-        customer_id: formData.customerId || null,
-        sale_name: formData.salesperson || formData.saleName || '',
-        job_name: formData.projectName || formData.jobName || '',
-        document_date: formData.issueDate || null,
-        valid_until: formData.expiryDate || formData.validUntil || null,
-        currency: formData.currency || 'THB',
-        remark: formData.remark || '',
-        total_amount: grandTotal || 0,
-        status: 'Draft',
-        consigner_id: consignerId,
-        consignee_id: consigneeId
-    };
-};
+    // สร้าง ALL services ก่อน แล้วเก็บ serviceIds
+    const serviceIds = [];
+    if (items && items.length > 0) {
+        for (const item of items) {
+            const serviceTypeId = await saveServiceTypeIfNeeded(item.serviceType);
+            const serviceId = 'sv-' + Math.floor(10000 + Math.random() * 90000);
+            await createServiceRecord(serviceId, serviceTypeId, item);
+            serviceIds.push(serviceId);
+        }
+    }
 
-export const createQuotation = async ({ formData, routes, items, grandTotal }) => {
-    const payload = await buildDocPayload(formData, routes, items, grandTotal);
-
+    // สร้าง document พร้อมส่ง service_id ตัวแรก
     const docRes = await fetch(`${BASE_URL}/document`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+            document_no: formData.documentNo || null,
+            document_type: 'Quotation',
+            customer_id: formData.customerId || null,
+            sale_name: formData.salesperson || '',
+            job_name: formData.projectName || '',
+            document_date: formData.issueDate || null,
+            valid_until: formData.expiryDate || null,
+            currency: 'THB',
+            remark: formData.remark || '',
+            total_amount: grandTotal || 0,
+            status: 'Draft',
+            consigner_id: consignerId,
+            consignee_id: consigneeId,
+            service_id: serviceIds[0] || null
+        })
     });
-
     const docResult = await docRes.json();
     if (!docRes.ok) throw new Error(docResult.error || 'บันทึกเอกสารไม่สำเร็จ');
 
     const newDocumentId = docResult.data?.document_id;
+    if (!newDocumentId) throw new Error('ไม่ได้รับ document_id จากระบบ');
 
-    // วนลูปบันทึก service + document_items ทีละรายการ
-    if (newDocumentId && items && items.length > 0) {
-        for (const item of items) {
-            const serviceId = 'sv-' + Math.floor(10000 + Math.random() * 90000);
-
-            await fetch(`${BASE_URL}/service`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service_id: serviceId,
-                    service_typeID: 'st-25658',
-                    description: item.description,
-                    quantity: Number(item.quantity) || null,
-                    unit_quantity: item.unitQuantity || item.unit_quantity || 'trip',
-                    default_price: Number(item.pricePerUnit) || 0,
-                    unit: item.unit || 'THB'
-                })
-            });
-
-            await fetch(`${BASE_URL}/document_items`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_id: newDocumentId,
-                    service_id: serviceId,
-                    description: item.description,
-                    quantity: Number(item.quantity),
-                    unit: item.unitQuantity || item.unit_quantity || 'trip',
-                    price_per_unit: Number(item.pricePerUnit),
-                    total_price: Number(item.total)
-                })
-            });
-        }
+    // สร้าง document_items เชื่อมทุก service กับ document
+    for (const serviceId of serviceIds) {
+        await createDocItemRecord(newDocumentId, serviceId);
     }
 
     return docResult;
 };
 
 export const updateQuotation = async (documentId, { formData, routes, items, grandTotal }) => {
-    const payload = await buildDocPayload(formData, routes, items, grandTotal);
+    const route = routes?.[0] || {};
+    const consignerId = await saveConsignerIfNeeded(route.origin);
+    const consigneeId = await saveConsigneeIfNeeded(route.destination);
 
-    const docRes = await fetch(`${BASE_URL}/document/${documentId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    const docResult = await docRes.json();
-    if (!docRes.ok) throw new Error(docResult.error || 'แก้ไขเอกสารไม่สำเร็จ');
-
-    // ลบ document_items เดิม แล้วสร้างใหม่
-    const itemsRes = await fetch(`${BASE_URL}/document_items?document_id=${documentId}`);
-    const existingItems = await itemsRes.json();
-    for (const oldItem of existingItems) {
+    // ลบ document_items เดิม
+    const oldRes = await fetch(`${BASE_URL}/document_items?document_id=${documentId}`);
+    const oldItems = await oldRes.json();
+    for (const oldItem of oldItems) {
         await fetch(`${BASE_URL}/document_items/${oldItem.document_items_id}`, { method: 'DELETE' });
     }
 
+    // สร้าง services ก่อน แล้วเก็บ serviceIds
+    const serviceIds = [];
     if (items && items.length > 0) {
         for (const item of items) {
+            const serviceTypeId = await saveServiceTypeIfNeeded(item.serviceType);
             const serviceId = 'sv-' + Math.floor(10000 + Math.random() * 90000);
-
-            await fetch(`${BASE_URL}/service`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    service_id: serviceId,
-                    service_typeID: 'st-25658',
-                    description: item.description,
-                    quantity: Number(item.quantity) || null,
-                    unit_quantity: item.unitQuantity || item.unit_quantity || 'trip',
-                    default_price: Number(item.pricePerUnit) || 0,
-                    unit: item.unit || 'THB'
-                })
-            });
-
-            await fetch(`${BASE_URL}/document_items`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    document_id: documentId,
-                    service_id: serviceId,
-                    description: item.description,
-                    quantity: Number(item.quantity),
-                    unit: item.unitQuantity || item.unit_quantity || 'trip',
-                    price_per_unit: Number(item.pricePerUnit),
-                    total_price: Number(item.total)
-                })
-            });
+            await createServiceRecord(serviceId, serviceTypeId, item);
+            serviceIds.push(serviceId);
         }
+    }
+
+    // แก้ไข document พร้อมส่ง service_id ตัวแรก
+    const docRes = await fetch(`${BASE_URL}/document/${documentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            document_no: formData.documentNo || null,
+            document_type: 'Quotation',
+            customer_id: formData.customerId || null,
+            sale_name: formData.salesperson || '',
+            job_name: formData.projectName || '',
+            document_date: formData.issueDate || null,
+            valid_until: formData.expiryDate || null,
+            currency: 'THB',
+            remark: formData.remark || '',
+            grand_total: grandTotal || 0,
+            status: 'Draft',
+            consigner_id: consignerId,
+            consignee_id: consigneeId,
+            service_id: serviceIds[0] || null
+        })
+    });
+    const docResult = await docRes.json();
+    if (!docRes.ok) throw new Error(docResult.error || 'แก้ไขเอกสารไม่สำเร็จ');
+
+    // สร้าง document_items ใหม่ทุก serviceId
+    for (const serviceId of serviceIds) {
+        await createDocItemRecord(documentId, serviceId);
     }
 
     return docResult;
