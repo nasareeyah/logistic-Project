@@ -202,7 +202,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                 <th>Contact</th>
                 <th>Phone</th>
                 <th>Email</th>
-                <th>Status</th>
+                {/* <th>Status</th> */}
                 <th style={{ width: '100px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
               </tr>
             </thead>
@@ -213,12 +213,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete }) {
                   <td>{c.contact_person || '-'}</td>
                   <td>{c.phone || '-'}</td>
                   <td>{c.email || '-'}</td>
-                  <td>
+                  {/* <td>
                     <span className={`status-badge-pill ${formData.status === 'Inactive' ? 'badge-cancelled' : 'badge-completed'}`}>
                       <span className="status-dot"></span>
                       {c.status || 'Active'}
                     </span>
-                  </td>
+                  </td> */}
                   <td style={{ textAlign: 'right', paddingRight: '24px' }}>
                     <button className="btn-action-edit" onClick={() => openEditModal(c)}>
                       <Pencil size={16} />

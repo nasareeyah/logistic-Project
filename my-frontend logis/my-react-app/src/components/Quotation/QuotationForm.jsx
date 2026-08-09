@@ -16,11 +16,6 @@ import QuotationPreview from './QuotationPreview';
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
 // =========================================================================
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  return dateStr.split('T')[0];
-};
-
 const getTodayDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -411,7 +406,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     </td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
-                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDate(doc.document_date)}</td>
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{doc.document_date || '-'}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
                         <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
