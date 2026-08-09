@@ -167,7 +167,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                   <th>Type</th>
                   {/* <th>Capacity</th> */}
                   {/* <th>Assigned Driver</th> */}
-                  <th>Status</th>
+                  {/* <th>Status</th> */}
                   <th style={{ width: '120px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
                 </tr>
               </thead>
@@ -185,12 +185,12 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                       {car.capacity ? `${car.capacity} ${car.capacity_unit || 'Ton'}` : '-'}
                     </td> */}
                     {/* <td>{getDriverName(car.assigned_driver_id)}</td> */}
-                    <td>
+                    {/* <td>
                       <span className={getStatusBadgeClass(car.status)}>
                         <span className="status-dot"></span>
                         {car.status || 'Available'}
                       </span>
-                    </td>
+                    </td> */}
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button

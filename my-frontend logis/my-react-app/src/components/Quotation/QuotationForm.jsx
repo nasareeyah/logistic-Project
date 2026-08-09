@@ -11,10 +11,16 @@ import {
   FolderOpen
 } from 'lucide-react';
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
+import QuotationPreview from './QuotationPreview';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
 // =========================================================================
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  return dateStr.split('T')[0];
+};
+
 const getTodayDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -54,6 +60,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
+  const [previewData, setPreviewData] = useState(null);
 
   // Sync props
   useEffect(() => {
@@ -281,6 +288,18 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     }
   };
 
+  // Preview Handler
+  const handlePreview = async (doc) => {
+    try {
+      const res = await fetch(`http://localhost:3000/api/document_items?document_id=${doc.document_id}`);
+      const items = await res.json();
+      setPreviewData({ doc, items: Array.isArray(items) ? items : [] });
+    } catch (err) {
+      console.error('Preview load error:', err);
+      alert('โหลดข้อมูลพรีวิวไม่สำเร็จ: ' + err.message);
+    }
+  };
+
   // Submit Handler
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -392,7 +411,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     </td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
-                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{doc.document_date || '-'}</td>
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDate(doc.document_date)}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
                         <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
@@ -401,7 +420,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     </td>
                     <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
-                        <button className="btn-action-edit" title="View">
+                        <button className="btn-action-edit" title="View" onClick={() => handlePreview(doc)}>
                           <Eye size={16} />
                         </button>
                         <button className="btn-action-edit" title="Edit" onClick={() => handleEditQuotation(doc)}>
@@ -425,6 +444,15 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             </div>
           )}
         </div>
+
+        {previewData && (
+          <QuotationPreview
+            doc={previewData.doc}
+            items={previewData.items}
+            customerList={customerList}
+            onClose={() => setPreviewData(null)}
+          />
+        )}
       </div>
     );
   }
