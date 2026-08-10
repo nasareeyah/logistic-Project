@@ -33,7 +33,7 @@ const getFutureDate = (fromDateStr, days = 30) => {
   return `${year}-${month}-${day}`;
 };
 
-const generateQuotationNo = (dateStr) => {
+const generateQuotationNo = (dateStr, documents = []) => {
   let d = new Date();
   if (dateStr) {
     const parsed = new Date(dateStr);
@@ -42,8 +42,15 @@ const generateQuotationNo = (dateStr) => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  const randomSeq = Math.floor(1000 + Math.random() * 9000);
-  return `QT-${year}${month}${day}-${randomSeq}`;
+  const datePrefix = `QT-${year}${month}${day}-`;
+  const maxSeq = (Array.isArray(documents) ? documents : []).reduce((max, doc) => {
+    const no = doc && doc.document_no ? String(doc.document_no) : '';
+    const m = /^QT-\d{8}-(\d{4})$/.exec(no);
+    if (!m) return max;
+    const seq = parseInt(m[1], 10);
+    return isNaN(seq) ? max : Math.max(max, seq);
+  }, 0);
+  return `${datePrefix}${String(maxSeq + 1).padStart(4, '0')}`;
 };
 
 export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [], serviceTypes = [] }) {
@@ -80,7 +87,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   // Form State
   const initialIssueDate = getTodayDate();
   const [formData, setFormData] = useState({
-    documentNo: generateQuotationNo(initialIssueDate),
+    documentNo: generateQuotationNo(initialIssueDate, propDocuments),
     issueDate: initialIssueDate,
     expiryDate: getFutureDate(initialIssueDate, 30),
     salesperson: '',
@@ -114,7 +121,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     setFormData(prev => ({
       ...prev,
       issueDate: newDate,
-      documentNo: generateQuotationNo(newDate),
+      documentNo: generateQuotationNo(newDate, propDocuments),
       expiryDate: getFutureDate(newDate, 30)
     }));
   };
@@ -123,7 +130,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const startCreateNew = () => {
     const today = getTodayDate();
     setFormData({
-      documentNo: generateQuotationNo(today),
+      documentNo: generateQuotationNo(today, propDocuments),
       issueDate: today,
       expiryDate: getFutureDate(today, 30),
       salesperson: '',
