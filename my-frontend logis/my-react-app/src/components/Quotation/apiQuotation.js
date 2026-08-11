@@ -44,12 +44,11 @@ const saveServiceTypeIfNeeded = async (typeName) => {
     return data.service_typeid || null;
 };
 
-const createServiceRecord = async (serviceId, serviceTypeId, item) => {
+const createServiceRecord = async (serviceTypeId, item) => {
     const res = await fetch(`${BASE_URL}/service`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            service_id: serviceId,
             service_typeID: serviceTypeId,
             description: item.description,
             quantity: Number(item.quantity) || null,
@@ -60,7 +59,7 @@ const createServiceRecord = async (serviceId, serviceTypeId, item) => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'บันทึก service ไม่สำเร็จ');
-    return data;
+    return data.service_id;
 };
 
 const createDocItemRecord = async (documentId, serviceId) => {
@@ -87,8 +86,7 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
     if (items && items.length > 0) {
         for (const item of items) {
             const serviceTypeId = await saveServiceTypeIfNeeded(item.serviceType);
-            const serviceId = 'sv-' + Math.floor(10000 + Math.random() * 90000);
-            await createServiceRecord(serviceId, serviceTypeId, item);
+            const serviceId = await createServiceRecord(serviceTypeId, item);
             serviceIds.push(serviceId);
         }
     }
@@ -108,7 +106,6 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
             currency: 'THB',
             remark: formData.remark || '',
             total_amount: grandTotal || 0,
-            status: 'Draft',
             consigner_id: consignerId,
             consignee_id: consigneeId,
             service_id: serviceIds[0] || null
@@ -145,8 +142,7 @@ export const updateQuotation = async (documentId, { formData, routes, items, gra
     if (items && items.length > 0) {
         for (const item of items) {
             const serviceTypeId = await saveServiceTypeIfNeeded(item.serviceType);
-            const serviceId = 'sv-' + Math.floor(10000 + Math.random() * 90000);
-            await createServiceRecord(serviceId, serviceTypeId, item);
+            const serviceId = await createServiceRecord(serviceTypeId, item);
             serviceIds.push(serviceId);
         }
     }
@@ -166,7 +162,6 @@ export const updateQuotation = async (documentId, { formData, routes, items, gra
             currency: 'THB',
             remark: formData.remark || '',
             grand_total: grandTotal || 0,
-            status: 'Draft',
             consigner_id: consignerId,
             consignee_id: consigneeId,
             service_id: serviceIds[0] || null

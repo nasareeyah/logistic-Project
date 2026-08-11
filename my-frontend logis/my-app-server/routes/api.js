@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
+async function nextId(seq, prefix, pad) {
+    const r = await db.query(`SELECT nextval('${seq}') AS n`);
+    return prefix + String(r.rows[0].n).padStart(pad, '0');
+}
+
 console.log("api route loaded");
 // --- CUSTOMERS ---
 router.get('/customers', async (req, res) => {
@@ -21,10 +26,11 @@ router.post('/customers', async (req, res) => {
             return res.status(400).json({ error: 'กรุณากรอกชื่อลูกค้า' });
         }
 
+        const finalCustId = customer_id || await nextId('seq_customer', 'cust-', 5);
         const sql = `INSERT INTO customers (customer_id, customer_name, tax_id, address, phone, email, contact_person) VALUES ($1, $2, $3, $4, $5, $6, $7)`;
 
         await db.query(sql, [
-            customer_id || null,
+            finalCustId,
             customer_name || null,
             tax_id || null,
             address || null,
@@ -72,10 +78,10 @@ router.get('/cars', async (req, res) => {
 
 router.post('/cars', async (req, res) => {
     try {
-        const { car_id, car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes } = req.body;
+        const { car_id, car_number, car_type, capacity, capacity_unit, assigned_driver_id, notes } = req.body;
         await db.query(
-            'INSERT INTO cars (car_id, car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-            [car_id, car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, status || 'Available', assigned_driver_id || null, notes || null]
+            'INSERT INTO cars (car_id, car_number, car_type, capacity, capacity_unit, assigned_driver_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [car_id || await nextId('seq_car', 'car-', 5), car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, assigned_driver_id || null, notes || null]
         );
         res.json({ message: 'เพิ่มข้อมูลรถสำเร็จ' });
     } catch (err) {
@@ -85,10 +91,10 @@ router.post('/cars', async (req, res) => {
 
 router.put('/cars/:id', async (req, res) => {
     try {
-        const { car_number, car_type, capacity, capacity_unit, status, assigned_driver_id, notes } = req.body;
+        const { car_number, car_type, capacity, capacity_unit, assigned_driver_id, notes } = req.body;
         await db.query(
-            'UPDATE cars SET car_number=$1, car_type=$2, capacity=$3, capacity_unit=$4, status=$5, assigned_driver_id=$6, notes=$7 WHERE car_id=$8',
-            [car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, status || 'Available', assigned_driver_id || null, notes || null, req.params.id]
+            'UPDATE cars SET car_number=$1, car_type=$2, capacity=$3, capacity_unit=$4, assigned_driver_id=$5, notes=$6 WHERE car_id=$7',
+            [car_number, car_type, capacity ? parseFloat(capacity) : null, capacity_unit || null, assigned_driver_id || null, notes || null, req.params.id]
         );
         res.json({ message: 'แก้ไขข้อมูลรถสำเร็จ' });
     } catch (err) {
@@ -117,10 +123,10 @@ router.get('/driver', async (req, res) => {
 
 router.post('/driver', async (req, res) => {
     try {
-        const { driver_id, full_name, phone, email, license_number, status, assigned_car_id, notes } = req.body;
+        const { driver_id, full_name, phone, email, license_number, assigned_car_id, notes } = req.body;
         await db.query(
-            'INSERT INTO driver (driver_id, full_name, phone, email, license_number, status, assigned_car_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-            [driver_id, full_name, phone, email || null, license_number || null, status || 'Available', assigned_car_id || null, notes || null]
+            'INSERT INTO driver (driver_id, full_name, phone, email, license_number, assigned_car_id, notes) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [driver_id || await nextId('seq_driver', 'd-', 6), full_name, phone, email || null, license_number || null, assigned_car_id || null, notes || null]
         );
         res.json({ message: 'เพิ่มคนขับสำเร็จ' });
     } catch (err) {
@@ -130,10 +136,10 @@ router.post('/driver', async (req, res) => {
 
 router.put('/driver/:id', async (req, res) => {
     try {
-        const { full_name, phone, email, license_number, status, assigned_car_id, notes } = req.body;
+        const { full_name, phone, email, license_number, assigned_car_id, notes } = req.body;
         await db.query(
-            'UPDATE driver SET full_name=$1, phone=$2, email=$3, license_number=$4, status=$5, assigned_car_id=$6, notes=$7 WHERE driver_id=$8',
-            [full_name, phone, email || null, license_number || null, status || 'Available', assigned_car_id || null, notes || null, req.params.id]
+            'UPDATE driver SET full_name=$1, phone=$2, email=$3, license_number=$4, assigned_car_id=$5, notes=$6 WHERE driver_id=$7',
+            [full_name, phone, email || null, license_number || null, assigned_car_id || null, notes || null, req.params.id]
         );
         res.json({ message: 'แก้ไขคนขับสำเร็จ' });
     } catch (err) {
@@ -183,7 +189,6 @@ router.post('/document', async (req, res) => {
         re_no, re_date,
         withholding_percent, withholding_amount,
         grand_total, net_total, total_amount,
-        status,
         remark,
         driver_id, car_id,
         do_no, do_date,
@@ -204,7 +209,7 @@ router.post('/document', async (req, res) => {
             let typeId = stResult.rows[0]?.service_typeid;
 
             if (!typeId) {
-                typeId = 'st-' + Math.floor(10000 + Math.random() * 90000);
+                typeId = await nextId('seq_service_type', 'st-', 5);
                 await db.query(
                     `INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)`,
                     [typeId, service_typename]
@@ -218,14 +223,14 @@ router.post('/document', async (req, res) => {
             resolvedServiceId = svResult.rows[0]?.service_id;
 
             if (!resolvedServiceId) {
-                resolvedServiceId = 'srv-' + Math.floor(10000 + Math.random() * 90000);
+                resolvedServiceId = await nextId('seq_service', 'sv-', 5);
                 await db.query(
                     `INSERT INTO service (service_id, service_typeid, description) VALUES ($1, $2, $3)`,
                     [resolvedServiceId, typeId, service_typename]
                 );
             }
         }
-        const finalDocId = document_id || ('doc-' + Math.floor(100000 + Math.random() * 900000));
+        const finalDocId = document_id || await nextId('seq_document', 'doc-', 6);
         const finalGrandTotal = grand_total || total_amount || null;
         const sql = `
             INSERT INTO document (
@@ -233,7 +238,7 @@ router.post('/document', async (req, res) => {
                 account_no, customer_id,
                 st_no, st_date, re_no, re_date,
                 withholding_percent, withholding_amount,
-                grand_total, net_total, status, remark,
+                grand_total, net_total, remark,
                 driver_id, car_id, do_no, do_date,
                 consigner_id, consignee_id, service_id,
                 sale_name, job_name, valid_until, currency
@@ -242,10 +247,10 @@ router.post('/document', async (req, res) => {
                 $5, $6,
                 $7, $8, $9, $10,
                 $11, $12,
-                $13, $14, $15, $16,
-                $17, $18, $19, $20,
-                $21, $22, $23,
-                $24, $25, $26, $27
+                $13, $14, $15,
+                $16, $17, $18, $19,
+                $20, $21, $22,
+                $23, $24, $25, $26
             )
         `;
         await db.query(sql, [
@@ -259,7 +264,6 @@ router.post('/document', async (req, res) => {
             re_no || null, re_date || null,
             withholding_percent || null, withholding_amount || null,
             finalGrandTotal, net_total || null,
-            status || 'รอดำเนินการ',
             remark || null,
             driver_id || null, car_id || null,
             do_no || null, do_date || null,
@@ -283,7 +287,7 @@ router.put('/document/:id', async (req, res) => {
             account_no, customer_id,
             st_no, st_date, re_no, re_date,
             withholding_percent, withholding_amount,
-            grand_total, net_total, status, remark,
+            grand_total, net_total, remark,
             driver_id, car_id, do_no, do_date,
             consigner_id, consignee_id, service_id,
             sale_name, job_name, valid_until, currency
@@ -295,18 +299,18 @@ router.put('/document/:id', async (req, res) => {
                 account_no=$4, customer_id=$5,
                 st_no=$6, st_date=$7, re_no=$8, re_date=$9,
                 withholding_percent=$10, withholding_amount=$11,
-                grand_total=$12, net_total=$13, status=$14, remark=$15,
-                driver_id=$16, car_id=$17, do_no=$18, do_date=$19,
-                consigner_id=$20, consignee_id=$21, service_id=$22,
-                sale_name=$23, job_name=$24, valid_until=$25, currency=$26
-            WHERE document_id=$27
+                grand_total=$12, net_total=$13, remark=$14,
+                driver_id=$15, car_id=$16, do_no=$17, do_date=$18,
+                consigner_id=$19, consignee_id=$20, service_id=$21,
+                sale_name=$22, job_name=$23, valid_until=$24, currency=$25
+            WHERE document_id=$26
         `;
         await db.query(sql, [
             document_type, document_no, document_date,
             account_no, customer_id,
             st_no, st_date, re_no, re_date,
             withholding_percent, withholding_amount,
-            grand_total, net_total, status, remark,
+            grand_total, net_total, remark,
             driver_id, car_id, do_no, do_date,
             consigner_id, consignee_id, service_id,
             sale_name, job_name, valid_until, currency,
@@ -351,7 +355,7 @@ router.get('/document_items', async (req, res) => {
 router.post('/document_items', async (req, res) => {
     try {
         const { document_id, service_id } = req.body;
-        const itemId = 'di-' + Math.floor(100000 + Math.random() * 900000);
+        const itemId = await nextId('seq_document_items', 'di-', 6);
         await db.query(
             `INSERT INTO document_items (document_items_id, document_id, service_id) VALUES ($1, $2, $3)`,
             [itemId, document_id, service_id || null]
@@ -380,11 +384,12 @@ router.post('/service', async (req, res) => {
             await db.query('INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)', [service_typeID, description || 'ทั่วไป']);
         }
 
+        const finalServiceId = service_id || await nextId('seq_service', 'sv-', 5);
         await db.query(
             `INSERT INTO service (service_id, service_typeID, description, quantity, unit_quantity, default_price, unit) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [service_id, service_typeID || null, description || null, quantity || null, unit_quantity || null, default_price || null, unit || null]
+            [finalServiceId, service_typeID || null, description || null, quantity || null, unit_quantity || null, default_price || null, unit || null]
         );
-        res.json({ message: 'สร้าง service สำเร็จ', service_id });
+        res.json({ message: 'สร้าง service สำเร็จ', service_id: finalServiceId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -424,7 +429,7 @@ router.post('/service_type', async (req, res) => {
         if (existing.rows.length > 0) {
             return res.json({ service_typeid: existing.rows[0].service_typeid, service_typename });
         }
-        const newId = 'st-' + Math.floor(10000 + Math.random() * 90000);
+        const newId = await nextId('seq_service_type', 'st-', 5);
         await db.query(
             'INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)',
             [newId, service_typename]
@@ -483,7 +488,7 @@ router.post('/consigner', async (req, res) => {
                 return res.json({ consigner_id: existing.rows[0].consigner_id, address });
             }
         }
-        const finalId = consigner_id || ('cgr-' + Math.floor(10000 + Math.random() * 90000));
+        const finalId = consigner_id || await nextId('seq_consigner', 'cgr-', 5);
         await db.query(
             'INSERT INTO consigner (consigner_id, consigner_name, address) VALUES ($1,$2,$3)',
             [finalId, consigner_name || null, address || null]
@@ -535,7 +540,7 @@ router.post('/consignee', async (req, res) => {
                 return res.json({ consignee_id: existing.rows[0].consignee_id, address });
             }
         }
-        const finalId = consignee_id || ('cge-' + Math.floor(10000 + Math.random() * 90000));
+        const finalId = consignee_id || await nextId('seq_consignee', 'cge-', 5);
         await db.query(
             'INSERT INTO consignee (consignee_id, consignee_name, address) VALUES ($1,$2,$3)',
             [finalId, consignee_name || null, address || null]

@@ -20,7 +20,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
     phone: '',
     email: '',
     license_number: '',
-    status: 'Available',
     assigned_car_id: '',
     notes: ''
   });
@@ -50,7 +49,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: '',
       email: '',
       license_number: '',
-      status: 'Available',
       assigned_car_id: '',
       notes: ''
     });
@@ -65,7 +63,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: driver.phone || '',
       email: driver.email || '',
       license_number: driver.license_number || '',
-      status: driver.status || 'Available',
       assigned_car_id: driver.assigned_car_id || '',
       notes: driver.notes || ''
     });
@@ -79,7 +76,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: '',
       email: '',
       license_number: '',
-      status: 'Available',
       assigned_car_id: '',
       notes: ''
     });
