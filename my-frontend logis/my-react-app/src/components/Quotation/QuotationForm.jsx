@@ -16,11 +16,6 @@ import QuotationPreview from './QuotationPreview';
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
 // =========================================================================
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  return dateStr.split('T')[0];
-};
-
 const getTodayDate = () => {
   const d = new Date();
   const year = d.getFullYear();
@@ -38,7 +33,17 @@ const getFutureDate = (fromDateStr, days = 30) => {
   return `${year}-${month}-${day}`;
 };
 
-const generateQuotationNo = (dateStr) => {
+const formatDateOnly = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const generateQuotationNo = (dateStr, documents = []) => {
   let d = new Date();
   if (dateStr) {
     const parsed = new Date(dateStr);
@@ -47,8 +52,15 @@ const generateQuotationNo = (dateStr) => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  const randomSeq = Math.floor(1000 + Math.random() * 9000);
-  return `QT-${year}${month}${day}-${randomSeq}`;
+  const datePrefix = `QT-${year}${month}${day}-`;
+  const maxSeq = (Array.isArray(documents) ? documents : []).reduce((max, doc) => {
+    const no = doc && doc.document_no ? String(doc.document_no) : '';
+    const m = /^QT-\d{8}-(\d{4})$/.exec(no);
+    if (!m) return max;
+    const seq = parseInt(m[1], 10);
+    return isNaN(seq) ? max : Math.max(max, seq);
+  }, 0);
+  return `${datePrefix}${String(maxSeq + 1).padStart(4, '0')}`;
 };
 
 export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [], serviceTypes = [] }) {
@@ -85,7 +97,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   // Form State
   const initialIssueDate = getTodayDate();
   const [formData, setFormData] = useState({
-    documentNo: generateQuotationNo(initialIssueDate),
+    documentNo: generateQuotationNo(initialIssueDate, propDocuments),
     issueDate: initialIssueDate,
     expiryDate: getFutureDate(initialIssueDate, 30),
     salesperson: '',
@@ -119,7 +131,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     setFormData(prev => ({
       ...prev,
       issueDate: newDate,
-      documentNo: generateQuotationNo(newDate),
+      documentNo: generateQuotationNo(newDate, propDocuments),
       expiryDate: getFutureDate(newDate, 30)
     }));
   };
@@ -128,7 +140,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const startCreateNew = () => {
     const today = getTodayDate();
     setFormData({
-      documentNo: generateQuotationNo(today),
+      documentNo: generateQuotationNo(today, propDocuments),
       issueDate: today,
       expiryDate: getFutureDate(today, 30),
       salesperson: '',
@@ -234,8 +246,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
     setFormData({
       documentNo: doc.document_no || '',
-      issueDate: doc.document_date || getTodayDate(),
-      expiryDate: doc.valid_until || getFutureDate(doc.document_date, 30),
+      issueDate: formatDateOnly(doc.document_date) || getTodayDate(),
+      expiryDate: formatDateOnly(doc.valid_until) || getFutureDate(doc.document_date, 30),
       salesperson: doc.sale_name || '',
       projectName: doc.job_name || '',
       customerId: doc.customer_id || '',
@@ -399,7 +411,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   <th style={{ whiteSpace: 'nowrap' }}>Project</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Customer</th>
                   <th style={{ whiteSpace: 'nowrap' }}>Issue Date</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Status</th>
                   <th style={{ width: '130px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
@@ -411,13 +422,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     </td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
                     <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
-                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDate(doc.document_date)}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className="status-badge-pill badge-completed" style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0' }}>
-                        <span className="status-dot" style={{ backgroundColor: '#94a3b8' }}></span>
-                        {doc.status || 'Draft'}
-                      </span>
-                    </td>
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDateOnly(doc.document_date) || '-'}</td>
                     <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
                         <button className="btn-action-edit" title="View" onClick={() => handlePreview(doc)}>

@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -1490,28 +1491,41 @@ code {
    PRINT STYLES — สำหรับพรีวิวใบเสนอราคา
    ========================================================================= */
 @media print {
+  html, body {
+    width: 210mm;
+    height: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #ffffff;
+  }
   body * {
     visibility: hidden;
   }
   .quotation-preview-print,
   .quotation-preview-print * {
     visibility: visible;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
   .quotation-preview-print {
     position: absolute;
     left: 0;
     top: 0;
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 24px;
-    border-radius: 0;
-    box-shadow: none;
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    box-sizing: border-box;
+    background-color: #ffffff !important;
   }
   .no-print {
     display: none !important;
   }
   @page {
-    margin: 12mm;
+    size: A4 portrait;
+    margin: 0 !important;
   }
 }

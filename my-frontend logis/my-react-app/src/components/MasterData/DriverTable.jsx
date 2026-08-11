@@ -20,7 +20,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
     phone: '',
     email: '',
     license_number: '',
-    status: 'Available',
     assigned_car_id: '',
     notes: ''
   });
@@ -50,7 +49,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: '',
       email: '',
       license_number: '',
-      status: 'Available',
       assigned_car_id: '',
       notes: ''
     });
@@ -65,7 +63,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: driver.phone || '',
       email: driver.email || '',
       license_number: driver.license_number || '',
-      status: driver.status || 'Available',
       assigned_car_id: driver.assigned_car_id || '',
       notes: driver.notes || ''
     });
@@ -79,7 +76,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       phone: '',
       email: '',
       license_number: '',
-      status: 'Available',
       assigned_car_id: '',
       notes: ''
     });
@@ -168,7 +164,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                   <th>Phone</th>
                   <th>Email</th>
                   <th>Assigned Truck</th>
-                  <th>Status</th>
+                  {/* <th>Status</th> */}
                   <th style={{ width: '120px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
                 </tr>
               </thead>
@@ -184,12 +180,12 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                     <td>{driver.phone || '-'}</td>
                     <td>{driver.email || '-'}</td>
                     <td>{getCarNumber(driver.assigned_car_id)}</td>
-                    <td>
+                    {/* <td>
                       <span className={getStatusBadgeClass(driver.status)}>
                         <span className="status-dot"></span>
                         {driver.status || 'Available'}
                       </span>
-                    </td>
+                    </td> */}
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button 

@@ -50,7 +50,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
       car_type: '10-Wheeler',
       capacity: '',
       capacity_unit: 'Ton',
-      status: 'Available',
       assigned_driver_id: '',
       notes: ''
     });
@@ -65,7 +64,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
       car_type: car.car_type || '10-Wheeler',
       capacity: car.capacity !== null && car.capacity !== undefined ? car.capacity : '',
       capacity_unit: car.capacity_unit || 'Ton',
-      status: car.status || 'Available',
       assigned_driver_id: car.assigned_driver_id || '',
       notes: car.notes || ''
     });
@@ -79,7 +77,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
       car_type: '10-Wheeler',
       capacity: '',
       capacity_unit: 'Ton',
-      status: 'Available',
       assigned_driver_id: '',
       notes: ''
     });

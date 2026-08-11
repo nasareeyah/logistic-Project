@@ -88,8 +88,7 @@ function App() {
   // CUSTOMER ACTIONS
   // ==========================================
  const handleAddCustomer = (newCustomerData, resetForm) => {
-    const autoCustId = 'cust-' + Math.floor(10000 + Math.random() * 90000);
-    const dataToSend = { ...newCustomerData, customer_id: autoCustId };
+    const dataToSend = { ...newCustomerData };
 
     fetch('http://localhost:3000/api/customers', {
       method: 'POST',
@@ -142,8 +141,7 @@ function App() {
   // CAR ACTIONS
   // ==========================================
   const handleAddCar = (newCarData, resetForm) => {
-    const autoCarId = 'car-' + Math.floor(10000 + Math.random() * 90000);
-    const dataToSend = { ...newCarData, car_id: autoCarId };
+    const dataToSend = { ...newCarData };
 
     fetch('http://localhost:3000/api/cars', {
       method: 'POST',
@@ -178,8 +176,7 @@ function App() {
   // DRIVER ACTIONS
   // ==========================================
   const handleAddDriver = (newDriverData, resetForm) => {
-    const autoDriverId = 'd-' + Math.floor(100000 + Math.random() * 900000);
-    const dataToSend = { ...newDriverData, driver_id: autoDriverId };
+    const dataToSend = { ...newDriverData };
 
     fetch('http://localhost:3000/api/driver', {
       method: 'POST',
@@ -214,10 +211,8 @@ function App() {
   // DOCUMENT ACTIONS
   // ==========================================
   const handleAddDocument = (docType, newDocData, resetForm) => {
-    const autoDocId = 'doc-' + Math.floor(100000 + Math.random() * 900000);
     const dataToSend = { 
       ...newDocData, 
-      document_id: autoDocId,
       document_type: docType 
     };
 
@@ -278,7 +273,7 @@ function App() {
         <Header />
         <div className="dashboard-content-area">
           {activeTab === 'dashboard' && <Dashboard customersCount={customers.length} carsCount={cars.length} driversCount={drivers.length} />}
-          {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} />}
+          {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} documents={documents} />}
           {activeTab === 'trucks' && (
             <CarTable 
               cars={cars} 
