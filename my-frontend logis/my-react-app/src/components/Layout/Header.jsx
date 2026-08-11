@@ -11,10 +11,10 @@ function Header() {
 
       {/* User Actions on the Right */}
       <div className="header-actions">
-        <div className="header-notification">
+        {/* <div className="header-notification">
           <Bell size={20} className="header-icon-bell" />
           <span className="header-notification-badge"></span>
-        </div>
+        </div> */}
         
         <div className="header-user-profile">
           <div className="header-avatar-circle">
