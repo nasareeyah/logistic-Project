@@ -7,8 +7,7 @@ import {
   Trash2,
   Truck,
   Inbox,
-  Calendar,
-  MapPin
+  Package
 } from 'lucide-react';
 
 function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
@@ -106,89 +105,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
     return driver;
   };
 
-  // Helper for job history matching design
-  const getCarJobHistory = (car) => {
-    if (!car) return [];
-
-    const sampleJobsMap = {
-      '65-3456': [
-        {
-          id: 'BK-20260805-3387',
-          status: 'Assigned',
-          statusType: 'assigned',
-          date: '05 Aug 2026',
-          customerName: 'Bangkok Logistics Partners',
-          pickupLocation: 'Ism',
-          pickupDate: '05 Aug',
-          deliveryLocation: 'Ims',
-          deliveryDate: '16 Aug',
-          tag: 'plastics ×500'
-        }
-      ],
-      '70-1234': [
-        {
-          id: 'BK-20260802-1192',
-          status: 'Completed',
-          statusType: 'completed',
-          date: '02 Aug 2026',
-          customerName: 'Siam Trading Co., Ltd.',
-          pickupLocation: 'Laem Chabang Port',
-          pickupDate: '02 Aug',
-          deliveryLocation: 'Ayutthaya Industrial Estate',
-          deliveryDate: '03 Aug',
-          tag: 'electronic parts ×200'
-        }
-      ],
-      '80-5678': [
-        {
-          id: 'BK-20260809-5541',
-          status: 'In Transit',
-          statusType: 'assigned',
-          date: '09 Aug 2026',
-          customerName: 'Thai Beverage Logistics',
-          pickupLocation: 'Pathum Thani Warehouse',
-          pickupDate: '09 Aug',
-          deliveryLocation: 'Chiang Mai DC',
-          deliveryDate: '11 Aug',
-          tag: 'beverage crates ×1200'
-        }
-      ],
-      '90-9012': [
-        {
-          id: 'BK-20260728-0982',
-          status: 'Completed',
-          statusType: 'completed',
-          date: '28 Jul 2026',
-          customerName: 'SCG Logistics Management',
-          pickupLocation: 'Saraburi Plant',
-          pickupDate: '28 Jul',
-          deliveryLocation: 'Rayong Hub',
-          deliveryDate: '29 Jul',
-          tag: 'construction materials ×800'
-        }
-      ]
-    };
-
-    if (sampleJobsMap[car.car_number]) {
-      return sampleJobsMap[car.car_number];
-    }
-
-    return [
-      {
-        id: `BK-20260810-${car.car_id ? String(car.car_id).slice(-4) : '9901'}`,
-        status: 'Assigned',
-        statusType: 'assigned',
-        date: '10 Aug 2026',
-        customerName: 'General Logistics Customer',
-        pickupLocation: 'Bangkok Port',
-        pickupDate: '10 Aug',
-        deliveryLocation: 'Chonburi Hub',
-        deliveryDate: '12 Aug',
-        tag: 'general freight ×300'
-      }
-    ];
-  };
-
   const selectedCar = Array.isArray(cars) ? cars.find(c => c.car_id === selectedCarId) : null;
 
   // ============================================================
@@ -196,7 +112,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   // ============================================================
   if (selectedCar) {
     const driver = getDriverForCar(selectedCar);
-    const jobs = getCarJobHistory(selectedCar);
 
     return (
       <div>
@@ -259,24 +174,8 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
               <div style={{ fontSize: '0.75rem', fontWeight: '500', color: '#64748b', marginBottom: '4px' }}>
                 License Plate
               </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+              <div style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a' }}>
                 {selectedCar.car_number}
-              </div>
-              <div>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#dcfce7',
-                  color: '#15803d',
-                  padding: '3px 10px',
-                  borderRadius: '12px',
-                  fontSize: '0.8rem',
-                  fontWeight: '500'
-                }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e' }}></span>
-                  {selectedCar.status || 'Available'}
-                </span>
               </div>
             </div>
 
@@ -319,108 +218,21 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
           padding: '24px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
-          <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left' }}>
-            Job History ({jobs.length})
-          </h3>
+          <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '40px' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left' }}>
+              Job History (0)
+            </h3>
+          </div>
 
-          {jobs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 24px', color: '#94a3b8' }}>
-              <Inbox size={40} style={{ margin: '0 auto 12px auto', opacity: 0.5 }} />
-              <p style={{ margin: 0, fontSize: '0.9rem' }}>No job history found for this truck.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {jobs.map((job, idx) => (
-                <div key={idx} style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  textAlign: 'left'
-                }}>
-                  {/* Top Header Row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '1rem', fontWeight: '700', color: '#0284c7' }}>
-                        {job.id}
-                      </span>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        backgroundColor: job.statusType === 'completed' ? '#f0fdf4' : '#eff6ff',
-                        color: job.statusType === 'completed' ? '#15803d' : '#1d4ed8',
-                        padding: '2px 10px',
-                        borderRadius: '12px',
-                        fontSize: '0.8rem',
-                        fontWeight: '500'
-                      }}>
-                        <span style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '50%',
-                          backgroundColor: job.statusType === 'completed' ? '#22c55e' : '#3b82f6'
-                        }}></span>
-                        {job.status}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.85rem' }}>
-                      <Calendar size={14} />
-                      <span>{job.date}</span>
-                    </div>
-                  </div>
-
-                  {/* Customer Subtitle */}
-                  <div style={{ fontSize: '0.9rem', color: '#475569', marginBottom: '16px' }}>
-                    {job.customerName}
-                  </div>
-
-                  {/* Pickup & Delivery Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '16px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#94a3b8', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                        PICKUP
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: '#334155' }}>
-                        <MapPin size={14} color="#64748b" />
-                        <span>{job.pickupLocation} · {job.pickupDate}</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#94a3b8', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                        DELIVERY
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: '#334155' }}>
-                        <MapPin size={14} color="#64748b" />
-                        <span>{job.deliveryLocation} · {job.deliveryDate}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tag Pill */}
-                  {job.tag && (
-                    <div>
-                      <span style={{
-                        backgroundColor: '#f1f5f9',
-                        color: '#475569',
-                        fontSize: '0.78rem',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: '500'
-                      }}>
-                        {job.tag}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ textAlign: 'center', padding: '20px 24px 40px 24px' }}>
+            <Package size={42} strokeWidth={1.5} color="#cbd5e1" style={{ margin: '0 auto 12px auto' }} />
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '400' }}>
+              No jobs assigned to this truck yet.
+            </p>
+          </div>
         </div>
 
-        {/* Modal - Add / Edit Truck */}
+        {/* Modal - Edit Truck */}
         {showModal && (
           <div className="modal-overlay">
             <div className="modal-box" style={{ maxWidth: '550px' }}>
