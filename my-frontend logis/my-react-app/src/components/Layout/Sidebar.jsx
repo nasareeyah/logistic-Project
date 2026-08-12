@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import logoImg from '../../assets/LOGO.svg';
 import { 
   LayoutDashboard, 
@@ -13,6 +13,20 @@ import {
 } from 'lucide-react';
 
 function Sidebar({ activeTab, setActiveTab, onLogout }) {
+  const [isDocOpen, setIsDocOpen] = useState(() => {
+    return ['quotation', 'invoice', 'receipt'].includes(activeTab);
+  });
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (['quotation', 'invoice', 'receipt'].includes(activeTab)) {
+      setIsDocOpen(true);
+    }
+  }, [activeTab]);
+
+  const isExpanded = isDocOpen || isHovered;
+  const isDocActive = ['quotation', 'invoice', 'receipt'].includes(activeTab);
+
   return (
     <div className="dashboard-sidebar">
       {/* 1. Header Logo */}
@@ -57,8 +71,13 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
             </li>
 
             {/* Document Center */}
-            <li style={{ display: 'flex', flexDirection: 'column' }}>
+            <li 
+              style={{ display: 'flex', flexDirection: 'column' }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
               <div 
+                onClick={() => setIsDocOpen(prev => !prev)}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -67,50 +86,68 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
                   borderRadius: '8px',
                   fontSize: '0.95rem',
                   fontWeight: '500',
-                  color: '#475569ff',
-                  cursor: 'pointer'
+                  color: isDocActive ? '#0284c7' : '#475569',
+                  backgroundColor: isDocActive ? '#f0f9ff' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease, color 0.2s ease'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span className="sidebar-menu-item-icon">
-                    <FileText size={18} color="#64748b" />
+                    <FileText size={18} color={isDocActive ? '#0284c7' : '#64748b'} />
                   </span>
                   <span>Document Center</span>
                 </div>
-                <ChevronDown size={16} color="#64748b" />
+                <ChevronDown 
+                  size={16} 
+                  color={isDocActive ? '#0284c7' : '#64748b'} 
+                  style={{ 
+                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 0.25s ease' 
+                  }}
+                />
               </div>
               
               {/* Sub-menus */}
-              <ul style={{ 
-                listStyle: 'none', 
-                paddingLeft: '32px', 
-                marginTop: '4px', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: '2px' 
-              }}>
-                <li 
-                  className={`sidebar-menu-item ${activeTab === 'quotation' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('quotation')}
-                  style={{ fontSize: '0.875rem', padding: '8px 12px' }}
-                >
-                  Quotation
-                </li>
-                <li 
-                  className={`sidebar-menu-item ${activeTab === 'invoice' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('invoice')}
-                  style={{ fontSize: '0.875rem', padding: '8px 12px' }}
-                >
-                  Invoice
-                </li>
-                <li 
-                  className={`sidebar-menu-item ${activeTab === 'receipt' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('receipt')}
-                  style={{ fontSize: '0.875rem', padding: '8px 12px' }}
-                >
-                  Receipt
-                </li>
-              </ul>
+              <div 
+                style={{ 
+                  maxHeight: isExpanded ? '200px' : '0px',
+                  opacity: isExpanded ? 1 : 0,
+                  overflow: 'hidden',
+                  transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out',
+                  marginTop: isExpanded ? '4px' : '0px'
+                }}
+              >
+                <ul style={{ 
+                  listStyle: 'none', 
+                  paddingLeft: '32px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '2px' 
+                }}>
+                  <li 
+                    className={`sidebar-menu-item ${activeTab === 'quotation' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('quotation')}
+                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
+                  >
+                    Quotation
+                  </li>
+                  <li 
+                    className={`sidebar-menu-item ${activeTab === 'invoice' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('invoice')}
+                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
+                  >
+                    Invoice
+                  </li>
+                  <li 
+                    className={`sidebar-menu-item ${activeTab === 'receipt' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('receipt')}
+                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
+                  >
+                    Receipt
+                  </li>
+                </ul>
+              </div>
             </li>
 
             {/* Delivery Order (DO) */}
