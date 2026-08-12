@@ -199,22 +199,20 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       </span>
                     </td> */}
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                        <button 
-                          className="table-action-btn edit-btn" 
-                          onClick={() => openEditModal(driver)}
-                          title="แก้ไขข้อมูล"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button 
-                          className="table-action-btn delete-btn" 
-                          onClick={() => onDelete(driver.driver_id)}
-                          title="ลบข้อมูล"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      <button 
+                        className="btn-action-edit" 
+                        onClick={() => openEditModal(driver)}
+                        title="แก้ไขข้อมูล"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button 
+                        className="btn-action-delete" 
+                        onClick={() => onDelete(driver.driver_id)}
+                        title="ลบข้อมูล"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
