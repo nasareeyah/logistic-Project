@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import logoImg from '../../assets/LOGO.svg';
+import logoWhite from '../../assets/logo-white.png';
 import { 
-  LayoutDashboard, 
-  ClipboardList, 
+  LayoutGrid, 
   FileText, 
+  Folder, 
   ChevronDown, 
   Package, 
   Users, 
@@ -25,23 +25,20 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
   }, [activeTab]);
 
   const isExpanded = isDocOpen || isHovered;
-  const isDocActive = ['quotation', 'invoice', 'receipt'].includes(activeTab);
 
   return (
     <div className="dashboard-sidebar">
       {/* 1. Header Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', marginBottom: '24px' }}>
-        <div className="sidebar-logo-container" style={{ justifyContent: 'center' }}>
-          <img 
-            src={logoImg} 
-            alt="ST TRAN EXPRESS" 
-            style={{ height: '65px', maxWidth: '100%', objectFit: 'contain' }} 
-          />
-        </div>
+      <div className="sidebar-logo-section">
+        <img 
+          src={logoWhite} 
+          alt="ST TRAN EXPRESS" 
+          className="sidebar-logo-img"
+        />
       </div>
 
       {/* 2. Menu Items Container */}
-      <div className="sidebar-menu-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', paddingRight: '4px' }}>
+      <div className="sidebar-menu-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
         
         {/* --- MAIN GROUP --- */}
         <div className="sidebar-group">
@@ -54,7 +51,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
               onClick={() => setActiveTab('dashboard')}
             >
               <span className="sidebar-menu-item-icon">
-                <LayoutDashboard size={18} />
+                <LayoutGrid size={18} />
               </span>
               <span>Dashboard</span>
             </li>
@@ -65,7 +62,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
               onClick={() => setActiveTab('booking')}
             >
               <span className="sidebar-menu-item-icon">
-                <ClipboardList size={18} />
+                <FileText size={18} />
               </span>
               <span>Booking</span>
             </li>
@@ -78,29 +75,18 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
             >
               <div 
                 onClick={() => setIsDocOpen(prev => !prev)}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  fontSize: '0.95rem',
-                  fontWeight: '500',
-                  color: isDocActive ? '#0284c7' : '#475569',
-                  backgroundColor: isDocActive ? '#f0f9ff' : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease, color 0.2s ease'
-                }}
+                className="sidebar-menu-item"
+                style={{ justifyContent: 'space-between' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <span className="sidebar-menu-item-icon">
-                    <FileText size={18} color={isDocActive ? '#0284c7' : '#64748b'} />
+                    <Folder size={18} />
                   </span>
                   <span>Document Center</span>
                 </div>
                 <ChevronDown 
-                  size={16} 
-                  color={isDocActive ? '#0284c7' : '#64748b'} 
+                  size={14} 
+                  color="#ffffff" 
                   style={{ 
                     transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                     transition: 'transform 0.25s ease' 
@@ -120,38 +106,38 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
               >
                 <ul style={{ 
                   listStyle: 'none', 
-                  paddingLeft: '32px', 
+                  paddingLeft: '24px', 
                   display: 'flex', 
                   flexDirection: 'column', 
-                  gap: '2px' 
+                  gap: '4px' 
                 }}>
                   <li 
-                    className={`sidebar-menu-item ${activeTab === 'quotation' ? 'active' : ''}`}
+                    className={`sidebar-sub-item ${activeTab === 'quotation' ? 'active' : ''}`}
                     onClick={() => setActiveTab('quotation')}
-                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                   >
-                    Quotation
+                    <FileText size={16} />
+                    <span>Quotation</span>
                   </li>
                   <li 
-                    className={`sidebar-menu-item ${activeTab === 'invoice' ? 'active' : ''}`}
+                    className={`sidebar-sub-item ${activeTab === 'invoice' ? 'active' : ''}`}
                     onClick={() => setActiveTab('invoice')}
-                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                   >
-                    Invoice
+                    <FileText size={16} />
+                    <span>Invoice</span>
                   </li>
                   <li 
-                    className={`sidebar-menu-item ${activeTab === 'receipt' ? 'active' : ''}`}
+                    className={`sidebar-sub-item ${activeTab === 'receipt' ? 'active' : ''}`}
                     onClick={() => setActiveTab('receipt')}
-                    style={{ fontSize: '0.875rem', padding: '8px 12px' }}
                   >
-                    Receipt
+                    <FileText size={16} />
+                    <span>Receipt</span>
                   </li>
                 </ul>
               </div>
             </li>
 
             {/* Delivery Order (DO) */}
-            <li
+            <li 
               className={`sidebar-menu-item ${activeTab === 'delivery-order' ? 'active' : ''}`}
               onClick={() => setActiveTab('delivery-order')}
             >
@@ -207,12 +193,12 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
 
       </div>
 
-
-
-      <button className="sidebar-logout-btn" onClick={onLogout}>
-        <LogOut size={16} />
-        <span>Log out</span>
-      </button>
+      <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+        <button className="sidebar-logout-btn" onClick={onLogout}>
+          <LogOut size={16} />
+          <span>Log out</span>
+        </button>
+      </div>
     </div>
   );
 }

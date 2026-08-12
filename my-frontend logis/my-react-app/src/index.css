@@ -479,8 +479,8 @@ code {
 /* Sidebar */
 .dashboard-sidebar {
   width: 280px;
-  background-color: #ffffff;
-  border-right: 1px solid #e2e8f0;
+  background-color: #0f172a;
+  border-right: 1px solid #1e293b;
   padding: 24px 16px;
   display: flex;
   flex-direction: column;
@@ -497,23 +497,36 @@ code {
 }
 
 .dashboard-sidebar::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .dashboard-sidebar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 4px;
 }
 
 .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .sidebar-logo-section {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  margin-bottom: 25px;
+  padding: 8px 12px 16px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 20px;
+}
+
+.sidebar-logo-img {
+  height: 72px;
+  max-width: 95%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-logo-img:hover {
+  transform: scale(1.03);
 }
 
 /* Sidebar Navigation Groups */
@@ -525,13 +538,13 @@ code {
 }
 
 .sidebar-group-title {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
   margin-bottom: 10px;
   margin-left: 12px;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
 }
 
 .sidebar-menu-list {
@@ -546,27 +559,55 @@ code {
 .sidebar-menu-item {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.925rem;
   font-weight: 500;
-  color: #475569;
+  color: #ffffff;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   gap: 12px;
   user-select: none;
+  white-space: nowrap;
 }
 
 .sidebar-menu-item:hover {
-  background-color: #f1f5f9;
-  color: #0f172a;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .sidebar-menu-item.active {
-  background-color: #1872b2;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(24, 114, 178, 0.15);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+}
+
+.sidebar-sub-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 10px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sidebar-sub-item:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.sidebar-sub-item.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
 }
 
 .sidebar-menu-item-icon {
@@ -586,10 +627,6 @@ code {
   padding: 2px 7px;
   border-radius: 20px;
   margin-left: auto;
-}
-
-.sidebar-menu-sub-item {
-  padding-left: 36px;
 }
 
 /* Sidebar logo brand wrapper */
@@ -619,19 +656,17 @@ code {
   color: #64748b;
 }
 
-
-
 /* Logout Button */
 .sidebar-logout-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: transparent;
-  color: #64748b;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px 16px;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
   cursor: pointer;
   font-weight: 600;
   font-size: 0.9rem;
@@ -640,9 +675,10 @@ code {
 }
 
 .sidebar-logout-btn:hover {
-  background: #fff1f2;
-  color: #e11d48;
-  border-color: #fecdd3;
+  background: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
 }
 
 /* Main Viewport */
@@ -668,7 +704,7 @@ code {
 }
 
 .header-brand-title {
-  color: #13365b;
+  color: #0f172a;
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 1px;
