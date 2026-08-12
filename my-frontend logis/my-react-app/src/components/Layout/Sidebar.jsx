@@ -47,8 +47,8 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
 
             {/* Booking */}
             <li 
-              className="sidebar-menu-item"
-              onClick={() => alert('ระบบ Booking ยังไม่เปิดให้บริการในเวอร์ชันนี้')}
+              className={`sidebar-menu-item ${activeTab === 'booking' ? 'active' : ''}`}
+              onClick={() => setActiveTab('booking')}
             >
               <span className="sidebar-menu-item-icon">
                 <ClipboardList size={18} />
@@ -114,9 +114,9 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
             </li>
 
             {/* Delivery Order (DO) */}
-            <li 
-              className="sidebar-menu-item"
-              onClick={() => alert('ระบบ Delivery Order ยังไม่เปิดให้บริการในเวอร์ชันนี้')}
+            <li
+              className={`sidebar-menu-item ${activeTab === 'delivery-order' ? 'active' : ''}`}
+              onClick={() => setActiveTab('delivery-order')}
             >
               <span className="sidebar-menu-item-icon">
                 <Package size={18} />
