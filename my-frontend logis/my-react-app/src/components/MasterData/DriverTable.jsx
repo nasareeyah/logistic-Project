@@ -91,6 +91,18 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
       )
     : [];
 
+  // Filter out cars that are already assigned to other drivers
+  const availableCars = Array.isArray(cars)
+    ? cars.filter(car => {
+        const isAssignedToOther = Array.isArray(drivers) && drivers.some(d => 
+          d.assigned_car_id && 
+          String(d.assigned_car_id) === String(car.car_id) && 
+          String(d.driver_id) !== String(editingDriverId)
+        );
+        return !isAssignedToOther;
+      })
+    : [];
+
   // Helper to find car registration plate
   const getCarNumber = (carId) => {
     if (!carId) return 'Unassigned';
@@ -300,7 +312,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                     onChange={e => setFormData({ ...formData, assigned_car_id: e.target.value })}
                   >
                     <option value="">-- Select Truck --</option>
-                    {Array.isArray(cars) && cars.map(car => (
+                    {availableCars.map(car => (
                       <option key={car.car_id} value={car.car_id}>
                         {car.car_number} ({car.car_type})
                       </option>
