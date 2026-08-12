@@ -138,35 +138,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Middle Grid Row: Chart + Schedule */}
-      <div className="dashboard-grid-row-2">
-        {/* Bookings & Revenue Panel */}
-        <div className="dashboard-card-panel">
-          <div className="dashboard-card-header">
-            <div className="dashboard-card-title-group">
-              <h3 className="dashboard-card-title">Bookings & Revenue</h3>
-              <span className="dashboard-card-subtitle">Last 6 months</span>
-            </div>
-            <TrendingUp size={18} color="#1872b2" />
-          </div>
-          {/* SVG Dotted Grid Line Chart Template */}
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '220px' }}>
-            <svg viewBox="0 0 600 220" width="100%" height="220" style={{ overflow: 'visible' }}>
-              <line x1="30" y1="30" x2="580" y2="30" stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1.5" />
-              <text x="10" y="34" fill="#94a3b8" fontSize="12" fontWeight="500">4</text>
-
-              <line x1="30" y1="80" x2="580" y2="80" stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1.5" />
-              <text x="10" y="84" fill="#94a3b8" fontSize="12" fontWeight="500">3</text>
-
-              <line x1="30" y1="130" x2="580" y2="130" stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1.5" />
-              <text x="10" y="134" fill="#94a3b8" fontSize="12" fontWeight="500">2</text>
-
-              <line x1="30" y1="180" x2="580" y2="180" stroke="#f1f5f9" strokeDasharray="4 4" strokeWidth="1.5" />
-              <text x="10" y="184" fill="#94a3b8" fontSize="12" fontWeight="500">1</text>
-            </svg>
-          </div>
-        </div>
-
+      {/* Middle Grid Row: Schedule + Recent Bookings */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', marginBottom: '24px' }}>
         {/* Schedule / Calendar Panel */}
         <div className="dashboard-card-panel">
           <div className="dashboard-card-header" style={{ marginBottom: '12px' }}>
@@ -206,72 +179,9 @@ function Dashboard() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Bottom Grid Row: Job Status + Recent Bookings */}
-      <div className="dashboard-grid-row-3">
-        {/* Job Status Panel */}
-        <div className="dashboard-card-panel">
-          <h3 className="dashboard-card-title" style={{ marginBottom: '16px' }}>Job Status</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {/* Waiting */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-waiting">
-                <span className="status-dot"></span>
-                Waiting
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-
-            {/* Assigned */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-assigned">
-                <span className="status-dot"></span>
-                Assigned
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-
-            {/* In Progress */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-inprogress">
-                <span className="status-dot"></span>
-                In Progress
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-
-            {/* Delivered */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-delivered">
-                <span className="status-dot"></span>
-                Delivered
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-
-            {/* Completed */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-completed">
-                <span className="status-dot"></span>
-                Completed
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-
-            {/* Cancelled */}
-            <div className="status-badge-item">
-              <span className="status-badge-pill badge-cancelled">
-                <span className="status-dot"></span>
-                Cancelled
-              </span>
-              <span className="status-badge-count">0</span>
-            </div>
-          </div>
-        </div>
 
         {/* Recent Bookings Panel */}
-        <div className="dashboard-card-panel">
+        <div className="dashboard-card-panel" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="dashboard-card-header" style={{ marginBottom: '0px' }}>
             <h3 className="dashboard-card-title">Recent Bookings</h3>
             <span style={{ fontSize: '0.85rem', color: '#1872b2', fontWeight: '600', cursor: 'pointer' }}>View all</span>
