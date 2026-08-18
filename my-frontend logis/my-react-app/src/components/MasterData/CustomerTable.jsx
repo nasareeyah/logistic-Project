@@ -113,9 +113,87 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
     setShowModal(true);
   };
 
+  // Helper to parse a combined address string back into individual parts
+  const parseAddress = (addressStr) => {
+    const result = {
+      streetAddress: '',
+      addressLine2: '',
+      city: '',
+      province: '',
+      postalCode: '',
+      country: 'Thailand'
+    };
+
+    if (!addressStr) return result;
+
+    const parts = addressStr.split(',').map(p => p.trim());
+    const knownCountries = ['Thailand', 'Malaysia', 'Singapore', 'Laos', 'Cambodia', 'Vietnam', 'Myanmar', 'China', 'Japan', 'South Korea'];
+
+    // 1. Extract Country
+    while (parts.length > 0 && knownCountries.includes(parts[parts.length - 1])) {
+      result.country = parts.pop();
+    }
+
+    // 2. Extract Postal Code
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const match = parts[i].match(/\b\d{5,6}\b/);
+      if (match) {
+        result.postalCode = match[0];
+        parts[i] = parts[i].replace(match[0], '').trim();
+        break;
+      }
+    }
+
+    // Clean up empty parts that might have been left from removing postal code
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!parts[i]) {
+        parts.splice(i, 1);
+      }
+    }
+
+    // 3. Extract Province and City
+    if (parts.length > 0) {
+      const lastPart = parts[parts.length - 1];
+      const spaceParts = lastPart.split(/\s+/).filter(Boolean);
+      
+      if (spaceParts.length >= 2 && parts.length === 2) {
+        // e.g. parts = ["12/22", "Hatyai Songkla"] -> city: "Hatyai", province: "Songkla"
+        result.province = spaceParts.pop();
+        result.city = spaceParts.join(' ');
+        parts.pop();
+        result.streetAddress = parts.join(', ');
+      } else if (parts.length >= 3) {
+        // e.g. parts = ["12/22", "Hatyai", "Songkla"]
+        result.province = parts.pop();
+        result.city = parts.pop();
+        result.streetAddress = parts.join(', ');
+      } else if (parts.length === 2) {
+        // e.g. parts = ["12/22", "Songkla"]
+        result.city = parts.pop();
+        result.streetAddress = parts[0];
+      } else if (parts.length === 1) {
+        // e.g. parts = ["12/22 Hatyai Songkla"]
+        const spacePartsAll = parts[0].split(/\s+/).filter(Boolean);
+        if (spacePartsAll.length >= 3) {
+          result.province = spacePartsAll.pop();
+          result.city = spacePartsAll.pop();
+          result.streetAddress = spacePartsAll.join(' ');
+        } else if (spacePartsAll.length === 2) {
+          result.city = spacePartsAll.pop();
+          result.streetAddress = spacePartsAll[0];
+        } else {
+          result.streetAddress = parts[0];
+        }
+      }
+    }
+
+    return result;
+  };
+
   const openEditModal = (c) => {
     setModalMode('edit');
     setEditingCustomerId(c.customer_id);
+    const parsedAddr = parseAddress(c.address || '');
     setFormData({
       customer_name: c.customer_name || '',
       contact_person: c.contact_person || '',
@@ -123,12 +201,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       email: c.email || '',
       tax_id: c.tax_id || '',
       address: c.address || '',
-      streetAddress: c.address || '',
-      addressLine2: '',
-      country: 'Thailand',
-      postalCode: '',
-      province: '',
-      city: ''
+      streetAddress: parsedAddr.streetAddress,
+      addressLine2: parsedAddr.addressLine2,
+      country: parsedAddr.country,
+      postalCode: parsedAddr.postalCode,
+      province: parsedAddr.province,
+      city: parsedAddr.city
     });
     setShowModal(true);
   };
@@ -327,6 +405,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.customer_name}
                       onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
 
@@ -340,6 +419,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.contact_person}
                         onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                     <div className="form-group">
@@ -350,6 +430,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.phone}
                         onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -364,6 +445,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.email}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                     <div className="form-group">
@@ -374,6 +456,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.tax_id}
                         onChange={e => setFormData({ ...formData, tax_id: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -390,6 +473,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.streetAddress}
                       onChange={e => setFormData({ ...formData, streetAddress: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
 
@@ -402,6 +486,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.addressLine2}
                       onChange={e => setFormData({ ...formData, addressLine2: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
 
@@ -433,6 +518,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.postalCode}
                         onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -447,6 +533,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.province}
                         onChange={e => setFormData({ ...formData, province: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                     <div className="form-group">
@@ -457,6 +544,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                         className="form-input"
                         value={formData.city}
                         onChange={e => setFormData({ ...formData, city: e.target.value })}
+                        autoComplete="new-password"
                       />
                     </div>
                   </div>
@@ -603,6 +691,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     className="form-input"
                     value={formData.customer_name}
                     onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -616,6 +705,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.contact_person}
                       onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                   <div className="form-group">
@@ -626,6 +716,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
@@ -640,6 +731,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                   <div className="form-group">
@@ -650,6 +742,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.tax_id}
                       onChange={e => setFormData({ ...formData, tax_id: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
@@ -666,6 +759,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     className="form-input"
                     value={formData.streetAddress}
                     onChange={e => setFormData({ ...formData, streetAddress: e.target.value })}
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -678,6 +772,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     className="form-input"
                     value={formData.addressLine2}
                     onChange={e => setFormData({ ...formData, addressLine2: e.target.value })}
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -709,6 +804,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.postalCode}
                       onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
@@ -723,6 +819,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.province}
                       onChange={e => setFormData({ ...formData, province: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                   <div className="form-group">
@@ -733,6 +830,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       className="form-input"
                       value={formData.city}
                       onChange={e => setFormData({ ...formData, city: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>

@@ -18,13 +18,13 @@ function Header() {
         
         <div className="header-user-profile">
           <div className="header-avatar-circle">
-            <span>OR</span>
+            <span>OP</span>
           </div>
           {/* <div className="header-user-info">
             <span className="header-user-name">Operator</span>
             <span className="header-user-role">Admin</span>
-          </div> */}
-          <ChevronDown size={16} className="header-profile-chevron" />
+          </div>
+          <ChevronDown size={16} className="header-profile-chevron" /> */}
         </div>
       </div>
     </div>

@@ -233,7 +233,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
               </button>
             </div>
             
-            <form onSubmit={handleCreateOrSave}>
+            <form onSubmit={handleCreateOrSave} autoComplete="off"> {/* ปิดป๊อปอัปกรอกอัตโนมัติ (Autofill) ของเบราว์เซอร์ */}
               <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                 {/* Driver Name */}
                 <div className="form-group">
@@ -248,6 +248,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                     className="form-input"
                     value={formData.full_name}
                     onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                    autoComplete="new-password"
                   />
                 </div>
 
@@ -261,6 +262,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       className="form-input"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                   <div className="form-group">
@@ -271,6 +273,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       className="form-input"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                 </div>
@@ -285,6 +288,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                       className="form-input"
                       value={formData.license_number}
                       onChange={e => setFormData({ ...formData, license_number: e.target.value })}
+                      autoComplete="new-password"
                     />
                   </div>
                   {/* <div className="form-group">
