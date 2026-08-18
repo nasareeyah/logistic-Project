@@ -42,7 +42,7 @@ const formatDateOnly = (dateStr) => {
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
-
+//รันเลขใบเสนอราคาใหม่ทุกวัน โดยใช้วันที่เป็น prefix และเลขลำดับต่อท้าย
 const generateQuotationNo = (dateStr, documents = []) => {
   let d = new Date();
   if (dateStr) {
@@ -55,6 +55,7 @@ const generateQuotationNo = (dateStr, documents = []) => {
   const datePrefix = `QT-${year}${month}${day}-`;
   const maxSeq = (Array.isArray(documents) ? documents : []).reduce((max, doc) => {
     const no = doc && doc.document_no ? String(doc.document_no) : '';
+    if (!no.startsWith(datePrefix)) return max;
     const m = /^QT-\d{8}-(\d{4})$/.exec(no);
     if (!m) return max;
     const seq = parseInt(m[1], 10);
@@ -123,7 +124,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Step 4 Service Items
   const [items, setItems] = useState([
-    { id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+    { id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
   ]);
 
   // Update Quotation No and Expiry Date when Issue Date changes
@@ -157,7 +158,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       remark: ''
     });
     setRoutes([{ id: 1, origin: '', destination: '' }]);
-    setItems([{ id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+    setItems([{ id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
     setEditingDocId(null);
     setCurrentStep(1);
     setViewMode('create');
@@ -213,7 +214,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const handleAddItem = () => {
     setItems(prev => [
       ...prev,
-      { id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }
+      { id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
     ]);
   };
   const handleRemoveItem = (id) => {
@@ -272,13 +273,13 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           serviceType: di.service_typename || '',
           description: di.description || '',
           quantity: Number(di.item_quantity) || 1,
-          unitQuantity: di.unit || 'trip',
+          unitQuantity: di.unit || '',
           pricePerUnit: Number(di.unit_price) || 0,
           unit: 'THB',
           total: (Number(di.item_quantity) || 1) * (Number(di.unit_price) || 0)
         })));
       } else {
-        setItems([{ id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: 'trip', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+        setItems([{ id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
       }
     } catch (e) {
       console.error('Load items error:', e);

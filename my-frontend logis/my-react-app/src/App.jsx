@@ -75,8 +75,8 @@ function App() {
   };
 
   const quotations = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Quotation') : [];
-  const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
-  const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
+  // const invoices = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Invoice') : [];
+  // const receipts = Array.isArray(documents) ? documents.filter(doc => doc.document_type === 'Receipt') : [];
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -87,6 +87,7 @@ function App() {
   // ==========================================
   // CUSTOMER ACTIONS
   // ==========================================
+  //เพิ่มลูกค้าใหม่
  const handleAddCustomer = (newCustomerData, resetForm) => {
     const dataToSend = { ...newCustomerData };
 
@@ -117,6 +118,7 @@ function App() {
         alert('เกิดข้อผิดพลาด: ' + err.message);
       });
 };
+//บันทึกการเเก้ไขข้อมูลลูกค้า
 
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
     fetch(`http://localhost:3000/api/customers/${id}`, {
@@ -128,18 +130,22 @@ function App() {
       fetchData();
     });
   };
+  //ลบข้อมูลลูกค้า
 
   const handleDeleteCustomer = (id) => {
     if (!confirm('ยืนยันการลบลูกค้านี้?')) return;
-    fetch(`http://localhost:3000/api/customers/${id}`, { method: 'DELETE' })
+    fetch(`http://localhost:3000/api/customers/${id}`, { 
+      method: 'DELETE' })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
   };
 
+
   // ==========================================
   // CAR ACTIONS
   // ==========================================
+  //เพิ่มข้อมูลรถใหม่
   const handleAddCar = (newCarData, resetForm) => {
     const dataToSend = { ...newCarData };
 
@@ -158,12 +164,13 @@ function App() {
         }
       }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
-
+//บันทึกการเเก้ไขข้อมูลรถ
   const handleSaveCarEdit = (id, editCarData, successCallback) => {
     fetch(`http://localhost:3000/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
       .then(() => { successCallback(); fetchData(); });
   };
 
+  //ลบข้อมูลรถ
   const handleDeleteCar = (id) => {
     if (!confirm('ยืนยันการลบรถคันนี้?')) return;
     fetch(`http://localhost:3000/api/cars/${id}`, { method: 'DELETE' })
@@ -175,6 +182,7 @@ function App() {
   // ==========================================
   // DRIVER ACTIONS
   // ==========================================
+  //เพิ่มข้อมูลคนขับใหม่
   const handleAddDriver = (newDriverData, resetForm) => {
     const dataToSend = { ...newDriverData };
 
@@ -193,12 +201,13 @@ function App() {
         }
       }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
+  //บันทึกการเเก้ไขข้อมูลคนขับ
 
   const handleSaveDriverEdit = (id, editDriverData, successCallback) => {
     fetch(`http://localhost:3000/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) })
       .then(() => { successCallback(); fetchData(); });
   };
-
+ //ลบข้อมูลคนขับ
   const handleDeleteDriver = (id) => {
     if (!confirm('ยืนยันการลบคนขับคนนี้?')) return;
     fetch(`http://localhost:3000/api/driver/${id}`, { method: 'DELETE' })
@@ -210,6 +219,7 @@ function App() {
   // ==========================================
   // DOCUMENT ACTIONS
   // ==========================================
+  //เพิ่มเอกสารใหม่
   const handleAddDocument = (docType, newDocData, resetForm) => {
     const dataToSend = { 
       ...newDocData, 
@@ -259,11 +269,12 @@ function App() {
   // ==========================================
   // RENDER SECTIONS
   // ==========================================
+  // Check if user is logged in
   if (!isLoggedIn) {
     return <Login onLogin={handleLogin} loginError={loginError} />;
   }
 
-  if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}>⏳ กำลังโหลดข้อมูล...</div>;
+  if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}> กำลังโหลดข้อมูล...</div>;
   if (error) return <div style={{ padding: '30px', textAlign: 'center', color: 'red', fontSize: '18px' }}>{error}</div>;
 
   return (

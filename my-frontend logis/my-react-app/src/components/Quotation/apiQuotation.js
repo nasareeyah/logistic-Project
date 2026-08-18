@@ -1,13 +1,19 @@
-// apiQuotation.js
-
 const BASE_URL = 'http://localhost:3000/api';
 
+
+ //1. ดึงรายชื่อลูกค้าทั้งหมดจากฐานข้อมูล เพื่อนำมาแสดงในฟอร์มออกใบเสนอราคา
+ 
 export const fetchCustomerList = async () => {
     const response = await fetch(`${BASE_URL}/customers`);
     if (!response.ok) throw new Error('ไม่สามารถดึงข้อมูลลูกค้าได้');
     return await response.json();
 };
 
+/**
+ * 2. บันทึกข้อมูลที่อยู่ต้นทาง (ผู้ส่ง - Consigner) ลงในระบบหากไม่มีอยู่เดิม
+ * @param {string} origin - ที่อยู่ต้นทาง
+ * @returns {number|null} ID ของผู้ส่งที่เพิ่งบันทึกสำเร็จ
+ */
 const saveConsignerIfNeeded = async (origin) => {
     if (!origin) return null;
     const res = await fetch(`${BASE_URL}/consigner`, {
@@ -20,6 +26,11 @@ const saveConsignerIfNeeded = async (origin) => {
     return data.consigner_id || null;
 };
 
+/**
+ * 3. บันทึกข้อมูลที่อยู่ปลายทาง (ผู้รับ - Consignee) ลงในระบบหากไม่มีอยู่เดิม
+ * @param {string} destination - ที่อยู่ปลายทาง
+ * @returns {number|null} ID ของผู้รับที่เพิ่งบันทึกสำเร็จ
+ */
 const saveConsigneeIfNeeded = async (destination) => {
     if (!destination) return null;
     const res = await fetch(`${BASE_URL}/consignee`, {
@@ -32,6 +43,11 @@ const saveConsigneeIfNeeded = async (destination) => {
     return data.consignee_id || null;
 };
 
+/**
+ * 4. บันทึกประเภทของการให้บริการ (เช่น รถกระบะตู้ทึบ, รถ 6 ล้อ) ลงในระบบหากไม่มีอยู่เดิม
+ * @param {string} typeName - ชื่อประเภทบริการ
+ * @returns {number|null} ID ของประเภทบริการที่เพิ่งบันทึกสำเร็จ
+ */
 const saveServiceTypeIfNeeded = async (typeName) => {
     if (!typeName) return null;
     const res = await fetch(`${BASE_URL}/service_type`, {
@@ -44,6 +60,12 @@ const saveServiceTypeIfNeeded = async (typeName) => {
     return data.service_typeid || null;
 };
 
+/**
+ * 5. บันทึกรายการบริการแต่ละแถวลงในฐานข้อมูล
+ * @param {number} serviceTypeId - ID ประเภทบริการ
+ * @param {object} item - รายการข้อมูลบริการ เช่น คำอธิบาย จำนวน ราคาต่อหน่วย
+ * @returns {number} ID ของบริการที่เพิ่งบันทึกสำเร็จ
+ */
 const createServiceRecord = async (serviceTypeId, item) => {
     const res = await fetch(`${BASE_URL}/service`, {
         method: 'POST',
@@ -52,7 +74,7 @@ const createServiceRecord = async (serviceTypeId, item) => {
             service_typeID: serviceTypeId,
             description: item.description,
             quantity: Number(item.quantity) || null,
-            unit_quantity: item.unitQuantity || 'trip',
+            unit_quantity: item.unitQuantity || '',
             default_price: Number(item.pricePerUnit) || 0,
             unit: item.unit || 'THB'
         })
@@ -62,6 +84,11 @@ const createServiceRecord = async (serviceTypeId, item) => {
     return data.service_id;
 };
 
+/**
+ * 6. สร้างประวัติไอเทมเอกสาร (document_items) เพื่อเชื่อมโยงตัวเอกสาร (Quotation) เข้ากับบริการที่ทำรายการ
+ * @param {number} documentId - ID ของเอกสาร
+ * @param {number} serviceId - ID ของบริการ
+ */
 const createDocItemRecord = async (documentId, serviceId) => {
     const res = await fetch(`${BASE_URL}/document_items`, {
         method: 'POST',
@@ -76,12 +103,16 @@ const createDocItemRecord = async (documentId, serviceId) => {
     return data;
 };
 
+/**
+ * 7. ฟังก์ชันหลักสำหรับ "สร้างใบเสนอราคาใหม่ (Create)" พร้อมทั้งบันทึกข้อมูลย่อยอย่างเป็นลำดับขั้นตอน
+ */
 export const createQuotation = async ({ formData, routes, items, grandTotal }) => {
+    // 7.1 บันทึกต้นทางและปลายทาง (ถ้ามี)
     const route = routes?.[0] || {};
     const consignerId = await saveConsignerIfNeeded(route.origin);
     const consigneeId = await saveConsigneeIfNeeded(route.destination);
 
-    // สร้าง ALL services ก่อน แล้วเก็บ serviceIds
+    // 7.2 วนลูปบันทึกประเภทบริการและสร้างรายการ Service ทั้งหมดในฟอร์ม พร้อมเก็บ IDs ไว้
     const serviceIds = [];
     if (items && items.length > 0) {
         for (const item of items) {
@@ -91,7 +122,7 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
         }
     }
 
-    // สร้าง document พร้อมส่ง service_id ตัวแรก
+    // 7.3 บันทึกตัวเอกสารหลัก (document) ลงฐานข้อมูล พร้อมอ้างอิง Service ตัวแรก
     const docRes = await fetch(`${BASE_URL}/document`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,7 +148,7 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
     const newDocumentId = docResult.data?.document_id;
     if (!newDocumentId) throw new Error('ไม่ได้รับ document_id จากระบบ');
 
-    // สร้าง document_items เชื่อมทุก service กับ document
+    // 7.4 บันทึกความเชื่อมโยงในตาราง document_items ให้ครบทุกรายการบริการที่มี
     for (const serviceId of serviceIds) {
         await createDocItemRecord(newDocumentId, serviceId);
     }
@@ -125,19 +156,23 @@ export const createQuotation = async ({ formData, routes, items, grandTotal }) =
     return docResult;
 };
 
+/**
+ * 8. ฟังก์ชันสำหรับ "แก้ไขใบเสนอราคาเดิม (Update)"
+ */
 export const updateQuotation = async (documentId, { formData, routes, items, grandTotal }) => {
+    // 8.1 บันทึกต้นทางและปลายทาง (ถ้ามีอัปเดต)
     const route = routes?.[0] || {};
     const consignerId = await saveConsignerIfNeeded(route.origin);
     const consigneeId = await saveConsigneeIfNeeded(route.destination);
 
-    // ลบ document_items เดิม
+    // 8.2 เคลียร์/ลบรายการไอเทมเอกสาร (document_items) เดิมออกก่อนเพื่อเตรียมเขียนทับ
     const oldRes = await fetch(`${BASE_URL}/document_items?document_id=${documentId}`);
     const oldItems = await oldRes.json();
     for (const oldItem of oldItems) {
         await fetch(`${BASE_URL}/document_items/${oldItem.document_items_id}`, { method: 'DELETE' });
     }
 
-    // สร้าง services ก่อน แล้วเก็บ serviceIds
+    // 8.3 สร้างรายการ Services ชุดใหม่ขึ้นมาทดแทน
     const serviceIds = [];
     if (items && items.length > 0) {
         for (const item of items) {
@@ -147,7 +182,7 @@ export const updateQuotation = async (documentId, { formData, routes, items, gra
         }
     }
 
-    // แก้ไข document พร้อมส่ง service_id ตัวแรก
+    // 8.4 ทำการอัปเดตตัวเอกสารหลัก (document) ในฐานข้อมูลด้วยค่าล่าสุด
     const docRes = await fetch(`${BASE_URL}/document/${documentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -170,7 +205,7 @@ export const updateQuotation = async (documentId, { formData, routes, items, gra
     const docResult = await docRes.json();
     if (!docRes.ok) throw new Error(docResult.error || 'แก้ไขเอกสารไม่สำเร็จ');
 
-    // สร้าง document_items ใหม่ทุก serviceId
+    // 8.5 เชื่อมโยงไอเทมใหม่ทั้งหมดลงในตาราง document_items
     for (const serviceId of serviceIds) {
         await createDocItemRecord(documentId, serviceId);
     }
@@ -178,6 +213,9 @@ export const updateQuotation = async (documentId, { formData, routes, items, gra
     return docResult;
 };
 
+/**
+ * 9. ลบใบเสนอราคาออกจากระบบโดยระบุ ID ของเอกสาร
+ */
 export const deleteQuotation = async (documentId) => {
     const res = await fetch(`${BASE_URL}/document/${documentId}`, {
         method: 'DELETE',

@@ -124,6 +124,7 @@ export default function QuotationPreview({ doc, items = [], customerList = [], o
         <div className="no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '12px' }}>
           <button
             className="btn-primary"
+            //ส่วน event onClick จะเรียกใช้ window.print() เพื่อเปิดหน้าต่างพิมพ์ของเบราว์เซอร์
             onClick={() => window.print()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
