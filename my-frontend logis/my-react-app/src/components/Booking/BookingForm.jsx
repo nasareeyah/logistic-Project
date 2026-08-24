@@ -57,87 +57,72 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   // Step 1: Customer
   const [customerSearch, setCustomerSearch] = useState('');
-  const defaultCustomers = [
-    {
-      customer_id: 'cust-001',
-      customer_name: 'Northern Rice Export Ltd.',
-      contact_person: 'Apiradee Charoen',
-      phone: '084-567-8901'
-    },
-    {
-      customer_id: 'cust-002',
-      customer_name: 'Thai Global Trading Co., Ltd.',
-      contact_person: 'Somchai Jaidee',
-      phone: '081-234-5678'
-    },
-    {
-      customer_id: 'cust-003',
-      customer_name: 'Eastern Seaboard Manufacturing',
-      contact_person: 'Prasert Boon',
-      phone: '083-456-7890'
-    },
-    {
-      customer_id: 'cust-004',
-      customer_name: 'Bangkok Logistics Partners',
-      contact_person: 'Nattaya Suk',
-      phone: '082-345-6789'
-    }
-  ];
+  const mergedCustomers = Array.isArray(customers) ? customers : [];
 
-  const mergedCustomers = Array.from(
-    new Map(
-      [...defaultCustomers, ...(Array.isArray(customers) ? customers : [])].map(c => [c.customer_name, c])
-    ).values()
-  );
-
-  const [selectedCustomer, setSelectedCustomer] = useState(defaultCustomers[3]);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isAddCustModalOpen, setIsAddCustModalOpen] = useState(false);
   const [newCustForm, setNewCustForm] = useState({ customer_name: '', contact_person: '', phone: '' });
 
   // Step 2: Cargo
   const [cargoItems, setCargoItems] = useState([
-    { product_name: 'plastics', quantity: '500', unit: 'tun', weight: '3000', wt_unit: 'kg', remark: '123' }
+    { product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
   ]);
 
-  // Step 3: Transport
+  // Step 3: Transport (Multiple Senders & Receivers)
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [transportData, setTransportData] = useState({
-    sender_name: '',
-    sender_address: 'Ism',
-    sender_city: '',
-    sender_state: '',
-    sender_postal: '',
-    sender_country: 'Country',
-    pickup_date: '2026-08-05',
+  
+  const emptySender = { company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr };
+  const emptyReceiver = { company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr };
 
-    receiver_name: '',
-    receiver_address: 'Ims',
-    receiver_city: '',
-    receiver_state: '',
-    receiver_postal: '',
-    receiver_country: 'Country',
-    delivery_date: '2026-08-16'
-  });
+  const [sendersList, setSendersList] = useState([{ ...emptySender }]);
+  const [receiversList, setReceiversList] = useState([{ ...emptyReceiver }]);
+
+  const handleAddSender = () => {
+    setSendersList(prev => [...prev, { ...emptySender }]);
+  };
+
+  const handleRemoveSender = (index) => {
+    if (sendersList.length <= 1) return;
+    setSendersList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSenderChange = (index, field, value) => {
+    setSendersList(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddReceiver = () => {
+    setReceiversList(prev => [...prev, { ...emptyReceiver }]);
+  };
+
+  const handleRemoveReceiver = (index) => {
+    if (receiversList.length <= 1) return;
+    setReceiversList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleReceiverChange = (index, field, value) => {
+    setReceiversList(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
   // Step 4: Attachments
   const [wizardAttachedFiles, setWizardAttachedFiles] = useState([]);
   const [wizardNewFiles, setWizardNewFiles] = useState([]);
   const wizardFileInputRef = useRef(null);
 
-  // Default truck options
-  const defaultTruckOptions = [
+  // Truck options derived from DB cars
+  const truckOptions = [
     '— Select truck —',
-    '65-3456 (Trailer (20ft))',
-    '80-5678 (Trailer (40ft))',
-    '70-1234 (10-Wheeler)'
+    ...(Array.isArray(cars) ? cars : []).map(c => `${c.car_number} (${c.car_type || 'Truck'})`)
   ];
 
-  const truckOptions = Array.from(new Set([
-    ...defaultTruckOptions,
-    ...(Array.isArray(cars) ? cars : []).map(c => `${c.car_number} (${c.car_type || 'Truck'})`)
-  ]));
-
-  // ดึงข้อมูล Bookings ทั้งหมด
+  // ดึงข้อมูล Bookings ทั้งหมดจากฐานข้อมูลจริง
   const loadBookingsData = async () => {
     try {
       setLoading(true);
@@ -145,80 +130,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       setBookings(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching bookings:', err);
-      // Mock data matching screenshot if server is starting
-      setBookings([
-        {
-          booking_id: 'bk-1001',
-          booking_no: 'BK-20260805-3387',
-          customer_name: 'Bangkok Logistics Partners',
-          pickup_date: '2026-08-05',
-          delivery_date: '2026-08-16',
-          truck_name: '65-3456 (Trailer (20ft))',
-          attachments: []
-        },
-        {
-          booking_id: 'bk-1002',
-          booking_no: 'BK-20260723-4478',
-          customer_name: 'Thai Global Trading Co., Ltd.',
-          pickup_date: '2026-07-23',
-          delivery_date: '2026-07-25',
-          truck_name: '80-5678 (Trailer (40ft))',
-          attachments: [
-            {
-              attachment_id: 'att-4478',
-              file_name: 'DO_BK-20260723-4478.pdf',
-              original_name: 'Delivery_Order_ThaiGlobal_4478.pdf',
-              file_path: '/uploads/DO_BK-20260723-4478.pdf',
-              file_size: 245000
-            }
-          ]
-        },
-        {
-          booking_id: 'bk-1003',
-          booking_no: 'BK-20260723-003',
-          customer_name: 'Eastern Seaboard Manufacturing',
-          pickup_date: '2026-07-22',
-          delivery_date: '2026-07-23',
-          truck_name: '— Select truck —',
-          attachments: []
-        },
-        {
-          booking_id: 'bk-1004',
-          booking_no: 'BK-20260723-002',
-          customer_name: 'Bangkok Logistics Partners',
-          pickup_date: '2026-07-24',
-          delivery_date: '2026-07-25',
-          truck_name: '80-5678 (Trailer (40ft))',
-          attachments: []
-        },
-        {
-          booking_id: 'bk-1005',
-          booking_no: 'BK-20260723-001',
-          customer_name: 'Thai Global Trading Co., Ltd.',
-          pickup_date: '2026-07-25',
-          delivery_date: '2026-07-26',
-          truck_name: '70-1234 (10-Wheeler)',
-          attachments: []
-        },
-        {
-          booking_id: 'bk-1006',
-          booking_no: 'BK-20260723-004',
-          customer_name: 'Thai Global Trading Co., Ltd.',
-          pickup_date: '2026-07-18',
-          delivery_date: '2026-07-19',
-          truck_name: '— Select truck —',
-          attachments: []
-        },
-        {
-          booking_id: 'bk-1007',
-          booking_no: 'BK-20260723-005',
-          customer_name: 'Bangkok Logistics Partners',
-          pickup_date: '2026-07-28',
-          delivery_date: '2026-07-29',
-          truck_name: '— Select truck —',
-          attachments: []
-        }
-      ]);
+      setBookings([]);
     } finally {
       setLoading(false);
     }
@@ -267,12 +179,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // Open 5-Step Wizard for Create
   const handleOpenCreateWizard = () => {
     setEditingBooking(null);
-    setSelectedCustomer(defaultCustomers[3]);
-    setCargoItems([{ product_name: 'plastics', quantity: '500', unit: 'tun', weight: '3000', wt_unit: 'kg', remark: '123' }]);
-    setTransportData({
-      sender_name: '', sender_address: 'Ism', sender_city: '', sender_state: '', sender_postal: '', sender_country: 'Country', pickup_date: '2026-08-05',
-      receiver_name: '', receiver_address: 'Ims', receiver_city: '', receiver_state: '', receiver_postal: '', receiver_country: 'Country', delivery_date: '2026-08-16'
-    });
+    setSelectedCustomer(null);
+    setCargoItems([{ product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }]);
+    setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
+    setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
     setWizardAttachedFiles([]);
     setWizardNewFiles([]);
     setCurrentStep(1);
@@ -285,29 +195,45 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     setOpenMenuId(null);
 
     const matchCust = mergedCustomers.find(c => c.customer_name === booking.customer_name);
-    setSelectedCustomer(matchCust || { customer_name: booking.customer_name, contact_person: 'Contact Person', phone: '080-000-0000' });
+    setSelectedCustomer(matchCust || { customer_name: booking.customer_name || '', contact_person: '', phone: '' });
 
     setCargoItems(Array.isArray(booking.cargo_details) ? booking.cargo_details : [
-      { product_name: 'plastics', quantity: '500', unit: 'tun', weight: '3000', wt_unit: 'kg', remark: '123' }
+      { product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
     ]);
 
-    setTransportData({
-      sender_name: booking.sender_details?.sender_name || '',
-      sender_address: booking.sender_details?.sender_address || 'Ism',
-      sender_city: booking.sender_details?.sender_city || '',
-      sender_state: booking.sender_details?.sender_state || '',
-      sender_postal: booking.sender_details?.sender_postal || '',
-      sender_country: booking.sender_details?.sender_country || 'Country',
-      pickup_date: booking.pickup_date ? new Date(booking.pickup_date).toISOString().slice(0, 10) : '2026-08-05',
+    // Parse sender_details if array or single object
+    if (Array.isArray(booking.sender_details) && booking.sender_details.length > 0) {
+      setSendersList(booking.sender_details);
+    } else if (booking.sender_details && typeof booking.sender_details === 'object') {
+      setSendersList([{
+        company_name: booking.sender_details.sender_name || booking.sender_details.company_name || '',
+        address_line: booking.sender_details.sender_address || booking.sender_details.address_line || '',
+        city: booking.sender_details.sender_city || booking.sender_details.city || '',
+        state: booking.sender_details.sender_state || booking.sender_details.state || '',
+        postal_code: booking.sender_details.sender_postal || booking.sender_details.postal_code || '',
+        country: booking.sender_details.sender_country || booking.sender_details.country || '',
+        pickup_date: booking.pickup_date ? new Date(booking.pickup_date).toISOString().slice(0, 10) : todayStr
+      }]);
+    } else {
+      setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
+    }
 
-      receiver_name: booking.receiver_details?.receiver_name || '',
-      receiver_address: booking.receiver_details?.receiver_address || 'Ims',
-      receiver_city: booking.receiver_details?.receiver_city || '',
-      receiver_state: booking.receiver_details?.receiver_state || '',
-      receiver_postal: booking.receiver_details?.receiver_postal || '',
-      receiver_country: booking.receiver_details?.receiver_country || 'Country',
-      delivery_date: booking.delivery_date ? new Date(booking.delivery_date).toISOString().slice(0, 10) : '2026-08-16'
-    });
+    // Parse receiver_details if array or single object
+    if (Array.isArray(booking.receiver_details) && booking.receiver_details.length > 0) {
+      setReceiversList(booking.receiver_details);
+    } else if (booking.receiver_details && typeof booking.receiver_details === 'object') {
+      setReceiversList([{
+        company_name: booking.receiver_details.receiver_name || booking.receiver_details.company_name || '',
+        address_line: booking.receiver_details.receiver_address || booking.receiver_details.address_line || '',
+        city: booking.receiver_details.receiver_city || booking.receiver_details.city || '',
+        state: booking.receiver_details.receiver_state || booking.receiver_details.state || '',
+        postal_code: booking.receiver_details.receiver_postal || booking.receiver_details.postal_code || '',
+        country: booking.receiver_details.receiver_country || booking.receiver_details.country || '',
+        delivery_date: booking.delivery_date ? new Date(booking.delivery_date).toISOString().slice(0, 10) : todayStr
+      }]);
+    } else {
+      setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
+    }
 
     setWizardAttachedFiles(booking.attachments || []);
     setWizardNewFiles([]);
@@ -394,27 +320,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         booking_no: autoBookingNo,
         customer_id: selectedCustomer?.customer_id || null,
         customer_name: selectedCustomer?.customer_name || 'Unassigned Customer',
-        pickup_date: transportData.pickup_date || null,
-        delivery_date: transportData.delivery_date || null,
+        pickup_date: sendersList[0]?.pickup_date || todayStr,
+        delivery_date: receiversList[0]?.delivery_date || todayStr,
         truck_name: editingBooking?.truck_name || '— Select truck —',
         status: editingBooking?.status || 'Active',
         cargo_details: cargoItems,
-        sender_details: {
-          sender_name: transportData.sender_name,
-          sender_address: transportData.sender_address,
-          sender_city: transportData.sender_city,
-          sender_state: transportData.sender_state,
-          sender_postal: transportData.sender_postal,
-          sender_country: transportData.sender_country
-        },
-        receiver_details: {
-          receiver_name: transportData.receiver_name,
-          receiver_address: transportData.receiver_address,
-          receiver_city: transportData.receiver_city,
-          receiver_state: transportData.receiver_state,
-          receiver_postal: transportData.receiver_postal,
-          receiver_country: transportData.receiver_country
-        }
+        sender_details: sendersList,
+        receiver_details: receiversList
       };
 
       let bookingId = editingBooking?.booking_id;
@@ -503,7 +415,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               <h2 className="step-section-heading">Select Customer</h2>
 
               <div className="step1-controls-row">
-                <div className="customer-search-box">
+                <div className="customer-search-box" style={{ width: '100%' }}>
                   <Search size={18} className="search-icon" />
                   <input
                     type="text"
@@ -512,15 +424,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     onChange={(e) => setCustomerSearch(e.target.value)}
                   />
                 </div>
-
-                <button 
-                  type="button" 
-                  className="add-new-customer-btn"
-                  onClick={() => setIsAddCustModalOpen(true)}
-                >
-                  <UserPlus size={16} />
-                  <span>Add New Customer</span>
-                </button>
               </div>
 
               <div className="customer-cards-grid">
@@ -672,160 +575,210 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {currentStep === 3 && (
             <div className="wizard-step-body">
               <div className="transport-dual-grid">
+                {/* PICKUP (SENDER) COLUMN */}
                 <div className="transport-box-card">
                   <div className="box-header-row">
                     <h3>Pickup (Sender)</h3>
-                    <button type="button" className="btn-small-add">
+                    <button type="button" className="btn-small-add" onClick={handleAddSender}>
                       <Plus size={14} />
                       <span>Add</span>
                     </button>
                   </div>
 
-                  <div className="form-group-vertical">
-                    <label>Sender Company Name</label>
-                    <input
-                      type="text"
-                      placeholder="Company name"
-                      value={transportData.sender_name}
-                      onChange={(e) => setTransportData({ ...transportData, sender_name: e.target.value })}
-                    />
-                  </div>
+                  {sendersList.map((sender, idx) => (
+                    <div key={idx} className="location-block-card">
+                      <div className="location-block-header">
+                        <span className="location-block-index">Pickup Location #{idx + 1}</span>
+                      </div>
 
-                  <div className="form-group-vertical">
-                    <label>Address Line</label>
-                    <input
-                      type="text"
-                      placeholder="Ism"
-                      value={transportData.sender_address}
-                      onChange={(e) => setTransportData({ ...transportData, sender_address: e.target.value })}
-                    />
-                  </div>
+                      <div className="form-group-vertical">
+                        <label>Sender Company Name</label>
+                        <input
+                          type="text"
+                          placeholder="Company name"
+                          value={sender.company_name}
+                          onChange={(e) => handleSenderChange(idx, 'company_name', e.target.value)}
+                        />
+                      </div>
 
-                  <div className="form-row-two-cols">
-                    <div className="form-group-vertical">
-                      <label>City</label>
-                      <input
-                        type="text"
-                        value={transportData.sender_city}
-                        onChange={(e) => setTransportData({ ...transportData, sender_city: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-vertical">
-                      <label>State / Province</label>
-                      <input
-                        type="text"
-                        value={transportData.sender_state}
-                        onChange={(e) => setTransportData({ ...transportData, sender_state: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                      <div className="form-group-vertical">
+                        <label>Address Line</label>
+                        <input
+                          type="text"
+                          placeholder="Street address / Location"
+                          value={sender.address_line}
+                          onChange={(e) => handleSenderChange(idx, 'address_line', e.target.value)}
+                        />
+                      </div>
 
-                  <div className="form-row-two-cols">
-                    <div className="form-group-vertical">
-                      <label>Postal Code</label>
-                      <input
-                        type="text"
-                        value={transportData.sender_postal}
-                        onChange={(e) => setTransportData({ ...transportData, sender_postal: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-vertical">
-                      <label>Country</label>
-                      <input
-                        type="text"
-                        placeholder="Country"
-                        value={transportData.sender_country}
-                        onChange={(e) => setTransportData({ ...transportData, sender_country: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                      <div className="form-row-two-cols">
+                        <div className="form-group-vertical">
+                          <label>City</label>
+                          <input
+                            type="text"
+                            placeholder="City"
+                            value={sender.city}
+                            onChange={(e) => handleSenderChange(idx, 'city', e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group-vertical">
+                          <label>State / Province</label>
+                          <input
+                            type="text"
+                            placeholder="State / Province"
+                            value={sender.state}
+                            onChange={(e) => handleSenderChange(idx, 'state', e.target.value)}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="form-group-vertical">
-                    <label>Pickup Date</label>
-                    <input
-                      type="date"
-                      value={transportData.pickup_date}
-                      onChange={(e) => setTransportData({ ...transportData, pickup_date: e.target.value })}
-                    />
-                  </div>
+                      <div className="form-row-two-cols">
+                        <div className="form-group-vertical">
+                          <label>Postal Code</label>
+                          <input
+                            type="text"
+                            placeholder="Postal code"
+                            value={sender.postal_code}
+                            onChange={(e) => handleSenderChange(idx, 'postal_code', e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group-vertical">
+                          <label>Country</label>
+                          <input
+                            type="text"
+                            placeholder="Country"
+                            value={sender.country}
+                            onChange={(e) => handleSenderChange(idx, 'country', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-group-vertical">
+                        <label>Pickup Date</label>
+                        <input
+                          type="date"
+                          value={sender.pickup_date || todayStr}
+                          onChange={(e) => handleSenderChange(idx, 'pickup_date', e.target.value)}
+                        />
+                      </div>
+
+                      {sendersList.length > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            className="btn-remove-location"
+                            onClick={() => handleRemoveSender(idx)}
+                          >
+                            <Trash2 size={13} />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
+                {/* DELIVERY (RECEIVER) COLUMN */}
                 <div className="transport-box-card">
                   <div className="box-header-row">
                     <h3>Delivery (Receiver)</h3>
-                    <button type="button" className="btn-small-add">
+                    <button type="button" className="btn-small-add" onClick={handleAddReceiver}>
                       <Plus size={14} />
                       <span>Add</span>
                     </button>
                   </div>
 
-                  <div className="form-group-vertical">
-                    <label>Receiver Company Name</label>
-                    <input
-                      type="text"
-                      placeholder="Company name"
-                      value={transportData.receiver_name}
-                      onChange={(e) => setTransportData({ ...transportData, receiver_name: e.target.value })}
-                    />
-                  </div>
+                  {receiversList.map((receiver, idx) => (
+                    <div key={idx} className="location-block-card">
+                      <div className="location-block-header">
+                        <span className="location-block-index">Delivery Location #{idx + 1}</span>
+                      </div>
 
-                  <div className="form-group-vertical">
-                    <label>Address Line</label>
-                    <input
-                      type="text"
-                      placeholder="Ims"
-                      value={transportData.receiver_address}
-                      onChange={(e) => setTransportData({ ...transportData, receiver_address: e.target.value })}
-                    />
-                  </div>
+                      <div className="form-group-vertical">
+                        <label>Receiver Company Name</label>
+                        <input
+                          type="text"
+                          placeholder="Company name"
+                          value={receiver.company_name}
+                          onChange={(e) => handleReceiverChange(idx, 'company_name', e.target.value)}
+                        />
+                      </div>
 
-                  <div className="form-row-two-cols">
-                    <div className="form-group-vertical">
-                      <label>City</label>
-                      <input
-                        type="text"
-                        value={transportData.receiver_city}
-                        onChange={(e) => setTransportData({ ...transportData, receiver_city: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-vertical">
-                      <label>State / Province</label>
-                      <input
-                        type="text"
-                        value={transportData.receiver_state}
-                        onChange={(e) => setTransportData({ ...transportData, receiver_state: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                      <div className="form-group-vertical">
+                        <label>Address Line</label>
+                        <input
+                          type="text"
+                          placeholder="Street address / Location"
+                          value={receiver.address_line}
+                          onChange={(e) => handleReceiverChange(idx, 'address_line', e.target.value)}
+                        />
+                      </div>
 
-                  <div className="form-row-two-cols">
-                    <div className="form-group-vertical">
-                      <label>Postal Code</label>
-                      <input
-                        type="text"
-                        value={transportData.receiver_postal}
-                        onChange={(e) => setTransportData({ ...transportData, receiver_postal: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-vertical">
-                      <label>Country</label>
-                      <input
-                        type="text"
-                        placeholder="Country"
-                        value={transportData.receiver_country}
-                        onChange={(e) => setTransportData({ ...transportData, receiver_country: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                      <div className="form-row-two-cols">
+                        <div className="form-group-vertical">
+                          <label>City</label>
+                          <input
+                            type="text"
+                            placeholder="City"
+                            value={receiver.city}
+                            onChange={(e) => handleReceiverChange(idx, 'city', e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group-vertical">
+                          <label>State / Province</label>
+                          <input
+                            type="text"
+                            placeholder="State / Province"
+                            value={receiver.state}
+                            onChange={(e) => handleReceiverChange(idx, 'state', e.target.value)}
+                          />
+                        </div>
+                      </div>
 
-                  <div className="form-group-vertical">
-                    <label>Delivery Date</label>
-                    <input
-                      type="date"
-                      value={transportData.delivery_date}
-                      onChange={(e) => setTransportData({ ...transportData, delivery_date: e.target.value })}
-                    />
-                  </div>
+                      <div className="form-row-two-cols">
+                        <div className="form-group-vertical">
+                          <label>Postal Code</label>
+                          <input
+                            type="text"
+                            placeholder="Postal code"
+                            value={receiver.postal_code}
+                            onChange={(e) => handleReceiverChange(idx, 'postal_code', e.target.value)}
+                          />
+                        </div>
+                        <div className="form-group-vertical">
+                          <label>Country</label>
+                          <input
+                            type="text"
+                            placeholder="Country"
+                            value={receiver.country}
+                            onChange={(e) => handleReceiverChange(idx, 'country', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="form-group-vertical">
+                        <label>Delivery Date</label>
+                        <input
+                          type="date"
+                          value={receiver.delivery_date || todayStr}
+                          onChange={(e) => handleReceiverChange(idx, 'delivery_date', e.target.value)}
+                        />
+                      </div>
+
+                      {receiversList.length > 1 && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                          <button
+                            type="button"
+                            className="btn-remove-location"
+                            onClick={() => handleRemoveReceiver(idx)}
+                          >
+                            <Trash2 size={13} />
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -899,7 +852,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 <div className="review-card-item">
                   <span className="review-label">BOOKING DATE</span>
                   <span className="review-value-bold">
-                    {new Date(transportData.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {new Date(sendersList[0]?.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
 
@@ -911,20 +864,28 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">PICKUP (SENDER)</span>
+                  <span className="review-label">PICKUP (SENDER - {sendersList.length} Location(s))</span>
                   <span className="review-value">
-                    —<br />
-                    {transportData.sender_address || '-'}<br />
-                    {new Date(transportData.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {sendersList.map((s, i) => (
+                      <div key={i} style={{ marginBottom: '6px' }}>
+                        <strong>#{i + 1} {s.company_name || 'Sender'}</strong><br />
+                        {s.address_line || '-'}<br />
+                        Date: {s.pickup_date ? new Date(s.pickup_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </div>
+                    ))}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">DELIVERY (RECEIVER)</span>
+                  <span className="review-label">DELIVERY (RECEIVER - {receiversList.length} Location(s))</span>
                   <span className="review-value">
-                    —<br />
-                    {transportData.receiver_address || '-'}<br />
-                    {new Date(transportData.delivery_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {receiversList.map((r, i) => (
+                      <div key={i} style={{ marginBottom: '6px' }}>
+                        <strong>#{i + 1} {r.company_name || 'Receiver'}</strong><br />
+                        {r.address_line || '-'}<br />
+                        Date: {r.delivery_date ? new Date(r.delivery_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      </div>
+                    ))}
                   </span>
                 </div>
 
@@ -974,71 +935,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             )}
           </div>
         </div>
-
-        {/* QUICK ADD CUSTOMER MODAL */}
-        {isAddCustModalOpen && (
-          <div className="modal-backdrop-overlay">
-            <div className="booking-form-modal-card" style={{ maxWidth: '450px' }}>
-              <div className="modal-header-bar">
-                <h2>Add New Customer</h2>
-                <button className="modal-close-btn" onClick={() => setIsAddCustModalOpen(false)}>
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="modal-body-content" style={{ gap: '14px' }}>
-                <div className="form-group">
-                  <label>Customer Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. New Logistics Co."
-                    value={newCustForm.customer_name}
-                    onChange={(e) => setNewCustForm({ ...newCustForm, customer_name: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Contact Person</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. John Doe"
-                    value={newCustForm.contact_person}
-                    onChange={(e) => setNewCustForm({ ...newCustForm, contact_person: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 081-999-8888"
-                    value={newCustForm.phone}
-                    onChange={(e) => setNewCustForm({ ...newCustForm, phone: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-footer-bar">
-                <button type="button" className="btn-secondary" onClick={() => setIsAddCustModalOpen(false)}>
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  className="btn-primary"
-                  onClick={() => {
-                    if (!newCustForm.customer_name) return alert('Enter customer name');
-                    const newC = { ...newCustForm, customer_id: 'cust-' + Date.now() };
-                    setSelectedCustomer(newC);
-                    setIsAddCustModalOpen(false);
-                    setNewCustForm({ customer_name: '', contact_person: '', phone: '' });
-                  }}
-                >
-                  Add & Select
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
