@@ -1,0 +1,611 @@
+/* ==========================================================================
+   5-STEP BOOKING WIZARD STYLES (Matching Mockup Screenshots 1 - 5)
+   ========================================================================== */
+
+.wizard-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 0 0 40px 0;
+  font-family: 'Inter', 'Sarabun', system-ui, -apple-system, sans-serif;
+  color: #1e293b;
+  box-sizing: border-box;
+}
+
+/* 1. TOP NAV & PAGE TITLE */
+.wizard-top-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.back-to-bookings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+  transition: color 0.15s ease;
+  width: fit-content;
+}
+
+.back-to-bookings-btn:hover {
+  color: #0f172a;
+}
+
+.wizard-page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+/* 2. WIZARD MAIN CARD */
+.wizard-main-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* STEPPER PROGRESS BAR */
+.wizard-stepper-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.stepper-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.stepper-item.active .stepper-circle {
+  background-color: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.18);
+}
+
+.stepper-item.completed .stepper-circle {
+  background-color: #0284c7;
+  color: #ffffff;
+}
+
+.stepper-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  transition: color 0.2s ease;
+}
+
+.stepper-item.active .stepper-label {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.stepper-item.completed .stepper-label {
+  color: #334155;
+  font-weight: 600;
+}
+
+.stepper-line {
+  flex: 1;
+  max-width: 60px;
+  height: 2px;
+  background-color: #e2e8f0;
+  transition: background-color 0.2s ease;
+}
+
+.stepper-line.completed {
+  background-color: #0284c7;
+}
+
+/* STEP BODY COMMON */
+.wizard-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 280px;
+}
+
+.step-section-heading {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.step-header-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* STEP 1: SELECT CUSTOMER */
+.step1-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.customer-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 8px 16px;
+  width: 320px;
+  transition: border-color 0.15s ease;
+}
+
+.customer-search-box:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.customer-search-box .search-icon {
+  color: #94a3b8;
+}
+
+.customer-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+}
+
+.add-new-customer-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.add-new-customer-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.customer-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.customer-select-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-select-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.customer-select-card.selected {
+  border: 2px solid #0284c7;
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08);
+}
+
+.cust-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cust-card-contact {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.cust-card-phone {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* STEP 2: CARGO FORM */
+.btn-outline-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-outline-action:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.cargo-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cargo-item-row-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.cargo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cargo-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.cargo-field input,
+.cargo-field select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  height: 38px;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+}
+
+.cargo-field input:focus,
+.cargo-field select:focus {
+  border-color: #0284c7;
+  background-color: #ffffff;
+}
+
+.col-product { flex: 2; }
+.col-qty { flex: 1; }
+.col-unit { flex: 1; }
+.col-weight { flex: 1; }
+.col-wtunit { flex: 1; }
+.col-remark { flex: 1.5; }
+
+.remove-cargo-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-cargo-btn:hover {
+  background-color: #fef2f2;
+}
+
+/* STEP 3: TRANSPORT DUAL CARDS */
+.transport-dual-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.transport-box-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.box-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.box-header-row h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.btn-small-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-small-add:hover {
+  background-color: #f8fafc;
+}
+
+.form-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group-vertical label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.form-group-vertical input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  background-color: #f8fafc;
+}
+
+.form-group-vertical input:focus {
+  border-color: #0284c7;
+  background-color: #ffffff;
+}
+
+.form-row-two-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* STEP 4: ATTACHMENTS LARGE DROPZONE */
+.attachments-large-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.attachments-large-dropzone:hover {
+  border-color: #0284c7;
+  background-color: #f0f9ff;
+}
+
+.dropzone-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-tray-icon {
+  color: #0284c7;
+}
+
+.upload-click-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.upload-click-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.attached-files-list-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.attached-files-list-box h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.attached-files-list-box ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attached-files-list-box li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1e293b;
+  background-color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-remove-new-file {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+}
+
+/* STEP 5: REVIEW SUMMARY GRID */
+.review-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.review-card-item {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.review-value-bold {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.review-value {
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+/* WIZARD FOOTER ACTION BAR */
+.wizard-footer-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.wizard-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wizard-back-btn:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.wizard-next-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #0284c7;
+  border: none;
+  color: #ffffff;
+  padding: 9px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wizard-next-btn:hover {
+  background-color: #0369a1;
+}
+
+.wizard-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #0284c7;
+  border: none;
+  color: #ffffff;
+  padding: 9px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wizard-submit-btn:hover {
+  background-color: #0369a1;
+}

@@ -1,6 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, '..', 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, 'do-' + uniqueSuffix + ext);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 30 * 1024 * 1024 } // 30MB limit
+});
 
 async function nextId(seq, prefix, pad) {
     const r = await db.query(`SELECT nextval('${seq}') AS n`);
@@ -602,62 +625,321 @@ router.delete('/consignee/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-// --- BOOKINGS ---
+// ==========================================
+// BOOKING & ATTACHMENT ROUTES
+// ==========================================
+let isBookingTableInit = false;
+
+async function initBookingTables() {
+    if (isBookingTableInit) return;
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS bookings (
+                booking_id VARCHAR(50) PRIMARY KEY,
+                booking_no VARCHAR(50) NOT NULL UNIQUE,
+                customer_id VARCHAR(50),
+                customer_name VARCHAR(255),
+                pickup_date DATE,
+                delivery_date DATE,
+                car_id VARCHAR(50),
+                truck_name VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'Pending',
+                remark TEXT,
+                cargo_details JSONB,
+                sender_details JSONB,
+                receiver_details JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cargo_details JSONB;`);
+        await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS sender_details JSONB;`);
+        await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS receiver_details JSONB;`);
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS booking_attachments (
+                attachment_id VARCHAR(50) PRIMARY KEY,
+                booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+                file_name VARCHAR(255),
+                original_name VARCHAR(255),
+                file_path TEXT,
+                file_type VARCHAR(100),
+                file_size INT,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        const countRes = await db.query(`SELECT COUNT(*) FROM bookings`);
+        if (parseInt(countRes.rows[0].count) === 0) {
+            const defaultBookings = [
+                {
+                    booking_id: 'bk-1001',
+                    booking_no: 'BK-20260805-3387',
+                    customer_name: 'Bangkok Logistics Partners',
+                    pickup_date: '2026-08-05',
+                    delivery_date: '2026-08-16',
+                    truck_name: '65-3456 (Trailer (20ft))',
+                    status: 'Active'
+                },
+                {
+                    booking_id: 'bk-1002',
+                    booking_no: 'BK-20260723-4478',
+                    customer_name: 'Thai Global Trading Co., Ltd.',
+                    pickup_date: '2026-07-23',
+                    delivery_date: '2026-07-25',
+                    truck_name: '80-5678 (Trailer (40ft))',
+                    status: 'Active'
+                },
+                {
+                    booking_id: 'bk-1003',
+                    booking_no: 'BK-20260723-003',
+                    customer_name: 'Eastern Seaboard Manufacturing',
+                    pickup_date: '2026-07-22',
+                    delivery_date: '2026-07-23',
+                    truck_name: '— Select truck —',
+                    status: 'Pending'
+                },
+                {
+                    booking_id: 'bk-1004',
+                    booking_no: 'BK-20260723-002',
+                    customer_name: 'Bangkok Logistics Partners',
+                    pickup_date: '2026-07-24',
+                    delivery_date: '2026-07-25',
+                    truck_name: '80-5678 (Trailer (40ft))',
+                    status: 'Active'
+                },
+                {
+                    booking_id: 'bk-1005',
+                    booking_no: 'BK-20260723-001',
+                    customer_name: 'Thai Global Trading Co., Ltd.',
+                    pickup_date: '2026-07-25',
+                    delivery_date: '2026-07-26',
+                    truck_name: '70-1234 (10-Wheeler)',
+                    status: 'Active'
+                },
+                {
+                    booking_id: 'bk-1006',
+                    booking_no: 'BK-20260723-004',
+                    customer_name: 'Thai Global Trading Co., Ltd.',
+                    pickup_date: '2026-07-18',
+                    delivery_date: '2026-07-19',
+                    truck_name: '— Select truck —',
+                    status: 'Pending'
+                },
+                {
+                    booking_id: 'bk-1007',
+                    booking_no: 'BK-20260723-005',
+                    customer_name: 'Bangkok Logistics Partners',
+                    pickup_date: '2026-07-28',
+                    delivery_date: '2026-07-29',
+                    truck_name: '— Select truck —',
+                    status: 'Pending'
+                }
+            ];
+
+            for (const item of defaultBookings) {
+                await db.query(
+                    `INSERT INTO bookings (booking_id, booking_no, customer_name, pickup_date, delivery_date, truck_name, status) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                    [item.booking_id, item.booking_no, item.customer_name, item.pickup_date, item.delivery_date, item.truck_name, item.status]
+                );
+            }
+
+            await db.query(
+                `INSERT INTO booking_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                ['att-4478', 'bk-1002', 'DO_BK-20260723-4478.pdf', 'Delivery_Order_ThaiGlobal_4478.pdf', '/uploads/DO_BK-20260723-4478.pdf', 'application/pdf', 245000]
+            );
+        }
+
+        isBookingTableInit = true;
+    } catch (err) {
+        console.error('Error initializing booking tables:', err.message);
+    }
+}
+
+// GET ALL BOOKINGS WITH ATTACHMENTS
 router.get('/bookings', async (req, res) => {
     try {
-        const result = await db.query(`
+        await initBookingTables();
+        const bookingsRes = await db.query(`
             SELECT b.*, 
-              c.customer_name,
-              ca.car_number, ca.car_type,
-              co.consigner_name, co.address AS consigner_address,
-              cee.consignee_name, cee.address AS consignee_address
+              COALESCE(b.customer_name, c.customer_name) AS customer_name,
+              ca.car_number, ca.car_type
             FROM bookings b
             LEFT JOIN customers c ON b.customer_id = c.customer_id
             LEFT JOIN cars ca ON b.car_id = ca.car_id
-            LEFT JOIN consigner co ON b.consigner_id = co.consigner_id
-            LEFT JOIN consignee cee ON b.consignee_id = cee.consignee_id
-            ORDER BY b.booking_date DESC
+            ORDER BY b.created_at DESC, b.booking_id DESC
         `);
-        res.json(result.rows);
+        const attachmentsRes = await db.query(`SELECT * FROM booking_attachments ORDER BY uploaded_at ASC`);
+
+        const attachmentsMap = {};
+        attachmentsRes.rows.forEach(att => {
+            if (!attachmentsMap[att.booking_id]) attachmentsMap[att.booking_id] = [];
+            attachmentsMap[att.booking_id].push(att);
+        });
+
+        const result = bookingsRes.rows.map(b => ({
+            ...b,
+            attachments: attachmentsMap[b.booking_id] || []
+        }));
+
+        res.json(result);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// POST /api/bookings → สร้างใหม่
+// CREATE NEW BOOKING
 router.post('/bookings', async (req, res) => {
     try {
-        const { booking_no, customer_id, car_id, consigner_id, consignee_id, remark } = req.body;
-        const bookingId = await nextId('seq_booking', 'bk-', 5);
+        await initBookingTables();
+        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, cargo_details, sender_details, receiver_details } = req.body;
+        const booking_id = 'bk-' + Date.now();
+        const finalBookingNo = booking_no || `BK-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
         await db.query(
-            `INSERT INTO bookings (booking_id, booking_no, customer_id, car_id, consigner_id, consignee_id, remark)
-             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-            [bookingId, booking_no || null, customer_id, car_id || null, consigner_id || null, consignee_id || null, remark || null]
+            `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, cargo_details, sender_details, receiver_details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            [
+                booking_id, 
+                finalBookingNo, 
+                customer_id || null, 
+                customer_name || 'Unassigned Customer', 
+                pickup_date || null, 
+                delivery_date || null, 
+                car_id || null, 
+                truck_name || '— Select truck —', 
+                status || 'Pending', 
+                remark || null,
+                cargo_details ? JSON.stringify(cargo_details) : null,
+                sender_details ? JSON.stringify(sender_details) : null,
+                receiver_details ? JSON.stringify(receiver_details) : null
+            ]
         );
-        res.json({ booking_id: bookingId, booking_no: booking_no, message: 'สร้าง booking สำเร็จ' });
+
+        res.json({ message: 'สร้าง Booking สำเร็จ', booking_id, booking_no: finalBookingNo });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-// PUT /api/bookings/:id → แก้ไข
+
+// UPDATE BOOKING DETAILS OR TRUCK ASSIGNMENT
 router.put('/bookings/:id', async (req, res) => {
     try {
-        const { booking_no, customer_id, car_id, consigner_id, consignee_id, remark } = req.body;
+        await initBookingTables();
+        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, cargo_details, sender_details, receiver_details } = req.body;
+        
         await db.query(
-            `UPDATE bookings SET booking_no=$1, customer_id=$2, car_id=$3, consigner_id=$4, consignee_id=$5, remark=$6
-             WHERE booking_id=$7`,
-            [booking_no || null, customer_id, car_id || null, consigner_id || null, consignee_id || null, remark || null, req.params.id]
+            `UPDATE bookings SET 
+                booking_no = COALESCE($1, booking_no),
+                customer_id = COALESCE($2, customer_id),
+                customer_name = COALESCE($3, customer_name),
+                pickup_date = COALESCE($4, pickup_date),
+                delivery_date = COALESCE($5, delivery_date),
+                car_id = COALESCE($6, car_id),
+                truck_name = COALESCE($7, truck_name),
+                status = COALESCE($8, status),
+                remark = COALESCE($9, remark),
+                cargo_details = CASE WHEN $10::jsonb IS NOT NULL THEN $10::jsonb ELSE cargo_details END,
+                sender_details = CASE WHEN $11::jsonb IS NOT NULL THEN $11::jsonb ELSE sender_details END,
+                receiver_details = CASE WHEN $12::jsonb IS NOT NULL THEN $12::jsonb ELSE receiver_details END
+             WHERE booking_id = $13`,
+            [
+                booking_no || null, 
+                customer_id || null, 
+                customer_name || null, 
+                pickup_date || null, 
+                delivery_date || null, 
+                car_id || null, 
+                truck_name || null, 
+                status || null, 
+                remark || null, 
+                cargo_details ? JSON.stringify(cargo_details) : null,
+                sender_details ? JSON.stringify(sender_details) : null,
+                receiver_details ? JSON.stringify(receiver_details) : null,
+                req.params.id
+            ]
         );
-        res.json({ message: 'แก้ไข booking สำเร็จ' });
+
+        res.json({ message: 'แก้ไข Booking สำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-// DELETE /api/bookings/:id → ลบ
+
+// DELETE BOOKING
 router.delete('/bookings/:id', async (req, res) => {
     try {
-        await db.query('DELETE FROM bookings WHERE booking_id = $1', [req.params.id]);
-        res.json({ message: 'ลบ booking สำเร็จ' });
+        await initBookingTables();
+        const atts = await db.query(`SELECT file_path FROM booking_attachments WHERE booking_id = $1`, [req.params.id]);
+        atts.rows.forEach(att => {
+            if (att.file_path) {
+                const fullPath = path.join(__dirname, '..', att.file_path);
+                if (fs.existsSync(fullPath)) {
+                    try { fs.unlinkSync(fullPath); } catch (e) {}
+                }
+            }
+        });
+
+        await db.query(`DELETE FROM booking_attachments WHERE booking_id = $1`, [req.params.id]);
+        await db.query(`DELETE FROM bookings WHERE booking_id = $1`, [req.params.id]);
+        res.json({ message: 'ลบ Booking และไฟล์แนบสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// UPLOAD ATTACHMENT(S) FOR A BOOKING
+router.post('/bookings/:id/attachments', upload.array('files', 10), async (req, res) => {
+    try {
+        await initBookingTables();
+        const booking_id = req.params.id;
+        const uploadedFiles = req.files || [];
+
+        if (uploadedFiles.length === 0) {
+            return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการแนบ' });
+        }
+
+        const savedAttachments = [];
+        for (const file of uploadedFiles) {
+            const attachment_id = 'att-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+            const relativePath = '/uploads/' + file.filename;
+            
+            await db.query(
+                `INSERT INTO booking_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [attachment_id, booking_id, file.filename, file.originalname, relativePath, file.mimetype, file.size]
+            );
+
+            savedAttachments.push({
+                attachment_id,
+                booking_id,
+                file_name: file.filename,
+                original_name: file.originalname,
+                file_path: relativePath,
+                file_type: file.mimetype,
+                file_size: file.size,
+                uploaded_at: new Date()
+            });
+        }
+
+        res.json({ message: 'แนบไฟล์สำเร็จ', attachments: savedAttachments });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE ATTACHMENT
+router.delete('/attachments/:id', async (req, res) => {
+    try {
+        await initBookingTables();
+        const attRes = await db.query(`SELECT file_path FROM booking_attachments WHERE attachment_id = $1`, [req.params.id]);
+        if (attRes.rows.length > 0 && attRes.rows[0].file_path) {
+            const fullPath = path.join(__dirname, '..', attRes.rows[0].file_path);
+            if (fs.existsSync(fullPath)) {
+                try { fs.unlinkSync(fullPath); } catch (e) {}
+            }
+        }
+        await db.query(`DELETE FROM booking_attachments WHERE attachment_id = $1`, [req.params.id]);
+        res.json({ message: 'ลบไฟล์แนบเรียบร้อย' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
