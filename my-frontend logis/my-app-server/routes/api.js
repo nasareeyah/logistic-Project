@@ -602,5 +602,65 @@ router.delete('/consignee/:id', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// --- BOOKINGS ---
+router.get('/bookings', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT b.*, 
+              c.customer_name,
+              ca.car_number, ca.car_type,
+              co.consigner_name, co.address AS consigner_address,
+              cee.consignee_name, cee.address AS consignee_address
+            FROM bookings b
+            LEFT JOIN customers c ON b.customer_id = c.customer_id
+            LEFT JOIN cars ca ON b.car_id = ca.car_id
+            LEFT JOIN consigner co ON b.consigner_id = co.consigner_id
+            LEFT JOIN consignee cee ON b.consignee_id = cee.consignee_id
+            ORDER BY b.booking_date DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/bookings → สร้างใหม่
+router.post('/bookings', async (req, res) => {
+    try {
+        const { booking_no, customer_id, car_id, consigner_id, consignee_id, remark } = req.body;
+        const bookingId = await nextId('seq_booking', 'bk-', 5);
+        await db.query(
+            `INSERT INTO bookings (booking_id, booking_no, customer_id, car_id, consigner_id, consignee_id, remark)
+             VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+            [bookingId, booking_no || null, customer_id, car_id || null, consigner_id || null, consignee_id || null, remark || null]
+        );
+        res.json({ booking_id: bookingId, booking_no: booking_no, message: 'สร้าง booking สำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// PUT /api/bookings/:id → แก้ไข
+router.put('/bookings/:id', async (req, res) => {
+    try {
+        const { booking_no, customer_id, car_id, consigner_id, consignee_id, remark } = req.body;
+        await db.query(
+            `UPDATE bookings SET booking_no=$1, customer_id=$2, car_id=$3, consigner_id=$4, consignee_id=$5, remark=$6
+             WHERE booking_id=$7`,
+            [booking_no || null, customer_id, car_id || null, consigner_id || null, consignee_id || null, remark || null, req.params.id]
+        );
+        res.json({ message: 'แก้ไข booking สำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+// DELETE /api/bookings/:id → ลบ
+router.delete('/bookings/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM bookings WHERE booking_id = $1', [req.params.id]);
+        res.json({ message: 'ลบ booking สำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 module.exports = router;

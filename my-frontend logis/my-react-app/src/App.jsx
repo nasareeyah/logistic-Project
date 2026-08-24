@@ -7,6 +7,7 @@ import CustomerTable from './components/MasterData/CustomerTable';
 import CarTable from './components/MasterData/CarTable';
 import DriverTable from './components/MasterData/DriverTable';
 import QuotationForm from './components/Quotation/QuotationForm';
+import BookingForm from './components/Booking/BookingForm';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -21,11 +22,12 @@ function App() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   const [services, setServices] = useState([]);
   const [serviceTypes, setServiceTypes] = useState([]);
   const [consigners, setConsigners] = useState([]);
   const [consignees, setConsignees] = useState([]);
+  const [bookings, setBookings] = useState([]);
 
   const handleLogin = (email, password) => {
     if (!email || !password) {
@@ -54,7 +56,9 @@ function App() {
       fetch('http://localhost:3000/api/service').then(r => r.json()),       // [5] บริการ
       fetch('http://localhost:3000/api/service_type').then(r => r.json()),
       fetch('http://localhost:3000/api/consigner').then(r => r.json()),     // [7] ผู้ส่ง
-      fetch('http://localhost:3000/api/consignee').then(r => r.json())      // [8] ผู้รับ
+      fetch('http://localhost:3000/api/consignee').then(r => r.json()),      // [8] ผู้รับ
+      fetch('http://localhost:3000/api/bookings').then(r => r.json())   // [9]
+
     ])
       .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData]) => {
         setCustomers(Array.isArray(c) ? c : []);
@@ -88,7 +92,7 @@ function App() {
   // CUSTOMER ACTIONS
   // ==========================================
   //เพิ่มลูกค้าใหม่
- const handleAddCustomer = (newCustomerData, resetForm) => {
+  const handleAddCustomer = (newCustomerData, resetForm) => {
     const dataToSend = { ...newCustomerData };
 
     fetch('http://localhost:3000/api/customers', {
@@ -117,8 +121,8 @@ function App() {
         console.error('Add Customer Error:', err);
         alert('เกิดข้อผิดพลาด: ' + err.message);
       });
-};
-//บันทึกการเเก้ไขข้อมูลลูกค้า
+  };
+  //บันทึกการเเก้ไขข้อมูลลูกค้า
 
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
     fetch(`http://localhost:3000/api/customers/${id}`, {
@@ -134,8 +138,9 @@ function App() {
 
   const handleDeleteCustomer = (id) => {
     if (!confirm('ยืนยันการลบลูกค้านี้?')) return;
-    fetch(`http://localhost:3000/api/customers/${id}`, { 
-      method: 'DELETE' })
+    fetch(`http://localhost:3000/api/customers/${id}`, {
+      method: 'DELETE'
+    })
       .then(res => res.json())
       .then(data => { alert(data.message); fetchData(); })
       .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
@@ -164,7 +169,7 @@ function App() {
         }
       }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
   };
-//บันทึกการเเก้ไขข้อมูลรถ
+  //บันทึกการเเก้ไขข้อมูลรถ
   const handleSaveCarEdit = (id, editCarData, successCallback) => {
     fetch(`http://localhost:3000/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
       .then(() => { successCallback(); fetchData(); });
@@ -207,7 +212,7 @@ function App() {
     fetch(`http://localhost:3000/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) })
       .then(() => { successCallback(); fetchData(); });
   };
- //ลบข้อมูลคนขับ
+  //ลบข้อมูลคนขับ
   const handleDeleteDriver = (id) => {
     if (!confirm('ยืนยันการลบคนขับคนนี้?')) return;
     fetch(`http://localhost:3000/api/driver/${id}`, { method: 'DELETE' })
@@ -221,9 +226,9 @@ function App() {
   // ==========================================
   //เพิ่มเอกสารใหม่
   const handleAddDocument = (docType, newDocData, resetForm) => {
-    const dataToSend = { 
-      ...newDocData, 
-      document_type: docType 
+    const dataToSend = {
+      ...newDocData,
+      document_type: docType
     };
 
     fetch('http://localhost:3000/api/document', {
@@ -237,8 +242,8 @@ function App() {
           alert('บันทึกไม่สำเร็จ: ' + data.error);
         } else {
           alert(data.message);
-          resetForm(); 
-          fetchData(); 
+          resetForm();
+          fetchData();
         }
       })
       .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
@@ -286,32 +291,42 @@ function App() {
           {activeTab === 'dashboard' && <Dashboard customersCount={customers.length} carsCount={cars.length} driversCount={drivers.length} />}
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} documents={documents} />}
           {activeTab === 'trucks' && (
-            <CarTable 
-              cars={cars} 
+            <CarTable
+              cars={cars}
               drivers={drivers}
-              onAdd={handleAddCar} 
-              onUpdate={handleSaveCarEdit} 
-              onDelete={handleDeleteCar} 
+              onAdd={handleAddCar}
+              onUpdate={handleSaveCarEdit}
+              onDelete={handleDeleteCar}
             />
           )}
           {activeTab === 'driver' && (
-            <DriverTable 
-              drivers={drivers} 
+            <DriverTable
+              drivers={drivers}
               cars={cars}
-              onAdd={handleAddDriver} 
-              onUpdate={handleSaveDriverEdit} 
-              onDelete={handleDeleteDriver} 
+              onAdd={handleAddDriver}
+              onUpdate={handleSaveDriverEdit}
+              onDelete={handleDeleteDriver}
             />
           )}
-          
+
           {activeTab === 'quotation' && (
-            <QuotationForm 
+            <QuotationForm
               customers={customers}
               documents={documents}
               fetchData={fetchData}
               consigners={consigners}
               consignees={consignees}
               serviceTypes={serviceTypes}
+            />
+          )}
+          {activeTab === 'booking' && (
+            <BookingForm
+              customers={customers}
+              cars={cars}
+              consigners={consigners}
+              consignees={consignees}
+              bookings={bookings}
+              fetchData={fetchData}
             />
           )}
           {/* {activeTab === 'invoice' && (
