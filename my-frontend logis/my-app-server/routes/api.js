@@ -680,6 +680,20 @@ router.get('/bookings', async (req, res) => {
         await initBookingTables();
         const bookingsRes = await db.query(`
             SELECT b.*, 
+              COALESCE(
+                NULLIF(b.pickup_date, ''), 
+                b.sender_details->0->>'pickup_date', 
+                b.sender_details->>'pickup_date', 
+                b.sender_details->0->>'sender_date', 
+                b.sender_details->>'sender_date'
+              ) AS pickup_date,
+              COALESCE(
+                NULLIF(b.delivery_date, ''), 
+                b.receiver_details->0->>'delivery_date', 
+                b.receiver_details->>'delivery_date', 
+                b.receiver_details->0->>'receiver_date', 
+                b.receiver_details->>'receiver_date'
+              ) AS delivery_date,
               COALESCE(b.customer_name, c.customer_name) AS customer_name,
               ca.car_number, ca.car_type
             FROM bookings b
@@ -748,15 +762,15 @@ router.put('/bookings/:id', async (req, res) => {
         
         await db.query(
             `UPDATE bookings SET 
-                booking_no = COALESCE($1, booking_no),
-                customer_id = COALESCE($2, customer_id),
-                customer_name = COALESCE($3, customer_name),
-                pickup_date = COALESCE($4, pickup_date),
-                delivery_date = COALESCE($5, delivery_date),
-                car_id = COALESCE($6, car_id),
-                truck_name = COALESCE($7, truck_name),
-                status = COALESCE($8, status),
-                remark = COALESCE($9, remark),
+                booking_no = COALESCE(NULLIF($1, ''), booking_no),
+                customer_id = COALESCE(NULLIF($2, ''), customer_id),
+                customer_name = COALESCE(NULLIF($3, ''), customer_name),
+                pickup_date = COALESCE(NULLIF($4, ''), pickup_date),
+                delivery_date = COALESCE(NULLIF($5, ''), delivery_date),
+                car_id = COALESCE(NULLIF($6, ''), car_id),
+                truck_name = COALESCE(NULLIF($7, ''), truck_name),
+                status = COALESCE(NULLIF($8, ''), status),
+                remark = COALESCE(NULLIF($9, ''), remark),
                 cargo_details = CASE WHEN $10::jsonb IS NOT NULL THEN $10::jsonb ELSE cargo_details END,
                 sender_details = CASE WHEN $11::jsonb IS NOT NULL THEN $11::jsonb ELSE sender_details END,
                 receiver_details = CASE WHEN $12::jsonb IS NOT NULL THEN $12::jsonb ELSE receiver_details END

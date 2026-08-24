@@ -166,6 +166,30 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     }
   };
 
+  const getEffectivePickupDate = (booking) => {
+    if (booking.pickup_date) return booking.pickup_date;
+    const senders = booking.sender_details;
+    if (Array.isArray(senders) && senders.length > 0) {
+      return senders[0]?.pickup_date || senders[0]?.sender_date || senders[0]?.date;
+    }
+    if (senders && typeof senders === 'object') {
+      return senders.pickup_date || senders.sender_date || senders.date;
+    }
+    return null;
+  };
+
+  const getEffectiveDeliveryDate = (booking) => {
+    if (booking.delivery_date) return booking.delivery_date;
+    const receivers = booking.receiver_details;
+    if (Array.isArray(receivers) && receivers.length > 0) {
+      return receivers[0]?.delivery_date || receivers[0]?.receiver_date || receivers[0]?.date;
+    }
+    if (receivers && typeof receivers === 'object') {
+      return receivers.delivery_date || receivers.receiver_date || receivers.date;
+    }
+    return null;
+  };
+
   // Inline Truck update handler
   const handleTruckChange = async (bookingId, newTruck) => {
     setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, truck_name: newTruck } : b));
@@ -239,6 +263,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     setWizardNewFiles([]);
     setCurrentStep(1);
     setViewMode('wizard');
+  };
+
+  // Open Summary View (Read Only Details) when clicking Booking # link
+  const handleOpenSummaryView = (booking) => {
+    handleOpenEditWizard(booking);
+    setCurrentStep(5);
+    setViewMode('summary');
   };
 
   // Delete Booking
@@ -940,6 +971,157 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   }
 
   // ----------------------------------------------------
+  // RENDER BOOKING SUMMARY / DETAILS VIEW MODE
+  // ----------------------------------------------------
+  if (viewMode === 'summary') {
+    return (
+      <div className="wizard-page-container">
+        {/* TOP NAV BAR */}
+        <div className="wizard-top-nav">
+          <button type="button" className="back-to-bookings-btn" onClick={() => setViewMode('table')}>
+            <ArrowLeft size={16} />
+            <span>Back to bookings</span>
+          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '10px' }}>
+            <h1 className="wizard-page-title">Booking Summary: {editingBooking?.booking_no}</h1>
+            <button 
+              type="button" 
+              className="new-booking-btn"
+              onClick={() => {
+                setCurrentStep(1);
+                setViewMode('wizard');
+              }}
+              style={{ height: '38px', padding: '0 16px', fontSize: '13px' }}
+            >
+              <Edit size={16} />
+              <span>Edit Booking</span>
+            </button>
+          </div>
+        </div>
+
+        {/* SUMMARY DETAILS CARD */}
+        <div className="wizard-main-card" style={{ marginTop: '20px' }}>
+          <div className="wizard-step-body">
+            <h2 className="step-section-heading">Transport Booking Details</h2>
+
+            <div className="review-summary-grid">
+              <div className="review-card-item">
+                <span className="review-label">BOOKING NUMBER</span>
+                <span className="review-value-bold">{editingBooking?.booking_no || '-'}</span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">CUSTOMER</span>
+                <span className="review-value-bold">{selectedCustomer?.customer_name || editingBooking?.customer_name || '-'}</span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">ASSIGNED TRUCK</span>
+                <span className="review-value-bold">{editingBooking?.truck_name || '— Select truck —'}</span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">BOOKING DATE</span>
+                <span className="review-value-bold">
+                  {new Date(sendersList[0]?.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>
+              </div>
+
+              <div className="review-card-item" style={{ gridColumn: 'span 2' }}>
+                <span className="review-label">CARGO DETAILS</span>
+                <span className="review-value">
+                  {cargoItems.map((c, i) => (
+                    <div key={i} style={{ marginBottom: '4px' }}>
+                      📦 <strong>{c.product_name || 'Cargo'}</strong> — Quantity: {c.quantity} {c.unit} | Weight: {c.weight} {c.wt_unit} {c.remark ? `(Remark: ${c.remark})` : ''}
+                    </div>
+                  ))}
+                </span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">PICKUP LOCATIONS (SENDER - {sendersList.length})</span>
+                <span className="review-value">
+                  {sendersList.map((s, i) => (
+                    <div key={i} style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: i < sendersList.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
+                      <strong>#{i + 1} {s.company_name || 'Sender Company'}</strong><br />
+                      {s.address_line || '-'}<br />
+                      {s.city ? `${s.city}, ` : ''}{s.state ? `${s.state} ` : ''}{s.postal_code || ''} {s.country || ''}<br />
+                      Pickup Date: {s.pickup_date ? new Date(s.pickup_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    </div>
+                  ))}
+                </span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">DELIVERY LOCATIONS (RECEIVER - {receiversList.length})</span>
+                <span className="review-value">
+                  {receiversList.map((r, i) => (
+                    <div key={i} style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: i < receiversList.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
+                      <strong>#{i + 1} {r.company_name || 'Receiver Company'}</strong><br />
+                      {r.address_line || '-'}<br />
+                      {r.city ? `${r.city}, ` : ''}{r.state ? `${r.state} ` : ''}{r.postal_code || ''} {r.country || ''}<br />
+                      Delivery Date: {r.delivery_date ? new Date(r.delivery_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                    </div>
+                  ))}
+                </span>
+              </div>
+
+              <div className="review-card-item" style={{ gridColumn: 'span 2' }}>
+                <span className="review-label">ATTACHED DO FILES & DOCUMENTS ({wizardAttachedFiles.length})</span>
+                <span className="review-value">
+                  {wizardAttachedFiles.length === 0 ? (
+                    <span style={{ color: '#94a3b8' }}>No attached files for this booking.</span>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                      {wizardAttachedFiles.map((att, i) => (
+                        <a
+                          key={i}
+                          href={`http://localhost:3000${att.file_path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="attached-preview-chip"
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <Paperclip size={13} className="chip-paperclip-icon" />
+                          <span>{att.original_name || att.file_name}</span>
+                          <Eye size={13} className="chip-eye-icon" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="wizard-footer-nav">
+            <button 
+              type="button" 
+              className="wizard-back-btn"
+              onClick={() => setViewMode('table')}
+            >
+              <ArrowLeft size={16} />
+              <span>Back to bookings</span>
+            </button>
+
+            <button 
+              type="button" 
+              className="wizard-next-btn"
+              onClick={() => {
+                setCurrentStep(1);
+                setViewMode('wizard');
+              }}
+            >
+              <Edit size={16} />
+              <span>Edit Booking</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
   // RENDER MAIN TABLE VIEW MODE
   // ----------------------------------------------------
   return (
@@ -1016,8 +1198,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       <td className="booking-no-cell">
                         <span 
                           className="booking-no-link"
-                          onClick={() => handleOpenEditWizard(booking)}
-                          title="Click to view & edit booking details"
+                          onClick={() => handleOpenSummaryView(booking)}
+                          title="Click to view booking summary"
                         >
                           {booking.booking_no}
                         </span>
@@ -1030,12 +1212,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       {/* Pickup Date */}
                       <td className="date-cell">
-                        {formatDateDisplay(booking.pickup_date)}
+                        {formatDateDisplay(getEffectivePickupDate(booking))}
                       </td>
 
                       {/* Delivery Date */}
                       <td className="date-cell">
-                        {formatDateDisplay(booking.delivery_date)}
+                        {formatDateDisplay(getEffectiveDeliveryDate(booking))}
                       </td>
 
                       {/* Truck Select Dropdown */}
