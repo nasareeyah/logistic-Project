@@ -191,10 +191,21 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   };
 
   // Inline Truck update handler
-  const handleTruckChange = async (bookingId, newTruck) => {
-    setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, truck_name: newTruck } : b));
+  const handleTruckChange = async (bookingId, selectedCarId) => {
+    const selectedCar = (Array.isArray(cars) ? cars : []).find(c => c.car_id === selectedCarId);
+    const carNumber = selectedCar ? selectedCar.car_number : '';
+    
+    setBookings(prev => prev.map(b => b.booking_id === bookingId ? { 
+      ...b, 
+      car_id: selectedCarId || null,
+      car_number: carNumber || null
+    } : b));
+    
     try {
-      await updateBooking(bookingId, { truck_name: newTruck });
+      await updateBooking(bookingId, { 
+        car_id: selectedCarId || null,
+        truck_name: carNumber || null
+      });
     } catch (err) {
       console.error('Error updating truck assignment:', err);
     }
@@ -294,33 +305,58 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     setIsAttachModalOpen(true);
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      setSelectedFiles(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      if (!selectedBookingForAttach) return;
+
+      try {
+        setUploading(true);
+        const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
+        alert(resData.message || 'แนบไฟล์สำเร็จ');
+        await loadBookingsData();
+
+        if (resData.attachments) {
+          setSelectedBookingForAttach(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), ...resData.attachments]
+          }));
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
-  const handleUploadFiles = async () => {
-    if (!selectedBookingForAttach) return;
-    if (selectedFiles.length === 0) return alert('กรุณาเลือกไฟล์อย่างน้อย 1 ไฟล์');
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
 
-    try {
-      setUploading(true);
-      const resData = await uploadAttachments(selectedBookingForAttach.booking_id, selectedFiles);
-      alert(resData.message || 'แนบไฟล์สำเร็จ');
-      setSelectedFiles([]);
-      await loadBookingsData();
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      if (!selectedBookingForAttach) return;
 
-      if (resData.attachments) {
-        setSelectedBookingForAttach(prev => ({
-          ...prev,
-          attachments: [...(prev.attachments || []), ...resData.attachments]
-        }));
+      try {
+        setUploading(true);
+        const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
+        alert(resData.message || 'แนบไฟล์สำเร็จ');
+        await loadBookingsData();
+
+        if (resData.attachments) {
+          setSelectedBookingForAttach(prev => ({
+            ...prev,
+            attachments: [...(prev.attachments || []), ...resData.attachments]
+          }));
+        }
+      } catch (err) {
+        alert('เกิดข้อผิดพลาด: ' + err.message);
+      } finally {
+        setUploading(false);
       }
-    } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -343,9 +379,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleWizardSubmit = async () => {
     setSaving(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
-      const randomNum = Math.floor(1000 + Math.random() * 9000);
-      const autoBookingNo = editingBooking?.booking_no || `BK-${today.replace(/-/g, '')}-${randomNum}`;
+      const autoBookingNo = editingBooking?.booking_no || '';
 
       const payload = {
         booking_no: autoBookingNo,
@@ -1225,12 +1259,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         <div className="truck-select-container">
                           <select
                             className="truck-select-input"
-                            value={booking.truck_name || '— Select truck —'}
+                            value={booking.car_id || ''}
                             onChange={(e) => handleTruckChange(booking.booking_id, e.target.value)}
                           >
-                            {truckOptions.map((opt, idx) => (
-                              <option key={idx} value={opt}>
-                                {opt}
+                            <option value="">— Select truck —</option>
+                            {(Array.isArray(cars) ? cars : []).map((car) => (
+                              <option key={car.car_id} value={car.car_id}>
+                                {car.car_number}
                               </option>
                             ))}
                           </select>
@@ -1343,7 +1378,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
             <div className="modal-body-content">
               {/* Dropzone */}
-              <div className="upload-dropzone">
+              <div 
+                className="upload-dropzone"
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
                   multiple
@@ -1351,31 +1391,21 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   onChange={handleFileSelect}
                   style={{ display: 'none' }}
                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                  disabled={uploading}
                 />
-                <Upload size={36} className="dropzone-upload-icon" />
-                <p className="dropzone-text">
-                  Drag and drop files here, or <button type="button" className="browse-link" onClick={() => fileInputRef.current?.click()}>browse</button>
-                </p>
-                <p className="dropzone-hint">Supports DO files, PDFs, images, documents</p>
-
-                {selectedFiles.length > 0 && (
-                  <div className="selected-files-list">
-                    <strong>Selected files to attach ({selectedFiles.length}):</strong>
-                    <ul>
-                      {selectedFiles.map((f, i) => (
-                        <li key={i}>
-                          📄 {f.name} ({(f.size / 1024).toFixed(1)} KB)
-                        </li>
-                      ))}
-                    </ul>
-                    <button 
-                      className="confirm-upload-btn" 
-                      onClick={handleUploadFiles}
-                      disabled={uploading}
-                    >
-                      {uploading ? '⏳ Uploading...' : '🚀 Attach Selected File(s)'}
-                    </button>
+                {uploading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '10px 0' }}>
+                    <span style={{ fontSize: '24px' }}>⏳</span>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#0284c7' }}>Uploading files, please wait...</p>
                   </div>
+                ) : (
+                  <>
+                    <Upload size={36} className="dropzone-upload-icon" />
+                    <p className="dropzone-text">
+                      Drag and drop files here, or <span className="browse-link">browse</span>
+                    </p>
+                    <p className="dropzone-hint">Supports DO files, PDFs, images, documents</p>
+                  </>
                 )}
               </div>
 

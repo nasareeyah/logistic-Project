@@ -60,7 +60,7 @@ function App() {
       fetch('http://localhost:3000/api/bookings').then(r => r.json())   // [9]
 
     ])
-      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData]) => {
+      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData]) => {
         setCustomers(Array.isArray(c) ? c : []);
         setCars(Array.isArray(carsData) ? carsData : []);
         setDrivers(Array.isArray(d) ? d : []);
@@ -70,6 +70,7 @@ function App() {
         setServiceTypes(Array.isArray(typeData) ? typeData : []);
         setConsigners(Array.isArray(consignerData) ? consignerData : []);
         setConsignees(Array.isArray(consigneeData) ? consigneeData : []);
+        setBookings(Array.isArray(bookingsData) ? bookingsData : []);
         setLoading(false);
       })
       .catch(err => {
