@@ -26,7 +26,9 @@ import {
   Check,
   UserPlus,
   CheckCircle2,
-  FileText
+  FileText,
+  FolderOpen,
+  Pencil
 } from 'lucide-react';
 import './BookingTable.css';
 import './BookingWizard.css';
@@ -442,34 +444,77 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // ----------------------------------------------------
   if (viewMode === 'wizard') {
     return (
-      <div className="wizard-page-container">
-        <div className="wizard-top-nav">
-          <button type="button" className="back-to-bookings-btn" onClick={() => setViewMode('table')}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
+        {/* Back link */}
+        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+          <button 
+            type="button"
+            onClick={() => setViewMode('table')}
+            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
+          >
             <ArrowLeft size={16} />
             <span>Back to bookings</span>
           </button>
-          <h1 className="wizard-page-title">{editingBooking ? 'Edit Booking' : 'New Booking'}</h1>
         </div>
 
-        <div className="wizard-main-card">
-          {/* STEPPER PROGRESS BAR */}
-          <div className="wizard-stepper-header">
+        <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
+          {editingBooking ? 'Edit Booking' : 'Create New Booking'}
+        </h2>
+
+        {/* Main Card Panel */}
+        <div className="dashboard-card-panel" style={{ padding: '32px' }}>
+          
+          {/* Stepper Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', overflowX: 'auto', paddingBottom: '8px' }}>
             {stepsList.map((step, idx) => {
-              const isCompleted = currentStep > step.num;
-              const isActive = currentStep === step.num;
+              const isCompleted = step.num < currentStep;
+              const isActive = step.num === currentStep;
 
               return (
-                <React.Fragment key={step.num}>
-                  <div className={`stepper-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
-                    <div className="stepper-circle">
-                      {isCompleted ? <Check size={14} strokeWidth={3} /> : step.num}
+                <div 
+                  key={step.num} 
+                  onClick={() => setCurrentStep(step.num)}
+                  style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '160px', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {/* Step Circle */}
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      backgroundColor: isCompleted || isActive ? '#0284c7' : '#f1f5f9',
+                      color: isCompleted || isActive ? '#ffffff' : '#64748b',
+                      border: isCompleted || isActive ? 'none' : '1px solid #cbd5e1'
+                    }}>
+                      {isCompleted ? <Check size={18} /> : step.num}
                     </div>
-                    <span className="stepper-label">{step.label}</span>
+                    {/* Step Label */}
+                    <span style={{ 
+                      fontSize: '14px', 
+                      fontWeight: isActive ? '700' : '500', 
+                      color: isActive ? '#0f172a' : isCompleted ? '#334155' : '#94a3b8',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {step.label}
+                    </span>
                   </div>
+
+                  {/* Line connector between steps */}
                   {idx < stepsList.length - 1 && (
-                    <div className={`stepper-line ${currentStep > step.num ? 'completed' : ''}`} />
+                    <div style={{
+                      flex: 1,
+                      height: '2px',
+                      backgroundColor: step.num < currentStep ? '#0284c7' : '#e2e8f0',
+                      margin: '0 12px',
+                      minWidth: '20px'
+                    }} />
                   )}
-                </React.Fragment>
+                </div>
               );
             })}
           </div>
@@ -965,39 +1010,53 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           )}
 
           {/* WIZARD FOOTER NAV */}
-          <div className="wizard-footer-nav">
-            <button 
-              type="button" 
-              className="wizard-back-btn"
-              onClick={() => {
-                if (currentStep > 1) setCurrentStep(prev => prev - 1);
-                else setViewMode('table');
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back</span>
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', marginTop: '24px' }}>
+            <div>
+              <button 
+                type="button" 
+                className="btn-secondary"
+                disabled={currentStep === 1}
+                onClick={() => {
+                  if (currentStep > 1) setCurrentStep(prev => prev - 1);
+                  else setViewMode('table');
+                }}
+                style={{ 
+                  opacity: currentStep === 1 ? 0.5 : 1, 
+                  cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back</span>
+              </button>
+            </div>
 
-            {currentStep < 5 ? (
-              <button 
-                type="button" 
-                className="wizard-next-btn"
-                onClick={() => setCurrentStep(prev => prev + 1)}
-              >
-                <span>Next</span>
-                <ArrowRight size={16} />
-              </button>
-            ) : (
-              <button 
-                type="button" 
-                className="wizard-submit-btn"
-                onClick={handleWizardSubmit}
-                disabled={saving}
-              >
-                <CheckCircle2 size={18} />
-                <span>{saving ? 'Saving...' : editingBooking ? 'Save Changes' : 'Create Booking'}</span>
-              </button>
-            )}
+            <div>
+              {currentStep < 5 ? (
+                <button 
+                  type="button" 
+                  className="btn-primary"
+                  onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <span>Next</span>
+                  <ArrowRight size={16} />
+                </button>
+              ) : (
+                <button 
+                  type="button" 
+                  className="btn-primary"
+                  disabled={saving}
+                  onClick={handleWizardSubmit}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Check size={16} />
+                  <span>{saving ? 'Saving...' : editingBooking ? 'Save Changes' : 'Create Booking'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1009,32 +1068,38 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // ----------------------------------------------------
   if (viewMode === 'summary') {
     return (
-      <div className="wizard-page-container">
-        {/* TOP NAV BAR */}
-        <div className="wizard-top-nav">
-          <button type="button" className="back-to-bookings-btn" onClick={() => setViewMode('table')}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
+        {/* Back link */}
+        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+          <button 
+            type="button"
+            onClick={() => setViewMode('table')}
+            style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
+          >
             <ArrowLeft size={16} />
             <span>Back to bookings</span>
           </button>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginTop: '10px' }}>
-            <h1 className="wizard-page-title">Booking Summary: {editingBooking?.booking_no}</h1>
-            <button 
-              type="button" 
-              className="new-booking-btn"
-              onClick={() => {
-                setCurrentStep(1);
-                setViewMode('wizard');
-              }}
-              style={{ height: '38px', padding: '0 16px', fontSize: '13px' }}
-            >
-              <Edit size={16} />
-              <span>Edit Booking</span>
-            </button>
-          </div>
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>
+            Booking Summary: {editingBooking?.booking_no}
+          </h2>
+          <button 
+            type="button" 
+            className="btn-primary"
+            onClick={() => {
+              setCurrentStep(1);
+              setViewMode('wizard');
+            }}
+          >
+            <Pencil size={16} />
+            <span>Edit Booking</span>
+          </button>
         </div>
 
         {/* SUMMARY DETAILS CARD */}
-        <div className="wizard-main-card" style={{ marginTop: '20px' }}>
+        <div className="dashboard-card-panel" style={{ padding: '32px' }}>
           <div className="wizard-step-body">
             <h2 className="step-section-heading">Transport Booking Details</h2>
 
@@ -1128,11 +1193,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
           </div>
 
-          <div className="wizard-footer-nav">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', marginTop: '24px' }}>
             <button 
               type="button" 
-              className="wizard-back-btn"
+              className="btn-secondary"
               onClick={() => setViewMode('table')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <ArrowLeft size={16} />
               <span>Back to bookings</span>
@@ -1140,13 +1206,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
             <button 
               type="button" 
-              className="wizard-next-btn"
+              className="btn-primary"
               onClick={() => {
                 setCurrentStep(1);
                 setViewMode('wizard');
               }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <Edit size={16} />
+              <Pencil size={16} />
               <span>Edit Booking</span>
             </button>
           </div>
@@ -1159,66 +1226,61 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // RENDER MAIN TABLE VIEW MODE
   // ----------------------------------------------------
   return (
-    <div className="booking-page-container">
-      {/* 1. BREADCRUMB & PAGE HEADING */}
-      <div className="booking-title-bar">
-        <div className="title-left">
-          <div className="breadcrumb-nav">
-            <span>Main</span>
-            <span className="separator">&gt;</span>
-            <span className="current">Booking</span>
-          </div>
-          <h1 className="main-title">Booking</h1>
-          <p className="sub-title">Create and manage transport bookings</p>
-        </div>
+    <div>
+      {/* Breadcrumb */}
+      <div className="dashboard-breadcrumb">
+        <span>Main</span>
+        <span className="dashboard-breadcrumb-separator">&gt;</span>
+        <span>Document Center</span>
+        <span className="dashboard-breadcrumb-separator">&gt;</span>
+        <span style={{ color: '#64748b' }}>Booking</span>
+      </div>
 
-        <button className="new-booking-btn" onClick={handleOpenCreateWizard}>
-          <Plus size={18} />
-          <span>New Booking</span>
+      {/* Page Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div style={{ textAlign: 'left' }}>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Booking</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Create and manage transport bookings</p>
+        </div>
+        <button className="btn-primary" onClick={handleOpenCreateWizard}>
+          <Plus size={16} />
+          <span>Create New Booking</span>
         </button>
       </div>
 
-      {/* 2. TABLE CARD CONTAINER */}
-      <div className="booking-table-card">
-        {/* Search Input Box */}
-        <div className="table-search-row">
-          <div className="table-search-box">
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search bookings..."
+      {/* Table Panel */}
+      <div className="dashboard-card-panel" style={{ padding: '24px 0 0 0' }}>
+        <div style={{ padding: '0 24px' }}>
+          <div className="panel-search-bar">
+            <Search size={16} className="panel-search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search bookings..." 
+              className="panel-search-input"
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Bookings Table */}
-        <div className="table-responsive-wrapper">
-          <table className="booking-custom-table">
+        <div style={{ overflowX: 'auto' }}>
+          <table className="custom-clean-table">
             <thead>
               <tr>
-                <th>Booking #</th>
-                <th>Customer</th>
-                <th>Pickup Date</th>
-                <th>Delivery Date</th>
-                <th>Truck</th>
-                {/* PROMPT SPECIFIC REQUIREMENT: ATTACHED FILE PREVIEW COLUMN POSITIONED BETWEEN TRUCK AND 3-DOTS MENU */}
-                <th>DO File / Attachment</th>
-                <th style={{ width: '60px', textAlign: 'center' }}></th>
+                <th style={{ width: '15%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>Customer</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Pickup Date</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Delivery Date</th>
+                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>Truck</th>
+                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
+                <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="table-loading-cell">
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                     ⏳ Loading bookings...
-                  </td>
-                </tr>
-              ) : filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan="7" className="table-empty-cell">
-                    No bookings found matching your search.
                   </td>
                 </tr>
               ) : (
@@ -1227,11 +1289,11 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   const firstAtt = hasAttachments ? booking.attachments[0] : null;
 
                   return (
-                    <tr key={booking.booking_id} className="booking-table-row">
+                    <tr key={booking.booking_id}>
                       {/* Booking # */}
-                      <td className="booking-no-cell">
+                      <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
                         <span 
-                          className="booking-no-link"
+                          style={{ cursor: 'pointer' }}
                           onClick={() => handleOpenSummaryView(booking)}
                           title="Click to view booking summary"
                         >
@@ -1240,22 +1302,22 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       </td>
 
                       {/* Customer */}
-                      <td className="customer-cell">
+                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>
                         {booking.customer_name || '-'}
                       </td>
 
                       {/* Pickup Date */}
-                      <td className="date-cell">
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                         {formatDateDisplay(getEffectivePickupDate(booking))}
                       </td>
 
                       {/* Delivery Date */}
-                      <td className="date-cell">
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                         {formatDateDisplay(getEffectiveDeliveryDate(booking))}
                       </td>
 
                       {/* Truck Select Dropdown */}
-                      <td className="truck-cell">
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <div className="truck-select-container">
                           <select
                             className="truck-select-input"
@@ -1273,8 +1335,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         </div>
                       </td>
 
-                      {/* DO FILE PREVIEW BADGE / CHIP (POSITIONED RIGHT NEXT TO TRUCK, BETWEEN TRUCK & 3-DOTS) */}
-                      <td className="file-preview-cell">
+                      {/* DO FILE PREVIEW BADGE / CHIP */}
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         {hasAttachments ? (
                           <div 
                             className="attached-preview-chip"
@@ -1303,47 +1365,18 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         )}
                       </td>
 
-                      {/* Action Menu (3 Dots Dropdown) */}
-                      <td className="action-cell">
-                        <div className="action-menu-container">
-                          <button 
-                            className="action-dots-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(openMenuId === booking.booking_id ? null : booking.booking_id);
-                            }}
-                          >
-                            <MoreVertical size={18} />
+                      {/* Action buttons */}
+                      <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button className="btn-action-edit" title="View Summary" onClick={() => handleOpenSummaryView(booking)}>
+                            <Eye size={16} />
                           </button>
-
-                          {/* Popup Menu */}
-                          {openMenuId === booking.booking_id && (
-                            <div className="action-dropdown-menu">
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => handleOpenEditWizard(booking)}
-                              >
-                                <Edit size={16} className="menu-icon" />
-                                <span>Edit</span>
-                              </button>
-
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => handleOpenAttachModal(booking)}
-                              >
-                                <Paperclip size={16} className="menu-icon" />
-                                <span>Attach DO File</span>
-                              </button>
-
-                              <button 
-                                className="dropdown-item delete-item"
-                                onClick={() => handleDeleteBooking(booking.booking_id)}
-                              >
-                                <Trash2 size={16} className="menu-icon danger" />
-                                <span className="danger-text">Delete</span>
-                              </button>
-                            </div>
-                          )}
+                          <button className="btn-action-edit" title="Edit Booking" onClick={() => handleOpenEditWizard(booking)}>
+                            <Pencil size={16} />
+                          </button>
+                          <button className="btn-action-delete" title="Delete Booking" onClick={() => handleDeleteBooking(booking.booking_id)}>
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1353,6 +1386,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </tbody>
           </table>
         </div>
+
+        {filteredBookings.length === 0 && !loading && (
+          <div className="empty-state-wrapper">
+            <FolderOpen size={48} className="empty-state-icon" />
+            <p className="empty-state-text">No bookings found. Click 'Create New Booking' to generate one.</p>
+          </div>
+        )}
       </div>
 
       {/* ==========================================

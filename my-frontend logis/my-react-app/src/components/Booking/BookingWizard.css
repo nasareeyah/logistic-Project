@@ -289,12 +289,15 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .cargo-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .cargo-field label {
@@ -305,6 +308,7 @@
 
 .cargo-field input,
 .cargo-field select {
+  width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 8px 12px;
@@ -322,12 +326,12 @@
   background-color: #ffffff;
 }
 
-.col-product { flex: 2; }
-.col-qty { flex: 1; }
-.col-unit { flex: 1; }
-.col-weight { flex: 1; }
-.col-wtunit { flex: 1; }
-.col-remark { flex: 1.5; }
+.col-product { flex: 2; min-width: 0; }
+.col-qty { flex: 1; min-width: 0; }
+.col-unit { flex: 1; min-width: 0; }
+.col-weight { flex: 1; min-width: 0; }
+.col-wtunit { flex: 1; min-width: 0; }
+.col-remark { flex: 1.5; min-width: 0; }
 
 .remove-cargo-btn {
   background: transparent;
