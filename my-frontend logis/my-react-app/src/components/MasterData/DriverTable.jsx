@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
@@ -6,7 +6,9 @@ import {
   Pencil, 
   Trash2, 
   User, 
-  Inbox
+  Inbox,
+  MoreVertical,
+  Edit
 } from 'lucide-react';
 
 function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
@@ -14,6 +16,17 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingDriverId, setEditingDriverId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -172,12 +185,11 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: '24px' }}>Name</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Assigned Truck</th>
-                  {/* <th>Status</th> */}
-                  <th style={{ width: '120px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                  <th style={{ width: '30%', paddingLeft: '24px' }}>Name</th>
+                  <th style={{ width: '20%' }}>Phone</th>
+                  <th style={{ width: '20%' }}>Email</th>
+                  <th style={{ width: '20%' }}>Assigned Truck</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,27 +204,45 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                     <td>{driver.phone || '-'}</td>
                     <td>{driver.email || '-'}</td>
                     <td>{getCarNumber(driver.assigned_car_id)}</td>
-                    {/* <td>
-                      <span className={getStatusBadgeClass(driver.status)}>
-                        <span className="status-dot"></span>
-                        {driver.status || 'Available'}
-                      </span>
-                    </td> */}
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                      <button 
-                        className="btn-action-edit" 
-                        onClick={() => openEditModal(driver)}
-                        title="แก้ไขข้อมูล"
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button 
-                        className="btn-action-delete" 
-                        onClick={() => onDelete(driver.driver_id)}
-                        title="ลบข้อมูล"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <div className="action-menu-container">
+                        <button 
+                          className="action-dots-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === driver.driver_id ? null : driver.driver_id);
+                          }}
+                          title="Actions"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+
+                        {openMenuId === driver.driver_id && (
+                          <div className="action-dropdown-menu">
+                            <button 
+                              className="dropdown-item"
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                openEditModal(driver);
+                              }}
+                            >
+                              <Edit size={16} className="menu-icon" />
+                              <span>Edit</span>
+                            </button>
+
+                            <button 
+                              className="dropdown-item delete-item"
+                              onClick={() => {
+                                setOpenMenuId(null);
+                                onDelete(driver.driver_id);
+                              }}
+                            >
+                              <Trash2 size={16} className="menu-icon danger" />
+                              <span className="danger-text">Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

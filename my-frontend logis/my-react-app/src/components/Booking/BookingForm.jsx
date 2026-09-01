@@ -1267,13 +1267,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '15%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
-                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>Customer</th>
+                <th style={{ width: '14%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
+                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Customer</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Pickup Date</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Delivery Date</th>
-                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>Truck</th>
-                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
-                <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Truck</th>
+                <th style={{ width: '21%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
+                <th style={{ width: '9%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1382,17 +1382,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           {/* Popup Menu */}
                           {openMenuId === booking.booking_id && (
                             <div className="action-dropdown-menu">
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleOpenSummaryView(booking);
-                                }}
-                              >
-                                <Eye size={16} className="menu-icon" />
-                                <span>Preview</span>
-                              </button>
-
                               <button 
                                 className="dropdown-item"
                                 onClick={() => {

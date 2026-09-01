@@ -8,7 +8,9 @@ import {
   Check, 
   ArrowLeft, 
   ArrowRight,
-  FolderOpen
+  FolderOpen,
+  MoreVertical,
+  Edit
 } from 'lucide-react';
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 import QuotationPreview from './QuotationPreview';
@@ -74,6 +76,17 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
   const [previewData, setPreviewData] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   // Sync props
   useEffect(() => {
@@ -408,37 +421,78 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: '24px', whiteSpace: 'nowrap' }}>Quotation #</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Project</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Customer</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Issue Date</th>
-                  <th style={{ width: '130px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                  <th style={{ width: '22%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Quotation #</th>
+                  <th style={{ width: '25%', whiteSpace: 'nowrap' }}>Project</th>
+                  <th style={{ width: '25%', whiteSpace: 'nowrap' }}>Customer</th>
+                  <th style={{ width: '18%', whiteSpace: 'nowrap' }}>Issue Date</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredQuotations.map(doc => (
-                  <tr key={doc.document_id || doc._id}>
-                    <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
-                      {doc.document_no || doc.document_id}
-                    </td>
-                    <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
-                    <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
-                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDateOnly(doc.document_date) || '-'}</td>
-                    <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
-                        <button className="btn-action-edit" title="View" onClick={() => handlePreview(doc)}>
-                          <Eye size={16} />
-                        </button>
-                        <button className="btn-action-edit" title="Edit" onClick={() => handleEditQuotation(doc)}>
-                          <Pencil size={16} />
-                        </button>
-                        <button className="btn-action-delete" title="Delete" onClick={() => handleDeleteQuotation(doc.document_id)}>
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredQuotations.map(doc => {
+                  const docId = doc.document_id || doc._id;
+                  return (
+                    <tr key={docId}>
+                      <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
+                        {doc.document_no || doc.document_id}
+                      </td>
+                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
+                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDateOnly(doc.document_date) || '-'}</td>
+                      <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
+                        <div className="action-menu-container">
+                          <button 
+                            className="action-dots-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === docId ? null : docId);
+                            }}
+                            title="Actions"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+
+                          {openMenuId === docId && (
+                            <div className="action-dropdown-menu">
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handlePreview(doc);
+                                }}
+                              >
+                                <Eye size={16} className="menu-icon" />
+                                <span>Preview</span>
+                              </button>
+
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleEditQuotation(doc);
+                                }}
+                              >
+                                <Edit size={16} className="menu-icon" />
+                                <span>Edit</span>
+                              </button>
+
+                              <button 
+                                className="dropdown-item delete-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleDeleteQuotation(doc.document_id);
+                                }}
+                              >
+                                <Trash2 size={16} className="menu-icon danger" />
+                                <span className="danger-text">Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

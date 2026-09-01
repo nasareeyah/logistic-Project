@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -14,7 +14,9 @@ import {
   MapPin,
   CreditCard,
   ArrowLeft,
-  File
+  File,
+  MoreVertical,
+  Edit
 } from 'lucide-react';
 
 function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] }) {
@@ -23,6 +25,17 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const countries = [
     'Thailand',
@@ -609,11 +622,11 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ paddingLeft: '24px' }}>Company Name</th>
-                <th>Contact</th>
-                <th>Phone</th>
-                <th>Email</th>
-                <th style={{ width: '100px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                <th style={{ width: '25%', paddingLeft: '24px' }}>Company Name</th>
+                <th style={{ width: '25%' }}>Contact</th>
+                <th style={{ width: '20%' }}>Phone</th>
+                <th style={{ width: '20%' }}>Email</th>
+                <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -641,12 +654,44 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   <td>{c.phone || '-'}</td>
                   <td>{c.email || '-'}</td>
                   <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                    <button className="btn-action-edit" onClick={() => openEditModal(c)}>
-                      <Pencil size={16} />
-                    </button>
-                    <button className="btn-action-delete" onClick={() => onDelete(c.customer_id)}>
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="action-menu-container">
+                      <button 
+                        className="action-dots-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(openMenuId === c.customer_id ? null : c.customer_id);
+                        }}
+                        title="Actions"
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+
+                      {openMenuId === c.customer_id && (
+                        <div className="action-dropdown-menu">
+                          <button 
+                            className="dropdown-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              openEditModal(c);
+                            }}
+                          >
+                            <Edit size={16} className="menu-icon" />
+                            <span>Edit</span>
+                          </button>
+
+                          <button 
+                            className="dropdown-item delete-item"
+                            onClick={() => {
+                              setOpenMenuId(null);
+                              onDelete(c.customer_id);
+                            }}
+                          >
+                            <Trash2 size={16} className="menu-icon danger" />
+                            <span className="danger-text">Delete</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

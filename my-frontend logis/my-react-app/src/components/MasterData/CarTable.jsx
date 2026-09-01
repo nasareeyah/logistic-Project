@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -7,7 +7,9 @@ import {
   Trash2,
   Truck,
   Inbox,
-  Package
+  Package,
+  MoreVertical,
+  Edit
 } from 'lucide-react';
 
 function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
@@ -16,6 +18,17 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCarId, setEditingCarId] = useState(null);
   const [selectedCarId, setSelectedCarId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.action-menu-container')) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const [formData, setFormData] = useState({
     car_number: '',
@@ -387,10 +400,10 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ paddingLeft: '24px' }}>License Plate</th>
-                  <th>Type</th>
-                  <th>Driver</th>
-                  <th style={{ width: '120px', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                  <th style={{ width: '35%', paddingLeft: '24px' }}>License Plate</th>
+                  <th style={{ width: '25%' }}>Type</th>
+                  <th style={{ width: '30%' }}>Driver</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -432,20 +445,44 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                         )}
                       </td>
                       <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                        <button
-                          className="btn-action-edit"
-                          onClick={() => openEditModal(car)}
-                          title="แก้ไขข้อมูล"
-                        >
-                          <Pencil size={16} />
-                        </button>
-                        <button
-                          className="btn-action-delete"
-                          onClick={() => onDelete(car.car_id)}
-                          title="ลบข้อมูล"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="action-menu-container">
+                          <button 
+                            className="action-dots-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === car.car_id ? null : car.car_id);
+                            }}
+                            title="Actions"
+                          >
+                            <MoreVertical size={18} />
+                          </button>
+
+                          {openMenuId === car.car_id && (
+                            <div className="action-dropdown-menu">
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  openEditModal(car);
+                                }}
+                              >
+                                <Edit size={16} className="menu-icon" />
+                                <span>Edit</span>
+                              </button>
+
+                              <button 
+                                className="dropdown-item delete-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  onDelete(car.car_id);
+                                }}
+                              >
+                                <Trash2 size={16} className="menu-icon danger" />
+                                <span className="danger-text">Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
