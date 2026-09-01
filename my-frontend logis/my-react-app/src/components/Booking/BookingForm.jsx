@@ -1267,13 +1267,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '14%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
-                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Customer</th>
+                <th style={{ width: '16%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
+                <th style={{ width: '17%', whiteSpace: 'nowrap' }}>Customer</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Pickup Date</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Delivery Date</th>
-                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Truck</th>
-                <th style={{ width: '21%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
-                <th style={{ width: '9%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '20%', whiteSpace: 'nowrap' }}>Truck</th>
+                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
+                <th style={{ width: '7%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
