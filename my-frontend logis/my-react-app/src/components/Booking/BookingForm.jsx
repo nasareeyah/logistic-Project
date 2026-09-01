@@ -1365,18 +1365,57 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         )}
                       </td>
 
-                      {/* Action buttons */}
+                      {/* Action Menu (3 Dots Dropdown) */}
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
-                          <button className="btn-action-edit" title="View Summary" onClick={() => handleOpenSummaryView(booking)}>
-                            <Eye size={16} />
+                        <div className="action-menu-container">
+                          <button 
+                            className="action-dots-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(openMenuId === booking.booking_id ? null : booking.booking_id);
+                            }}
+                            title="Actions"
+                          >
+                            <MoreVertical size={18} />
                           </button>
-                          <button className="btn-action-edit" title="Edit Booking" onClick={() => handleOpenEditWizard(booking)}>
-                            <Pencil size={16} />
-                          </button>
-                          <button className="btn-action-delete" title="Delete Booking" onClick={() => handleDeleteBooking(booking.booking_id)}>
-                            <Trash2 size={16} />
-                          </button>
+
+                          {/* Popup Menu */}
+                          {openMenuId === booking.booking_id && (
+                            <div className="action-dropdown-menu">
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleOpenSummaryView(booking);
+                                }}
+                              >
+                                <Eye size={16} className="menu-icon" />
+                                <span>Preview</span>
+                              </button>
+
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleOpenEditWizard(booking);
+                                }}
+                              >
+                                <Edit size={16} className="menu-icon" />
+                                <span>Edit</span>
+                              </button>
+
+                              <button 
+                                className="dropdown-item delete-item"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  handleDeleteBooking(booking.booking_id);
+                                }}
+                              >
+                                <Trash2 size={16} className="menu-icon danger" />
+                                <span className="danger-text">Delete</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
