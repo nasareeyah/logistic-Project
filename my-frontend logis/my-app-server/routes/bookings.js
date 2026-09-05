@@ -11,26 +11,52 @@ let isBookingTableInit = false;
 async function saveConsignerFromBooking(sender) {
     if (!sender) return null;
     const consigner_name = sender.company_name || null;
-    const addressParts = [
-        sender.address_line,
-        sender.city,
-        sender.state,
-        sender.postal_code,
-        sender.country
-    ].filter(Boolean);
-    const address = addressParts.length > 0 ? addressParts.join(', ') : null;
+    const address_line = sender.address_line || null;
+    const city = sender.city || null;
+    const state = sender.state || sender.province || null;
+    const province = sender.province || sender.state || null;
+    const postal_code = sender.postal_code || null;
+    const country = sender.country || 'Thailand';
 
-    if (!address) return null;
+    if (!address_line && !consigner_name) return null;
 
-    const existing = await db.query('SELECT consigner_id FROM consigner WHERE address = $1', [address]);
+    let existing;
+    if (address_line) {
+        existing = await db.query(
+            'SELECT consigner_id FROM consigner WHERE address_line = $1 AND (city = $2 OR city IS NULL) LIMIT 1',
+            [address_line, city]
+        );
+    } else if (consigner_name) {
+        existing = await db.query('SELECT consigner_id FROM consigner WHERE consigner_name = $1 LIMIT 1', [consigner_name]);
+    } else {
+        existing = { rows: [] };
+    }
+
     if (existing.rows.length > 0) {
-        return existing.rows[0].consigner_id;
+        const existId = existing.rows[0].consigner_id;
+        if (address_line || city || state || postal_code) {
+            await db.query(
+                `UPDATE consigner SET
+                    consigner_name = COALESCE(NULLIF($1, ''), consigner_name),
+                    address_line = COALESCE(NULLIF($2, ''), address_line),
+                    city = COALESCE(NULLIF($3, ''), city),
+                    state = COALESCE(NULLIF($4, ''), state),
+                    province = COALESCE(NULLIF($5, ''), province),
+                    postal_code = COALESCE(NULLIF($6, ''), postal_code),
+                    country = COALESCE(NULLIF($7, ''), country)
+                WHERE consigner_id = $8`,
+                [consigner_name, address_line, city, state, province, postal_code, country, existId]
+            );
+        }
+        return existId;
     }
 
     const finalId = await nextId('seq_consigner', 'cgr-', 5);
     await db.query(
-        'INSERT INTO consigner (consigner_id, consigner_name, address) VALUES ($1,$2,$3)',
-        [finalId, consigner_name, address]
+        `INSERT INTO consigner (
+            consigner_id, consigner_name, address_line, city, state, province, postal_code, country
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [finalId, consigner_name, address_line, city, state, province, postal_code, country]
     );
     return finalId;
 }
@@ -38,26 +64,52 @@ async function saveConsignerFromBooking(sender) {
 async function saveConsigneeFromBooking(receiver) {
     if (!receiver) return null;
     const consignee_name = receiver.company_name || null;
-    const addressParts = [
-        receiver.address_line,
-        receiver.city,
-        receiver.state,
-        receiver.postal_code,
-        receiver.country
-    ].filter(Boolean);
-    const address = addressParts.length > 0 ? addressParts.join(', ') : null;
+    const address_line = receiver.address_line || null;
+    const city = receiver.city || null;
+    const state = receiver.state || receiver.province || null;
+    const province = receiver.province || receiver.state || null;
+    const postal_code = receiver.postal_code || null;
+    const country = receiver.country || 'Thailand';
 
-    if (!address) return null;
+    if (!address_line && !consignee_name) return null;
 
-    const existing = await db.query('SELECT consignee_id FROM consignee WHERE address = $1', [address]);
+    let existing;
+    if (address_line) {
+        existing = await db.query(
+            'SELECT consignee_id FROM consignee WHERE address_line = $1 AND (city = $2 OR city IS NULL) LIMIT 1',
+            [address_line, city]
+        );
+    } else if (consignee_name) {
+        existing = await db.query('SELECT consignee_id FROM consignee WHERE consignee_name = $1 LIMIT 1', [consignee_name]);
+    } else {
+        existing = { rows: [] };
+    }
+
     if (existing.rows.length > 0) {
-        return existing.rows[0].consignee_id;
+        const existId = existing.rows[0].consignee_id;
+        if (address_line || city || state || postal_code) {
+            await db.query(
+                `UPDATE consignee SET
+                    consignee_name = COALESCE(NULLIF($1, ''), consignee_name),
+                    address_line = COALESCE(NULLIF($2, ''), address_line),
+                    city = COALESCE(NULLIF($3, ''), city),
+                    state = COALESCE(NULLIF($4, ''), state),
+                    province = COALESCE(NULLIF($5, ''), province),
+                    postal_code = COALESCE(NULLIF($6, ''), postal_code),
+                    country = COALESCE(NULLIF($7, ''), country)
+                WHERE consignee_id = $8`,
+                [consignee_name, address_line, city, state, province, postal_code, country, existId]
+            );
+        }
+        return existId;
     }
 
     const finalId = await nextId('seq_consignee', 'cge-', 5);
     await db.query(
-        'INSERT INTO consignee (consignee_id, consignee_name, address) VALUES ($1,$2,$3)',
-        [finalId, consignee_name, address]
+        `INSERT INTO consignee (
+            consignee_id, consignee_name, address_line, city, state, province, postal_code, country
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [finalId, consignee_name, address_line, city, state, province, postal_code, country]
     );
     return finalId;
 }
@@ -95,9 +147,29 @@ async function initBookingTables() {
                 unit VARCHAR(50),
                 weight NUMERIC,
                 wt_unit VARCHAR(50),
-                remark TEXT
+                remark TEXT,
+                load_from VARCHAR(255),
+                destination VARCHAR(255),
+                country VARCHAR(100)
             );
         `);
+        await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS load_from VARCHAR(255);`);
+        await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS destination VARCHAR(255);`);
+        await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS country VARCHAR(100);`);
+
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS address_line VARCHAR(255);`);
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS city VARCHAR(100);`);
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS state VARCHAR(100);`);
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS province VARCHAR(100);`);
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);`);
+        await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT 'Thailand';`);
+
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS address_line VARCHAR(255);`);
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS city VARCHAR(100);`);
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS state VARCHAR(100);`);
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS province VARCHAR(100);`);
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);`);
+        await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT 'Thailand';`);
 
         await db.query(`
             CREATE TABLE IF NOT EXISTS booking_attachments (
@@ -125,9 +197,21 @@ router.get('/bookings', async (req, res) => {
         const bookingsRes = await db.query(`
             SELECT b.*, 
               cgr.consigner_name,
-              cgr.address AS consigner_address,
+              cgr.address_line AS consigner_address,
+              cgr.address_line AS consigner_address_line,
+              cgr.city AS consigner_city,
+              cgr.state AS consigner_state,
+              cgr.province AS consigner_province,
+              cgr.postal_code AS consigner_postal_code,
+              cgr.country AS consigner_country,
               cge.consignee_name,
-              cge.address AS consignee_address,
+              cge.address_line AS consignee_address,
+              cge.address_line AS consignee_address_line,
+              cge.city AS consignee_city,
+              cge.state AS consignee_state,
+              cge.province AS consignee_province,
+              cge.postal_code AS consignee_postal_code,
+              cge.country AS consignee_country,
               COALESCE(b.customer_name, c.customer_name) AS customer_name,
               ca.car_number, ca.car_type
             FROM bookings b
@@ -159,12 +243,22 @@ router.get('/bookings', async (req, res) => {
                 ...b,
                 sender_details: b.consigner_id ? [{
                     company_name: b.consigner_name,
-                    address_line: b.consigner_address,
+                    address_line: b.consigner_address_line || b.consigner_address || '',
+                    city: b.consigner_city || '',
+                    state: b.consigner_state || b.consigner_province || '',
+                    province: b.consigner_province || b.consigner_state || '',
+                    postal_code: b.consigner_postal_code || '',
+                    country: b.consigner_country || 'Thailand',
                     pickup_date: pickupDateText
                 }] : [],
                 receiver_details: b.consignee_id ? [{
                     company_name: b.consignee_name,
-                    address_line: b.consignee_address,
+                    address_line: b.consignee_address_line || b.consignee_address || '',
+                    city: b.consignee_city || '',
+                    state: b.consignee_state || b.consignee_province || '',
+                    province: b.consignee_province || b.consignee_state || '',
+                    postal_code: b.consignee_postal_code || '',
+                    country: b.consignee_country || 'Thailand',
                     delivery_date: deliveryDateText
                 }] : [],
                 cargo_details: cargoMap[b.booking_id] || [],
@@ -256,8 +350,8 @@ router.post('/bookings', async (req, res) => {
                 const item = cargo_details[i];
                 const cId = await nextId('seq_booking_cargo', 'cg-', 6);
                 await db.query(
-                    `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark) 
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
                     [
                         cId,
                         booking_id,
@@ -266,7 +360,10 @@ router.post('/bookings', async (req, res) => {
                         item.unit || null,
                         item.weight ? parseFloat(item.weight) : null,
                         item.wt_unit || null,
-                        item.remark || null
+                        item.remark || null,
+                        item.load_from || null,
+                        item.destination || null,
+                        item.country || null
                     ]
                 );
             }
@@ -347,8 +444,8 @@ router.put('/bookings/:id', async (req, res) => {
                     const item = cargo_details[i];
                     const cId = await nextId('seq_booking_cargo', 'cg-', 6);
                     await db.query(
-                        `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                        `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
                         [
                             cId,
                             req.params.id,
@@ -357,7 +454,10 @@ router.put('/bookings/:id', async (req, res) => {
                             item.unit || null,
                             item.weight ? parseFloat(item.weight) : null,
                             item.wt_unit || null,
-                            item.remark || null
+                            item.remark || null,
+                            item.load_from || null,
+                            item.destination || null,
+                            item.country || null
                         ]
                     );
                 }

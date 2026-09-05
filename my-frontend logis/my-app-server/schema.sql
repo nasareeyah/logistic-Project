@@ -5,13 +5,17 @@ CREATE TABLE bank (
 );
 --2.customers
 CREATE TABLE customers (
-  customer_id VARCHAR(10) PRIMARY KEY,
+  customer_id VARCHAR(50) PRIMARY KEY,
   customer_name VARCHAR(255),
   tax_id VARCHAR(20),
   address TEXT,
   phone VARCHAR(50),
   email VARCHAR(100),
-  contact_person VARCHAR(100)
+  contact_person VARCHAR(100),
+  city VARCHAR(100),
+  province VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100) DEFAULT 'Thailand'
 );
 
 CREATE TABLE cars (
@@ -62,14 +66,26 @@ CREATE TABLE location (
 CREATE TABLE consigner (
   consigner_id VARCHAR(10) PRIMARY KEY,
   consigner_name VARCHAR(255),
-  address TEXT
+  address_line VARCHAR(255),
+  city VARCHAR(100),
+  state VARCHAR(100),
+  province VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100) DEFAULT 'Thailand',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 10. consignee 
-create table consignee(
+CREATE TABLE consignee (
   consignee_id VARCHAR(10) PRIMARY KEY,
   consignee_name VARCHAR(255),
-  address TEXT
+  address_line VARCHAR(255),
+  city VARCHAR(100),
+  state VARCHAR(100),
+  province VARCHAR(100),
+  postal_code VARCHAR(20),
+  country VARCHAR(100) DEFAULT 'Thailand',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -146,6 +162,51 @@ CREATE TABLE delivery_orders (
   description TEXT,
   quantity DECIMAL(10,2),
   unit VARCHAR(50),
+  booking_id VARCHAR(50),
   FOREIGN KEY (document_id) REFERENCES document(document_id),
   FOREIGN KEY (service_id) REFERENCES service(service_id)
+);
+
+-- 16. bookings
+CREATE TABLE bookings (
+  booking_id VARCHAR(50) PRIMARY KEY,
+  booking_no VARCHAR(50) NOT NULL UNIQUE,
+  customer_id VARCHAR(50),
+  customer_name VARCHAR(255),
+  pickup_date DATE,
+  delivery_date DATE,
+  car_id VARCHAR(50),
+  truck_name VARCHAR(100),
+  status VARCHAR(50) DEFAULT 'Pending',
+  remark TEXT,
+  consigner_id VARCHAR(50),
+  consignee_id VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. booking_cargo
+CREATE TABLE booking_cargo (
+  cargo_id VARCHAR(50) PRIMARY KEY,
+  booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+  product_name VARCHAR(255),
+  quantity NUMERIC,
+  unit VARCHAR(50),
+  weight NUMERIC,
+  wt_unit VARCHAR(50),
+  remark TEXT,
+  load_from VARCHAR(255),
+  destination VARCHAR(255),
+  country VARCHAR(100)
+);
+
+-- 18. booking_attachments
+CREATE TABLE booking_attachments (
+  attachment_id VARCHAR(50) PRIMARY KEY,
+  booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+  file_name VARCHAR(255),
+  original_name VARCHAR(255),
+  file_path TEXT,
+  file_type VARCHAR(100),
+  file_size INT,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
