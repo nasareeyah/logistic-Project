@@ -1,23 +1,24 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  fetchBookings, 
-  createBooking, 
-  updateBooking, 
-  deleteBooking, 
-  uploadAttachments, 
-  deleteAttachment 
+import {
+  fetchBookings,
+  createBooking,
+  updateBooking,
+  deleteBooking,
+  uploadAttachments,
+  deleteAttachment
 } from './apiBooking';
-import { 
-  Search, 
-  Plus, 
-  MoreVertical, 
-  Edit, 
-  Paperclip, 
-  Trash2, 
-  X, 
-  Upload, 
-  Download, 
-  Eye, 
+import {
+  Search,
+  Plus,
+  MoreVertical,
+  Edit,
+  Paperclip,
+  Trash2,
+  X,
+  Upload,
+  Download,
+  Eye,
   ChevronDown,
   FileCheck,
   AlertCircle,
@@ -72,7 +73,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   // Step 3: Transport (Multiple Senders & Receivers)
   const todayStr = new Date().toISOString().slice(0, 10);
-  
+
   const emptySender = { company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr };
   const emptyReceiver = { company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr };
 
@@ -196,15 +197,15 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleTruckChange = async (bookingId, selectedCarId) => {
     const selectedCar = (Array.isArray(cars) ? cars : []).find(c => c.car_id === selectedCarId);
     const carNumber = selectedCar ? selectedCar.car_number : '';
-    
-    setBookings(prev => prev.map(b => b.booking_id === bookingId ? { 
-      ...b, 
+
+    setBookings(prev => prev.map(b => b.booking_id === bookingId ? {
+      ...b,
       car_id: selectedCarId || null,
       car_number: carNumber || null
     } : b));
-    
+
     try {
-      await updateBooking(bookingId, { 
+      await updateBooking(bookingId, {
         car_id: selectedCarId || null,
         truck_name: carNumber || null
       });
@@ -447,7 +448,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
         {/* Back link */}
         <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-          <button 
+          <button
             type="button"
             onClick={() => setViewMode('table')}
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
@@ -463,7 +464,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
         {/* Main Card Panel */}
         <div className="dashboard-card-panel" style={{ padding: '32px' }}>
-          
+
           {/* Stepper Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px', overflowX: 'auto', paddingBottom: '8px' }}>
             {stepsList.map((step, idx) => {
@@ -471,8 +472,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               const isActive = step.num === currentStep;
 
               return (
-                <div 
-                  key={step.num} 
+                <div
+                  key={step.num}
                   onClick={() => setCurrentStep(step.num)}
                   style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '160px', cursor: 'pointer' }}
                 >
@@ -494,9 +495,9 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       {isCompleted ? <Check size={18} /> : step.num}
                     </div>
                     {/* Step Label */}
-                    <span style={{ 
-                      fontSize: '14px', 
-                      fontWeight: isActive ? '700' : '500', 
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: isActive ? '700' : '500',
                       color: isActive ? '#0f172a' : isCompleted ? '#334155' : '#94a3b8',
                       whiteSpace: 'nowrap'
                     }}>
@@ -542,8 +543,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     const q = customerSearch.toLowerCase().trim();
                     if (!q) return true;
                     return (c.customer_name || '').toLowerCase().includes(q) ||
-                           (c.contact_person || '').toLowerCase().includes(q) ||
-                           (c.phone || '').toLowerCase().includes(q);
+                      (c.contact_person || '').toLowerCase().includes(q) ||
+                      (c.phone || '').toLowerCase().includes(q);
                   })
                   .map((cust, idx) => {
                     const isSelected = selectedCustomer?.customer_name === cust.customer_name;
@@ -908,8 +909,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   style={{ display: 'none' }}
                   accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
                 />
-                <div 
-                  className="dropzone-inner" 
+                <div
+                  className="dropzone-inner"
                   onClick={() => wizardFileInputRef.current?.click()}
                 >
                   <Upload size={38} className="upload-tray-icon" />
@@ -933,8 +934,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       <li key={`new-${i}`}>
                         <FileText size={14} color="#16a34a" />
                         <span>{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
-                        <button 
-                          type="button" 
+                        <button
+                          type="button"
                           className="btn-remove-new-file"
                           onClick={() => setWizardNewFiles(prev => prev.filter((_, idx) => idx !== i))}
                         >
@@ -1012,16 +1013,16 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {/* WIZARD FOOTER NAV */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', marginTop: '24px' }}>
             <div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-secondary"
                 disabled={currentStep === 1}
                 onClick={() => {
                   if (currentStep > 1) setCurrentStep(prev => prev - 1);
                   else setViewMode('table');
                 }}
-                style={{ 
-                  opacity: currentStep === 1 ? 0.5 : 1, 
+                style={{
+                  opacity: currentStep === 1 ? 0.5 : 1,
                   cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -1035,8 +1036,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
             <div>
               {currentStep < 5 ? (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-primary"
                   onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1045,8 +1046,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   <ArrowRight size={16} />
                 </button>
               ) : (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="btn-primary"
                   disabled={saving}
                   onClick={handleWizardSubmit}
@@ -1071,7 +1072,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
         {/* Back link */}
         <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-          <button 
+          <button
             type="button"
             onClick={() => setViewMode('table')}
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
@@ -1085,8 +1086,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>
             Booking Summary: {editingBooking?.booking_no}
           </h2>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="btn-primary"
             onClick={() => {
               setCurrentStep(1);
@@ -1194,8 +1195,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '24px', borderTop: '1px solid #e2e8f0', marginTop: '24px' }}>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-secondary"
               onClick={() => setViewMode('table')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1204,8 +1205,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               <span>Back to bookings</span>
             </button>
 
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-primary"
               onClick={() => {
                 setCurrentStep(1);
@@ -1253,9 +1254,9 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         <div style={{ padding: '0 24px' }}>
           <div className="panel-search-bar">
             <Search size={16} className="panel-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search bookings..." 
+            <input
+              type="text"
+              placeholder="Search bookings..."
               className="panel-search-input"
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
@@ -1292,7 +1293,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     <tr key={booking.booking_id}>
                       {/* Booking # */}
                       <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
-                        <span 
+                        <span
                           style={{ cursor: 'pointer' }}
                           onClick={() => handleOpenSummaryView(booking)}
                           title="Click to view booking summary"
@@ -1338,7 +1339,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       {/* DO FILE PREVIEW BADGE / CHIP */}
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {hasAttachments ? (
-                          <div 
+                          <div
                             className="attached-preview-chip"
                             onClick={() => handleOpenAttachModal(booking)}
                             title="Click to preview/view attached files"
@@ -1368,7 +1369,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       {/* Action Menu (3 Dots Dropdown) */}
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                         <div className="action-menu-container">
-                          <button 
+                          <button
                             className="action-dots-btn"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1382,7 +1383,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           {/* Popup Menu */}
                           {openMenuId === booking.booking_id && (
                             <div className="action-dropdown-menu">
-                              <button 
+                              <button
                                 className="dropdown-item"
                                 onClick={() => {
                                   setOpenMenuId(null);
@@ -1393,7 +1394,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                                 <span>Edit</span>
                               </button>
 
-                              <button 
+                              <button
                                 className="dropdown-item delete-item"
                                 onClick={() => {
                                   setOpenMenuId(null);
@@ -1446,7 +1447,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
             <div className="modal-body-content">
               {/* Dropzone */}
-              <div 
+              <div
                 className="upload-dropzone"
                 onClick={() => !uploading && fileInputRef.current?.click()}
                 onDragOver={handleDragOver}

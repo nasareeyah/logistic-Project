@@ -8,8 +8,8 @@ router.get('/document', async (req, res) => {
     try {
         const query = `
             SELECT d.*, s.description AS service_name, st.service_typename,
-                   cgr.address AS consigner_address,
-                   cge.address AS consignee_address
+                   cgr.address_line AS consigner_address,
+                   cge.address_line AS consignee_address
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
             LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
