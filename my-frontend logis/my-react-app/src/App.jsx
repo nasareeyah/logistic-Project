@@ -8,6 +8,7 @@ import CarTable from './components/MasterData/CarTable';
 import DriverTable from './components/MasterData/DriverTable';
 import QuotationForm from './components/Quotation/QuotationForm';
 import BookingForm from './components/Booking/BookingForm';
+import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -328,6 +329,14 @@ function App() {
               consignees={consignees}
               bookings={bookings}
               fetchData={fetchData}
+            />
+          )}
+          {activeTab === 'delivery-order' && (
+            <DeliveryOrderTable
+              customers={customers}
+              cars={cars}
+              drivers={drivers}
+              bookings={bookings}
             />
           )}
           {/* {activeTab === 'invoice' && (

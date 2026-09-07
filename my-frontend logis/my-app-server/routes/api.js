@@ -7,5 +7,6 @@ router.use(require('./drivers'));
 router.use(require('./documents'));
 router.use(require('./locations'));
 router.use(require('./bookings'));
+router.use(require('./deliveryOrders'));
 
 module.exports = router;
