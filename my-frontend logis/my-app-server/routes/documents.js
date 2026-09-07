@@ -3,13 +3,25 @@ const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
 
+// Middleware ตรวจสอบสิทธิ์การเข้าถึงเอกสารทางการเงิน (Quotation, Invoice, Receipt)
+// Employee ไม่มีสิทธิ์เข้าถึง ส่วน Operator / Accounting มีสิทธิ์เต็ม
+const checkFinancialPermission = (req, res, next) => {
+    const role = req.headers['x-user-role'];
+    if (role && role === 'employee') {
+        return res.status(403).json({
+            error: 'ปฏิเสธการเข้าถึง: พนักงานทั่วไป (Employee) ไม่มีสิทธิ์เข้าถึงเอกสารทางการเงิน (Quotation, Invoice, Receipt)'
+        });
+    }
+    next();
+};
+
 // --- DOCUMENTS & DOCUMENT ITEMS ---
-router.get('/document', async (req, res) => {
+router.get('/document', checkFinancialPermission, async (req, res) => {
     try {
         const query = `
             SELECT d.*, s.description AS service_name, st.service_typename,
-                   cgr.address AS consigner_address,
-                   cge.address AS consignee_address
+                   cgr.address_line AS consigner_address,
+                   cge.address_line AS consignee_address
             FROM document d
             LEFT JOIN service s ON d.service_id = s.service_id
             LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
@@ -24,7 +36,7 @@ router.get('/document', async (req, res) => {
     }
 });
 
-router.post('/document', async (req, res) => {
+router.post('/document', checkFinancialPermission, async (req, res) => {
     const {
         document_id,
         document_type,
@@ -127,7 +139,7 @@ router.post('/document', async (req, res) => {
     }
 });
 
-router.put('/document/:id', async (req, res) => {
+router.put('/document/:id', checkFinancialPermission, async (req, res) => {
     try {
         const {
             document_type, document_no, document_date,
@@ -169,7 +181,7 @@ router.put('/document/:id', async (req, res) => {
     }
 });
 
-router.delete('/document/:id', async (req, res) => {
+router.delete('/document/:id', checkFinancialPermission, async (req, res) => {
     try {
         await db.query('DELETE FROM document_items WHERE document_id = $1', [req.params.id]);
         await db.query('DELETE FROM document WHERE document_id = $1', [req.params.id]);
@@ -179,7 +191,7 @@ router.delete('/document/:id', async (req, res) => {
     }
 });
 
-router.get('/document_items', async (req, res) => {
+router.get('/document_items', checkFinancialPermission, async (req, res) => {
     try {
         const { document_id } = req.query;
         const sql = `SELECT di.*, s.description, s.quantity AS item_quantity, s.unit_quantity AS unit,
@@ -199,7 +211,7 @@ router.get('/document_items', async (req, res) => {
     }
 });
 
-router.post('/document_items', async (req, res) => {
+router.post('/document_items', checkFinancialPermission, async (req, res) => {
     try {
         const { document_id, service_id } = req.body;
         const itemId = await nextId('seq_document_items', 'di-', 6);
@@ -213,7 +225,7 @@ router.post('/document_items', async (req, res) => {
     }
 });
 
-router.delete('/document_items/:id', async (req, res) => {
+router.delete('/document_items/:id', checkFinancialPermission, async (req, res) => {
     try {
         await db.query('DELETE FROM document_items WHERE document_items_id = $1', [req.params.id]);
         res.json({ message: 'ลบรายการสำเร็จ' });

@@ -6,7 +6,7 @@ const { nextId } = require('../utils/dbHelpers');
 // --- CONSIGNER ---
 router.get('/consigner', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM consigner ORDER BY address');
+        const result = await db.query('SELECT * FROM consigner ORDER BY consigner_id ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -15,19 +15,25 @@ router.get('/consigner', async (req, res) => {
 
 router.post('/consigner', async (req, res) => {
     try {
-        const { consigner_id, consigner_name, address } = req.body;
-        if (address) {
-            const existing = await db.query('SELECT consigner_id FROM consigner WHERE address = $1', [address]);
+        const { consigner_id, consigner_name, address_line, city, state, province, postal_code, country } = req.body;
+        const lineVal = address_line || null;
+        const stateVal = state || province || null;
+        const provVal = province || state || null;
+
+        if (lineVal) {
+            const existing = await db.query('SELECT consigner_id FROM consigner WHERE address_line = $1 AND (city = $2 OR city IS NULL)', [lineVal, city || null]);
             if (existing.rows.length > 0) {
-                return res.json({ consigner_id: existing.rows[0].consigner_id, address });
+                return res.json({ consigner_id: existing.rows[0].consigner_id, address_line: lineVal });
             }
         }
         const finalId = consigner_id || await nextId('seq_consigner', 'cgr-', 5);
         await db.query(
-            'INSERT INTO consigner (consigner_id, consigner_name, address) VALUES ($1,$2,$3)',
-            [finalId, consigner_name || null, address || null]
+            `INSERT INTO consigner (
+                consigner_id, consigner_name, address_line, city, state, province, postal_code, country
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [finalId, consigner_name || null, lineVal, city || null, stateVal, provVal, postal_code || null, country || 'Thailand']
         );
-        res.json({ consigner_id: finalId, address });
+        res.json({ consigner_id: finalId, address_line: lineVal });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -35,10 +41,22 @@ router.post('/consigner', async (req, res) => {
 
 router.put('/consigner/:id', async (req, res) => {
     try {
-        const { consigner_name, address } = req.body;
+        const { consigner_name, address_line, city, state, province, postal_code, country } = req.body;
+        const lineVal = address_line || null;
+        const stateVal = state || province || null;
+        const provVal = province || state || null;
+
         await db.query(
-            'UPDATE consigner SET consigner_name=$1, address=$2 WHERE consigner_id=$3',
-            [consigner_name || null, address || null, req.params.id]
+            `UPDATE consigner SET 
+                consigner_name = COALESCE($1, consigner_name), 
+                address_line = COALESCE($2, address_line),
+                city = COALESCE($3, city),
+                state = COALESCE($4, state),
+                province = COALESCE($5, province),
+                postal_code = COALESCE($6, postal_code),
+                country = COALESCE($7, country)
+            WHERE consigner_id = $8`,
+            [consigner_name || null, lineVal, city || null, stateVal, provVal, postal_code || null, country || null, req.params.id]
         );
         res.json({ message: 'แก้ไขผู้ส่งสำเร็จ' });
     } catch (err) {
@@ -58,7 +76,7 @@ router.delete('/consigner/:id', async (req, res) => {
 // --- CONSIGNEE ---
 router.get('/consignee', async (req, res) => {
     try {
-        const result = await db.query('SELECT * FROM consignee ORDER BY address');
+        const result = await db.query('SELECT * FROM consignee ORDER BY consignee_id ASC');
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -67,19 +85,25 @@ router.get('/consignee', async (req, res) => {
 
 router.post('/consignee', async (req, res) => {
     try {
-        const { consignee_id, consignee_name, address } = req.body;
-        if (address) {
-            const existing = await db.query('SELECT consignee_id FROM consignee WHERE address = $1', [address]);
+        const { consignee_id, consignee_name, address_line, city, state, province, postal_code, country } = req.body;
+        const lineVal = address_line || null;
+        const stateVal = state || province || null;
+        const provVal = province || state || null;
+
+        if (lineVal) {
+            const existing = await db.query('SELECT consignee_id FROM consignee WHERE address_line = $1 AND (city = $2 OR city IS NULL)', [lineVal, city || null]);
             if (existing.rows.length > 0) {
-                return res.json({ consignee_id: existing.rows[0].consignee_id, address });
+                return res.json({ consignee_id: existing.rows[0].consignee_id, address_line: lineVal });
             }
         }
         const finalId = consignee_id || await nextId('seq_consignee', 'cge-', 5);
         await db.query(
-            'INSERT INTO consignee (consignee_id, consignee_name, address) VALUES ($1,$2,$3)',
-            [finalId, consignee_name || null, address || null]
+            `INSERT INTO consignee (
+                consignee_id, consignee_name, address_line, city, state, province, postal_code, country
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [finalId, consignee_name || null, lineVal, city || null, stateVal, provVal, postal_code || null, country || 'Thailand']
         );
-        res.json({ consignee_id: finalId, address });
+        res.json({ consignee_id: finalId, address_line: lineVal });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -87,10 +111,22 @@ router.post('/consignee', async (req, res) => {
 
 router.put('/consignee/:id', async (req, res) => {
     try {
-        const { consignee_name, address } = req.body;
+        const { consignee_name, address_line, city, state, province, postal_code, country } = req.body;
+        const lineVal = address_line || null;
+        const stateVal = state || province || null;
+        const provVal = province || state || null;
+
         await db.query(
-            'UPDATE consignee SET consignee_name=$1, address=$2 WHERE consignee_id=$3',
-            [consignee_name || null, address || null, req.params.id]
+            `UPDATE consignee SET 
+                consignee_name = COALESCE($1, consignee_name), 
+                address_line = COALESCE($2, address_line),
+                city = COALESCE($3, city),
+                state = COALESCE($4, state),
+                province = COALESCE($5, province),
+                postal_code = COALESCE($6, postal_code),
+                country = COALESCE($7, country)
+            WHERE consignee_id = $8`,
+            [consignee_name || null, lineVal, city || null, stateVal, provVal, postal_code || null, country || null, req.params.id]
         );
         res.json({ message: 'แก้ไขผู้รับสำเร็จ' });
     } catch (err) {

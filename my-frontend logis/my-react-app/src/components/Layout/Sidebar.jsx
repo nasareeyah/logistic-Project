@@ -12,7 +12,7 @@ import {
   LogOut 
 } from 'lucide-react';
 
-function Sidebar({ activeTab, setActiveTab, onLogout }) {
+function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
   const [isDocOpen, setIsDocOpen] = useState(() => {
     return ['quotation', 'invoice', 'receipt'].includes(activeTab);
   });
@@ -67,74 +67,76 @@ function Sidebar({ activeTab, setActiveTab, onLogout }) {
               <span>Booking</span>
             </li>
 
-            {/* Document Center */}
-            <li 
-              style={{ display: 'flex', flexDirection: 'column' }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <div 
-                onClick={() => setIsDocOpen(prev => !prev)}
-                className="sidebar-menu-item"
-                style={{ justifyContent: 'space-between' }}
+            {/* Document Center (เข้าถึงได้เฉพาะ Operator และ Accounting) */}
+            {(userRole === 'operator' || userRole === 'accounting' || userRole === 'operator_accounting') && (
+              <li 
+                style={{ display: 'flex', flexDirection: 'column' }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="sidebar-menu-item-icon">
-                    <Folder size={18} />
-                  </span>
-                  <span>Document Center</span>
+                <div 
+                  onClick={() => setIsDocOpen(prev => !prev)}
+                  className="sidebar-menu-item"
+                  style={{ justifyContent: 'space-between' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span className="sidebar-menu-item-icon">
+                      <Folder size={18} />
+                    </span>
+                    <span>Document Center</span>
+                  </div>
+                  <ChevronDown 
+                    size={14} 
+                    color="#ffffff" 
+                    style={{ 
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.25s ease' 
+                    }}
+                  />
                 </div>
-                <ChevronDown 
-                  size={14} 
-                  color="#ffffff" 
+                
+                {/* Sub-menus */}
+                <div 
                   style={{ 
-                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                    transition: 'transform 0.25s ease' 
+                    maxHeight: isExpanded ? '200px' : '0px',
+                    opacity: isExpanded ? 1 : 0,
+                    overflow: 'hidden',
+                    transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out',
+                    marginTop: isExpanded ? '4px' : '0px'
                   }}
-                />
-              </div>
-              
-              {/* Sub-menus */}
-              <div 
-                style={{ 
-                  maxHeight: isExpanded ? '200px' : '0px',
-                  opacity: isExpanded ? 1 : 0,
-                  overflow: 'hidden',
-                  transition: 'max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease-in-out',
-                  marginTop: isExpanded ? '4px' : '0px'
-                }}
-              >
-                <ul style={{ 
-                  listStyle: 'none', 
-                  paddingLeft: '24px', 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: '4px' 
-                }}>
-                  <li 
-                    className={`sidebar-sub-item ${activeTab === 'quotation' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('quotation')}
-                  >
-                    <FileText size={16} />
-                    <span>Quotation</span>
-                  </li>
-                  <li 
-                    className={`sidebar-sub-item ${activeTab === 'invoice' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('invoice')}
-                  >
-                    <FileText size={16} />
-                    <span>Invoice</span>
-                  </li>
-                  <li 
-                    className={`sidebar-sub-item ${activeTab === 'receipt' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('receipt')}
-                  >
-                    <FileText size={16} />
-                    <span>Receipt</span>
-                  </li>
-                </ul>
-              </div>
-            </li>
+                >
+                  <ul style={{ 
+                    listStyle: 'none', 
+                    paddingLeft: '24px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '4px' 
+                  }}>
+                    <li 
+                      className={`sidebar-sub-item ${activeTab === 'quotation' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('quotation')}
+                    >
+                      <FileText size={16} />
+                      <span>Quotation</span>
+                    </li>
+                    <li 
+                      className={`sidebar-sub-item ${activeTab === 'invoice' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('invoice')}
+                    >
+                      <FileText size={16} />
+                      <span>Invoice</span>
+                    </li>
+                    <li 
+                      className={`sidebar-sub-item ${activeTab === 'receipt' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('receipt')}
+                    >
+                      <FileText size={16} />
+                      <span>Receipt</span>
+                    </li>
+                  </ul>
+                </div>
+              </li>
+            )}
 
             {/* Delivery Order (DO) */}
             <li 

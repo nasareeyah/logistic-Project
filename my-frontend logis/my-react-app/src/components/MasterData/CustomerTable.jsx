@@ -76,16 +76,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       return;
     }
 
-    // Combine address sub-fields into single address string for database
-    const addressParts = [];
-    if (formData.streetAddress) addressParts.push(formData.streetAddress);
-    if (formData.addressLine2) addressParts.push(formData.addressLine2);
-    
-    const locationParts = [formData.city, formData.province, formData.postalCode].filter(Boolean).join(' ');
-    if (locationParts) addressParts.push(locationParts);
-    if (formData.country) addressParts.push(formData.country);
-
-    const combinedAddress = addressParts.length > 0 ? addressParts.join(', ') : formData.address;
+    let street = formData.streetAddress || '';
+    if (formData.addressLine2) {
+      street = street ? `${street}, ${formData.addressLine2}` : formData.addressLine2;
+    }
 
     const dataToSave = {
       customer_name: formData.customer_name,
@@ -93,7 +87,13 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       phone: formData.phone,
       email: formData.email,
       tax_id: formData.tax_id,
-      address: combinedAddress
+      address: street || formData.address || '',
+      streetAddress: formData.streetAddress,
+      addressLine2: formData.addressLine2,
+      city: formData.city,
+      province: formData.province,
+      postal_code: formData.postalCode,
+      country: formData.country || 'Thailand'
     };
 
     if (modalMode === 'add') {
@@ -206,7 +206,18 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
   const openEditModal = (c) => {
     setModalMode('edit');
     setEditingCustomerId(c.customer_id);
-    const parsedAddr = parseAddress(c.address || '');
+    const hasStructuredAddress = Boolean(c.city || c.province || c.postal_code || c.street_address);
+    const parsedAddr = hasStructuredAddress
+      ? {
+          streetAddress: c.street_address || c.address || '',
+          addressLine2: c.address_line2 || '',
+          city: c.city || '',
+          province: c.province || '',
+          postalCode: c.postal_code || '',
+          country: c.country || 'Thailand'
+        }
+      : parseAddress(c.address || '');
+
     setFormData({
       customer_name: c.customer_name || '',
       contact_person: c.contact_person || '',
@@ -216,7 +227,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       address: c.address || '',
       streetAddress: parsedAddr.streetAddress,
       addressLine2: parsedAddr.addressLine2,
-      country: parsedAddr.country,
+      country: parsedAddr.country || 'Thailand',
       postalCode: parsedAddr.postalCode,
       province: parsedAddr.province,
       city: parsedAddr.city
@@ -264,12 +275,20 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
     : 0;
 
   if (selectedCustomerId && selectedCustomer) {
+    const addressDisplay = [
+      selectedCustomer.address,
+      selectedCustomer.city,
+      selectedCustomer.province,
+      selectedCustomer.postal_code,
+      selectedCustomer.country
+    ].filter(Boolean).join(', ') || selectedCustomer.address || '-';
+
     const fields = [
       { label: 'Contact Person', value: selectedCustomer.contact_person, icon: User },
       { label: 'Phone', value: selectedCustomer.phone, icon: Phone },
       { label: 'Email', value: selectedCustomer.email, icon: Mail },
       { label: 'Tax ID', value: selectedCustomer.tax_id, icon: FileText },
-      { label: 'Address', value: selectedCustomer.address, icon: MapPin }
+      { label: 'Address', value: addressDisplay, icon: MapPin }
     ];
 
     return (
