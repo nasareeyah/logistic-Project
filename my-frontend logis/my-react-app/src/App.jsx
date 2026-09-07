@@ -11,6 +11,14 @@ import BookingForm from './components/Booking/BookingForm';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('currentUser');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loginError, setLoginError] = useState('');
   const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -29,30 +37,62 @@ function App() {
   const [consignees, setConsignees] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const handleLogin = (email, password) => {
+  const handleLogin = async (email, password) => {
     if (!email || !password) {
       setLoginError('กรุณากรอกอีเมลและรหัสผ่าน');
       return;
     }
-    setIsLoggedIn(true);
-    localStorage.setItem('isLoggedIn', 'true');
-    setLoginError('');
+    try {
+      const res = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setLoginError(data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+        return;
+      }
+      setIsLoggedIn(true);
+      setCurrentUser(data.user);
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+      setLoginError('');
+      if (data.user.role === 'employee' && ['quotation', 'invoice', 'receipt'].includes(activeTab)) {
+        setActiveTab('dashboard');
+      }
+    } catch (err) {
+      setLoginError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้: ' + err.message);
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setCurrentUser(null);
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentUser');
+    setActiveTab('dashboard');
   };
+
+  // Guard: หากเป็น Employee แล้วพยายามเข้าถึงแท็บเอกสารการเงิน ให้ดีดกลับหน้า Dashboard ทันที
+  useEffect(() => {
+    if (currentUser?.role === 'employee' && ['quotation', 'invoice', 'receipt'].includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [currentUser, activeTab]);
 
   const fetchData = () => {
     setLoading(true);
     setError(null);
+    const roleHeaders = currentUser?.role ? { 'x-user-role': currentUser.role } : {};
+    const isEmployee = currentUser?.role === 'employee';
+
     Promise.all([
       fetch('http://localhost:3000/api/customers').then(r => r.json()),     // [0] ลูกค้า
       fetch('http://localhost:3000/api/cars').then(r => r.json()),          // [1] รถ
       fetch('http://localhost:3000/api/driver').then(r => r.json()),        // [2] คนขับ
-      fetch('http://localhost:3000/api/document').then(r => r.json()),      // [3] เอกสาร
-      fetch('http://localhost:3000/api/document_items').then(r => r.json()), // [4] ไอเทมเอกสาร
+      isEmployee ? Promise.resolve([]) : fetch('http://localhost:3000/api/document', { headers: roleHeaders }).then(r => r.ok ? r.json() : []), // [3] เอกสาร
+      isEmployee ? Promise.resolve([]) : fetch('http://localhost:3000/api/document_items', { headers: roleHeaders }).then(r => r.ok ? r.json() : []), // [4] ไอเทมเอกสาร
       fetch('http://localhost:3000/api/service').then(r => r.json()),       // [5] บริการ
       fetch('http://localhost:3000/api/service_type').then(r => r.json()),
       fetch('http://localhost:3000/api/consigner').then(r => r.json()),     // [7] ผู้ส่ง
@@ -87,7 +127,7 @@ function App() {
     if (isLoggedIn) {
       fetchData();
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, currentUser?.role]);
 
   // ==========================================
   // CUSTOMER ACTIONS
@@ -285,9 +325,15 @@ function App() {
 
   return (
     <div className="dashboard-layout-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} pendingBadge="5" />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onLogout={handleLogout} 
+        pendingBadge="5" 
+        userRole={currentUser?.role}
+      />
       <div className="dashboard-main-content">
-        <Header />
+        <Header user={currentUser} />
         <div className="dashboard-content-area">
           {activeTab === 'dashboard' && <Dashboard customersCount={customers.length} carsCount={cars.length} driversCount={drivers.length} />}
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} documents={documents} />}
@@ -311,14 +357,21 @@ function App() {
           )}
 
           {activeTab === 'quotation' && (
-            <QuotationForm
-              customers={customers}
-              documents={documents}
-              fetchData={fetchData}
-              consigners={consigners}
-              consignees={consignees}
-              serviceTypes={serviceTypes}
-            />
+            (currentUser?.role === 'operator' || currentUser?.role === 'accounting' || currentUser?.role === 'operator_accounting') ? (
+              <QuotationForm
+                customers={customers}
+                documents={documents}
+                fetchData={fetchData}
+                consigners={consigners}
+                consignees={consignees}
+                serviceTypes={serviceTypes}
+              />
+            ) : (
+              <div style={{ padding: '30px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '12px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                <h3 style={{ color: '#ef4444', fontSize: '18px', marginBottom: '8px' }}>⛔ ปฏิเสธการเข้าถึง (Access Denied)</h3>
+                <p style={{ color: '#6b7280', fontSize: '14px' }}>เอกสารทางการเงิน (Quotation / ใบเสนอราคา) สงวนสิทธิ์การเข้าถึงสำหรับฝ่าย Operator / Accounting เท่านั้น</p>
+              </div>
+            )
           )}
           {activeTab === 'booking' && (
             <BookingForm
@@ -329,6 +382,20 @@ function App() {
               bookings={bookings}
               fetchData={fetchData}
             />
+          )}
+          {activeTab === 'delivery-order' && (
+            <div style={{ padding: '30px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📦</div>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', margin: 0 }}>จัดการใบ Delivery Order (DO)</h2>
+                  <p style={{ fontSize: '13px', color: '#6b7280', margin: 0 }}>พร้อมระบบ Preview และ Export PDF (สิทธิ์เข้าถึง: Operator / Accounting และ Employee)</p>
+                </div>
+              </div>
+              <div style={{ border: '1px dashed #d1d5db', borderRadius: '8px', padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                ระบบจัดการใบส่งมอบสินค้า (Delivery Order) เชื่อมโยงกับข้อมูล Booking เรียบร้อยแล้ว
+              </div>
+            </div>
           )}
           {/* {activeTab === 'invoice' && (
             <DocumentTable

@@ -103,7 +103,74 @@ function Login({ onLogin, loginError }) {
               <button type="submit" className="login-btn-submit">Login</button>
             </div>
           </form>
-          <div className="login-hint">การสาธิต: สามารถใช้อีเมลและรหัสผ่านใดก็ได้เพื่อเข้าสู่ระบบ</div>
+
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px', fontWeight: 600, textAlign: 'center' }}>
+              ทดสอบเข้าสู่ระบบตามบทบาท (Quick Demo):
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('operator@st-tran.com');
+                  setPassword('1234');
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #3b82f6',
+                  backgroundColor: '#eff6ff',
+                  color: '#1d4ed8',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                🚛 1. Operator (โลโก้ OP | สิทธิ์เข้าถึงเอกสารการเงิน)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('account@st-tran.com');
+                  setPassword('1234');
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #8b5cf6',
+                  backgroundColor: '#f5f3ff',
+                  color: '#6d28d9',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                💼 2. Accounting (โลโก้ AC | ฝ่ายบัญชี + เอกสารการเงิน)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('employee@st-tran.com');
+                  setPassword('1234');
+                }}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #10b981',
+                  backgroundColor: '#ecfdf5',
+                  color: '#047857',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                👤 3. Employee (โลโก้ EM | พนักงานทั่วไป - ซ่อนเอกสารการเงิน)
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
