@@ -210,3 +210,15 @@ CREATE TABLE booking_attachments (
   file_size INT,
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 19. users (RBAC: Operator/Accounting vs Employee)
+CREATE TABLE users (
+  user_id VARCHAR(50) PRIMARY KEY,
+  username VARCHAR(100) UNIQUE,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  role VARCHAR(50) NOT NULL, -- 'operator_accounting' or 'employee'
+  department VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
