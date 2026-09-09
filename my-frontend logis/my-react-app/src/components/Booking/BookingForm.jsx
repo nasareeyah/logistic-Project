@@ -33,12 +33,12 @@ import {
 } from 'lucide-react';
 import './BookingTable.css';
 import './BookingWizard.css';
+import ActionDropdown from '../Common/ActionDropdown';
 
 export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], fetchData }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableSearch, setTableSearch] = useState('');
-  const [openMenuId, setOpenMenuId] = useState(null);
 
   // View Mode: 'table' or 'wizard'
   const [viewMode, setViewMode] = useState('table');
@@ -141,17 +141,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   useEffect(() => {
     loadBookingsData();
-  }, []);
-
-  // Close popup menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   const formatDateDisplay = (dateString) => {
@@ -1264,7 +1253,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}> 
+        <div className="table-responsive-wrapper"> 
           <table className="custom-clean-table">
             <thead>
               <tr>
@@ -1368,45 +1357,21 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       {/* Action Menu (3 Dots Dropdown) */}
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
-                        <div className="action-menu-container">
-                          <button
-                            className="action-dots-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(openMenuId === booking.booking_id ? null : booking.booking_id);
-                            }}
-                            title="Actions"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-
-                          {/* Popup Menu */}
-                          {openMenuId === booking.booking_id && (
-                            <div className="action-dropdown-menu">
-                              <button
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleOpenEditWizard(booking);
-                                }}
-                              >
-                                <Edit size={16} className="menu-icon" />
-                                <span>Edit</span>
-                              </button>
-
-                              <button
-                                className="dropdown-item delete-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleDeleteBooking(booking.booking_id);
-                                }}
-                              >
-                                <Trash2 size={16} className="menu-icon danger" />
-                                <span className="danger-text">Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <ActionDropdown
+                          items={[
+                            {
+                              label: 'Edit',
+                              icon: <Edit size={16} className="menu-icon" />,
+                              onClick: () => handleOpenEditWizard(booking)
+                            },
+                            {
+                              label: 'Delete',
+                              icon: <Trash2 size={16} className="menu-icon danger" />,
+                              danger: true,
+                              onClick: () => handleDeleteBooking(booking.booking_id)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );

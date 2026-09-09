@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 import QuotationPreview from './QuotationPreview';
+import ActionDropdown from '../Common/ActionDropdown';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
@@ -76,17 +77,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
   const [previewData, setPreviewData] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   // Sync props
   useEffect(() => {
@@ -417,7 +407,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             </div>
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
+          <div className="table-responsive-wrapper">
             <table className="custom-clean-table">
               <thead>
                 <tr>
@@ -440,55 +430,26 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                       <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
                       <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDateOnly(doc.document_date) || '-'}</td>
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
-                        <div className="action-menu-container">
-                          <button 
-                            className="action-dots-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(openMenuId === docId ? null : docId);
-                            }}
-                            title="Actions"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-
-                          {openMenuId === docId && (
-                            <div className="action-dropdown-menu">
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handlePreview(doc);
-                                }}
-                              >
-                                <Eye size={16} className="menu-icon" />
-                                <span>Preview</span>
-                              </button>
-
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleEditQuotation(doc);
-                                }}
-                              >
-                                <Edit size={16} className="menu-icon" />
-                                <span>Edit</span>
-                              </button>
-
-                              <button 
-                                className="dropdown-item delete-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleDeleteQuotation(doc.document_id);
-                                }}
-                              >
-                                <Trash2 size={16} className="menu-icon danger" />
-                                <span className="danger-text">Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <ActionDropdown
+                          items={[
+                            {
+                              label: 'Preview',
+                              icon: <Eye size={16} className="menu-icon" />,
+                              onClick: () => handlePreview(doc)
+                            },
+                            {
+                              label: 'Edit',
+                              icon: <Edit size={16} className="menu-icon" />,
+                              onClick: () => handleEditQuotation(doc)
+                            },
+                            {
+                              label: 'Delete',
+                              icon: <Trash2 size={16} className="menu-icon danger" />,
+                              danger: true,
+                              onClick: () => handleDeleteQuotation(doc.document_id)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
