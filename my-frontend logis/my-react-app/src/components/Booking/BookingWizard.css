@@ -326,6 +326,7 @@
   background-color: #ffffff;
 }
 
+.col-inv { flex: 1.2; min-width: 0; }
 .col-product { flex: 2; min-width: 0; }
 .col-qty { flex: 1; min-width: 0; }
 .col-unit { flex: 1; min-width: 0; }

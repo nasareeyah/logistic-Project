@@ -68,7 +68,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   // Step 2: Cargo
   const [cargoItems, setCargoItems] = useState([
-    { product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
+    { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
   ]);
 
   // Step 3: Transport (Multiple Senders & Receivers)
@@ -218,7 +218,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleOpenCreateWizard = () => {
     setEditingBooking(null);
     setSelectedCustomer(null);
-    setCargoItems([{ product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }]);
+    setCargoItems([{ inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }]);
     setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
     setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
     setWizardAttachedFiles([]);
@@ -235,8 +235,16 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     const matchCust = mergedCustomers.find(c => c.customer_name === booking.customer_name);
     setSelectedCustomer(matchCust || { customer_name: booking.customer_name || '', contact_person: '', phone: '' });
 
-    setCargoItems(Array.isArray(booking.cargo_details) ? booking.cargo_details : [
-      { product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
+    setCargoItems(Array.isArray(booking.cargo_details) ? booking.cargo_details.map(c => ({
+      inv_no: c.inv_no || '',
+      product_name: c.product_name || '',
+      quantity: c.quantity || '1',
+      unit: c.unit || 'box',
+      weight: c.weight || '0',
+      wt_unit: c.wt_unit || 'kg',
+      remark: c.remark || ''
+    })) : [
+      { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
     ]);
 
     // Parse sender_details if array or single object
@@ -570,7 +578,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             <div className="wizard-step-body">
               <div className="step-header-with-action">
                 <h2 className="step-section-heading">Cargo Information</h2>
-                <button type="button" className="btn-outline-action" onClick={() => setCargoItems(prev => [...prev, { product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }])}>
+                <button type="button" className="btn-outline-action" onClick={() => setCargoItems(prev => [...prev, { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }])}>
                   <Plus size={16} />
                   <span>Add Item</span>
                 </button>
@@ -579,6 +587,21 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               <div className="cargo-items-container">
                 {cargoItems.map((item, idx) => (
                   <div key={idx} className="cargo-item-row-form">
+                    <div className="cargo-field col-inv">
+                      <label>INV.No</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="e.g. 100234"
+                        value={item.inv_no || ''}
+                        onChange={(e) => {
+                          const updated = [...cargoItems];
+                          updated[idx].inv_no = e.target.value;
+                          setCargoItems(updated);
+                        }}
+                      />
+                    </div>
+
                     <div className="cargo-field col-product">
                       <label>Product Name</label>
                       <input
@@ -970,7 +993,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 <div className="review-card-item">
                   <span className="review-label">CARGO</span>
                   <span className="review-value">
-                    {cargoItems.map(c => `${c.product_name || 'cargo'} — ${c.quantity} ${c.unit} (${c.weight} ${c.wt_unit})`).join(', ')}
+                    {cargoItems.map(c => `${c.inv_no ? `[INV: ${c.inv_no}] ` : ''}${c.product_name || 'cargo'} — ${c.quantity} ${c.unit} (${c.weight} ${c.wt_unit})`).join(', ')}
                   </span>
                 </div>
 
@@ -1132,7 +1155,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 <span className="review-value">
                   {cargoItems.map((c, i) => (
                     <div key={i} style={{ marginBottom: '4px' }}>
-                      📦 <strong>{c.product_name || 'Cargo'}</strong> — Quantity: {c.quantity} {c.unit} | Weight: {c.weight} {c.wt_unit} {c.remark ? `(Remark: ${c.remark})` : ''}
+                      📦 {c.inv_no ? <span style={{ color: '#2563eb', fontWeight: 600, marginRight: '6px' }}>[INV: {c.inv_no}]</span> : ''}<strong>{c.product_name || 'Cargo'}</strong> — Quantity: {c.quantity} {c.unit} | Weight: {c.weight} {c.wt_unit} {c.remark ? `(Remark: ${c.remark})` : ''}
                     </div>
                   ))}
                 </span>

@@ -51,26 +51,65 @@ export default function DeliveryOrderTable({
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   // 6-step form data
-  const getTodayStr = () => new Date().toISOString().slice(0, 10);
+  const getTodayStr = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   const getTomorrowStr = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
-  const generateDoNumber = () => {
+  const formatInputDate = (dateVal) => {
+    if (!dateVal) return '';
+    if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal)) return dateVal;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const generateDoNumber = (existingList = deliveryOrders) => {
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `DO-${yyyy}${mm}${dd}-${rand}`;
+    const prefix = `DO-${yyyy}${mm}${dd}-`;
+
+    let maxSeq = 0;
+    if (Array.isArray(existingList)) {
+      existingList.forEach((item) => {
+        if (item.do_no && item.do_no.startsWith(prefix)) {
+          const parts = item.do_no.split('-');
+          const seq = parseInt(parts[parts.length - 1], 10);
+          if (!isNaN(seq) && seq > maxSeq) {
+            maxSeq = seq;
+          }
+        }
+      });
+    }
+    const nextSeq = String(maxSeq + 1).padStart(4, '0');
+    return `${prefix}${nextSeq}`;
   };
 
   const initialFormData = {
     // Step 1
     booking_id: '',
     booking_no: '',
+    cargo_id: '',
+    consigner_id: '',
+    consignee_id: '',
+    car_id: '',
+    driver_id: '',
 
     // Step 2: Parties
     consignor_name: '',
@@ -111,6 +150,28 @@ export default function DeliveryOrderTable({
 
   const [formData, setFormData] = useState(initialFormData);
 
+  const [bookingsList, setBookingsList] = useState(bookings);
+
+  useEffect(() => {
+    if (Array.isArray(bookings) && bookings.length > 0) {
+      setBookingsList(bookings);
+    }
+  }, [bookings]);
+
+  const fetchBookingsList = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/bookings');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setBookingsList(data);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   // Fetch Delivery Orders from backend
   const fetchDeliveryOrders = async () => {
     try {
@@ -129,6 +190,7 @@ export default function DeliveryOrderTable({
 
   useEffect(() => {
     fetchDeliveryOrders();
+    fetchBookingsList();
   }, []);
 
   // Close menu when clicking outside
@@ -169,13 +231,28 @@ export default function DeliveryOrderTable({
   ];
 
   // Open Create Wizard
-  const handleOpenCreateWizard = () => {
+  const handleOpenCreateWizard = async () => {
+    fetchBookingsList();
     setEditingDoId(null);
     setSelectedBooking(null);
     setBookingSearchQuery('');
+
+    let nextDo = generateDoNumber(deliveryOrders);
+    try {
+      const res = await fetch('http://localhost:3000/api/delivery-orders/next-no');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.next_do_no) {
+          nextDo = data.next_do_no;
+        }
+      }
+    } catch {
+      // fallback to local sequence
+    }
+
     setFormData({
       ...initialFormData,
-      do_no: generateDoNumber(),
+      do_no: nextDo,
       date_of_load: getTodayStr(),
       eta: getTomorrowStr()
     });
@@ -185,16 +262,54 @@ export default function DeliveryOrderTable({
 
   // Open Edit Wizard
   const handleOpenEditWizard = (item) => {
+    fetchBookingsList();
     setEditingDoId(item.do_id || item.do_no);
     setBookingSearchQuery('');
     
     // Check if matched booking exists
-    const matchedBooking = bookings.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id);
+    const matchedBooking = bookingsList.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id) || bookings.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id);
     setSelectedBooking(matchedBooking || null);
+
+    // Resolve goods_items for Edit mode:
+    let editGoods = [];
+    if (Array.isArray(item.goods_items) && item.goods_items.length > 0) {
+      editGoods = item.goods_items;
+    } else if (item.product_name) {
+      editGoods = [
+        {
+          description: item.product_name || '',
+          quantity: String(item.quantity !== null && item.quantity !== undefined ? item.quantity : '1'),
+          unit: item.unit || 'box',
+          weight: item.weight || '0',
+          wt_unit: item.wt_unit || 'kg',
+          load_from: item.load_from || item.consignor_address || '',
+          destination: item.destination || item.consignee_address || '',
+          cargo_id: item.cargo_id || ''
+        }
+      ];
+    } else if (matchedBooking && Array.isArray(matchedBooking.cargo_details) && matchedBooking.cargo_details.length > 0) {
+      editGoods = matchedBooking.cargo_details.map((c) => ({
+        description: c.product_name || '',
+        quantity: String(c.quantity !== null && c.quantity !== undefined ? c.quantity : '1'),
+        unit: c.unit || 'box',
+        weight: c.weight || '0',
+        wt_unit: c.wt_unit || 'kg',
+        load_from: c.load_from || item.consignor_address || '',
+        destination: c.destination || item.consignee_address || '',
+        cargo_id: c.cargo_id || ''
+      }));
+    } else {
+      editGoods = [{ description: '', quantity: '1', load_from: '', destination: '' }];
+    }
 
     setFormData({
       booking_id: item.booking_id || '',
       booking_no: item.booking_no || (matchedBooking?.booking_no || ''),
+      cargo_id: item.cargo_id || (matchedBooking?.cargo_details?.[0]?.cargo_id || ''),
+      consigner_id: item.consigner_id || '',
+      consignee_id: item.consignee_id || '',
+      car_id: item.car_id || '',
+      driver_id: item.driver_id || '',
       consignor_name: item.consignor_name || '',
       consignor_address: item.consignor_address || '',
       consignor_city: item.consignor_city || '',
@@ -209,15 +324,13 @@ export default function DeliveryOrderTable({
       consignee_country: item.consignee_country || 'Thailand',
       customer_name: item.customer_name || '',
       do_no: item.do_no || '',
-      invoice_no: item.invoice_no || '',
-      date_of_load: item.date_of_load ? new Date(item.date_of_load).toISOString().slice(0, 10) : getTodayStr(),
-      eta: item.eta ? new Date(item.eta).toISOString().slice(0, 10) : getTomorrowStr(),
+      invoice_no: item.invoice_no || (matchedBooking?.cargo_details?.[0]?.inv_no || ''),
+      date_of_load: formatInputDate(item.date_of_load) || formatInputDate(matchedBooking?.pickup_date) || getTodayStr(),
+      eta: formatInputDate(item.eta) || formatInputDate(matchedBooking?.delivery_date) || getTomorrowStr(),
       truck_number: item.truck_number || '',
       driver_name: item.driver_name || '',
       driver_phone: item.driver_phone || '',
-      goods_items: Array.isArray(item.goods_items) && item.goods_items.length > 0
-        ? item.goods_items
-        : (item.cargo_details ? [{ description: item.cargo_details, quantity: '1', load_from: '', destination: item.destination || '' }] : [{ description: '', quantity: '1', load_from: '', destination: '' }]),
+      goods_items: editGoods,
       shipping: item.shipping || '',
       warehouse: item.warehouse || '',
       remark: item.remark || ''
@@ -233,61 +346,90 @@ export default function DeliveryOrderTable({
     const sender = bk.sender_details?.[0] || {};
     const receiver = bk.receiver_details?.[0] || {};
 
-    let resolvedTruck = bk.truck_name || bk.car_number || '';
+    let resolvedCarId = bk.car_id || '';
+    let resolvedDriverId = '';
+    let resolvedTruck = '';
     let resolvedDriver = '';
     let resolvedDriverPhone = '';
 
-    if (bk.car_id) {
-      const carObj = cars.find((c) => c.car_id === bk.car_id);
+    if (!resolvedCarId && bk.truck_name) {
+      const matchedCar = cars.find((c) => c.car_number === bk.truck_name);
+      if (matchedCar) {
+        resolvedCarId = matchedCar.car_id;
+      }
+    }
+
+    if (resolvedCarId) {
+      const carObj = cars.find((c) => c.car_id === resolvedCarId);
       if (carObj) {
-        resolvedTruck = carObj.car_number || resolvedTruck;
+        resolvedTruck = carObj.car_number || '';
         if (carObj.assigned_driver_id) {
+          resolvedDriverId = carObj.assigned_driver_id;
           const dObj = drivers.find((d) => d.driver_id === carObj.assigned_driver_id);
           if (dObj) {
             resolvedDriver = dObj.full_name || '';
             resolvedDriverPhone = dObj.phone || '';
           }
         }
+      } else {
+        resolvedTruck = bk.truck_name || '';
       }
+    } else if (bk.truck_name) {
+      resolvedTruck = bk.truck_name;
     }
 
-    if (!resolvedDriver && drivers.length > 0) {
-      resolvedDriver = drivers[0].full_name || '';
-      resolvedDriverPhone = drivers[0].phone || '';
-    }
+    // Cargo ID and Invoice number from cargo_details
+    const primaryCargo = (Array.isArray(bk.cargo_details) && bk.cargo_details.length > 0)
+      ? bk.cargo_details[0]
+      : null;
+    const resolvedCargoId = primaryCargo?.cargo_id || bk.cargo_id || '';
+    const resolvedInvoiceNo = (Array.isArray(bk.cargo_details) && bk.cargo_details.length > 0)
+      ? bk.cargo_details.map((c) => c.inv_no).filter(Boolean).join(', ')
+      : (primaryCargo?.inv_no || '');
 
-    // Goods items from cargo_details
+    // Goods items from cargo_details (Sync description = product_name, quantity = quantity; load_from & destination start blank for fresh input)
     let goods = [];
     if (Array.isArray(bk.cargo_details) && bk.cargo_details.length > 0) {
       goods = bk.cargo_details.map((c) => ({
-        description: c.product_name || 'Goods',
-        quantity: String(c.quantity || '1'),
-        load_from: sender.address_line || sender.company_name || '',
-        destination: receiver.address_line || receiver.company_name || ''
+        description: c.product_name || '',
+        quantity: String(c.quantity !== null && c.quantity !== undefined ? c.quantity : '1'),
+        unit: c.unit || 'box',
+        weight: c.weight || '0',
+        wt_unit: c.wt_unit || 'kg',
+        load_from: c.load_from || '',
+        destination: c.destination || '',
+        cargo_id: c.cargo_id || ''
       }));
     } else {
       goods = [
         {
-          description: 'General Goods',
-          quantity: '1',
-          load_from: sender.address_line || '',
-          destination: receiver.address_line || ''
+          description: bk.product_name || '',
+          quantity: String(bk.quantity || '1'),
+          unit: 'box',
+          weight: '0',
+          wt_unit: 'kg',
+          load_from: '',
+          destination: '',
+          cargo_id: ''
         }
       ];
     }
 
-    const loadDate = bk.pickup_date
-      ? new Date(bk.pickup_date).toISOString().slice(0, 10)
-      : sender.pickup_date || getTodayStr();
-
-    const etaDate = bk.delivery_date
-      ? new Date(bk.delivery_date).toISOString().slice(0, 10)
-      : receiver.delivery_date || getTomorrowStr();
+    const rawPickup = bk.pickup_date || sender.pickup_date || sender.sender_date || sender.date || '';
+    const rawDelivery = bk.delivery_date || receiver.delivery_date || receiver.receiver_date || receiver.date || '';
+    const loadDate = formatInputDate(rawPickup) || getTodayStr();
+    const etaDate = formatInputDate(rawDelivery) || getTomorrowStr();
 
     setFormData((prev) => ({
       ...prev,
       booking_id: bk.booking_id || '',
       booking_no: bk.booking_no || '',
+      cargo_id: resolvedCargoId || prev.cargo_id,
+      consigner_id: bk.consigner_id || prev.consigner_id,
+      consignee_id: bk.consignee_id || prev.consignee_id,
+      car_id: resolvedCarId,
+      driver_id: resolvedDriverId,
+      invoice_no: resolvedInvoiceNo || prev.invoice_no,
       customer_name: bk.customer_name || '',
       consignor_name: sender.company_name || '',
       consignor_address: sender.address_line || '',
@@ -301,9 +443,9 @@ export default function DeliveryOrderTable({
       consignee_state: receiver.state || '',
       consignee_postal_code: receiver.postal_code || '',
       consignee_country: receiver.country || 'Thailand',
-      truck_number: resolvedTruck || prev.truck_number,
-      driver_name: resolvedDriver || prev.driver_name,
-      driver_phone: resolvedDriverPhone || prev.driver_phone,
+      truck_number: resolvedTruck,
+      driver_name: resolvedDriver,
+      driver_phone: resolvedDriverPhone,
       date_of_load: loadDate || prev.date_of_load,
       eta: etaDate || prev.eta,
       goods_items: goods
@@ -353,42 +495,51 @@ export default function DeliveryOrderTable({
       if (editingDoId) {
         // Update
         try {
-          await fetch(`http://localhost:3000/api/delivery-orders/${editingDoId}`, {
+          const res = await fetch(`http://localhost:3000/api/delivery-orders/${editingDoId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
+          if (res.ok) {
+            await fetchDeliveryOrders();
+          }
         } catch {
           // ignore
         }
 
         const updatedList = deliveryOrders.map((d) =>
-          d.do_id === editingDoId || d.do_no === editingDoId ? { ...d, ...payload } : d
+          d.do_id === editingDoId || d.delivery_orders_id === editingDoId || d.do_no === editingDoId ? { ...d, ...payload } : d
         );
         setDeliveryOrders(updatedList);
         localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
         alert('แก้ไข Delivery Order สำเร็จ');
       } else {
         // Create
-        const newDo = {
-          do_id: `do-${Date.now()}`,
-          ...payload
-        };
-
+        let savedDo = null;
         try {
           const res = await fetch('http://localhost:3000/api/delivery-orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newDo)
+            body: JSON.stringify(payload)
           });
           if (res.ok) {
-            fetchDeliveryOrders();
+            const data = await res.json();
+            savedDo = data.data || { ...payload, do_id: data.do_id, delivery_orders_id: data.do_id, do_no: data.do_no };
+            await fetchDeliveryOrders();
           }
         } catch {
           // ignore
         }
 
-        const updatedList = [newDo, ...deliveryOrders];
+        if (!savedDo) {
+          savedDo = {
+            do_id: `do-${Date.now()}`,
+            delivery_orders_id: `do-${Date.now()}`,
+            ...payload
+          };
+        }
+
+        const updatedList = [savedDo, ...deliveryOrders.filter(d => (d.do_id || d.delivery_orders_id) !== (savedDo.do_id || savedDo.delivery_orders_id))];
         setDeliveryOrders(updatedList);
         localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
         alert('สร้างเอกสาร Delivery Order สำเร็จ');
@@ -410,11 +561,12 @@ export default function DeliveryOrderTable({
       await fetch(`http://localhost:3000/api/delivery-orders/${id || doNo}`, {
         method: 'DELETE'
       });
+      await fetchDeliveryOrders();
     } catch {
       // ignore
     }
 
-    const updatedList = deliveryOrders.filter((d) => d.do_id !== id && d.do_no !== doNo);
+    const updatedList = deliveryOrders.filter((d) => d.do_id !== id && d.delivery_orders_id !== id && d.do_no !== doNo);
     setDeliveryOrders(updatedList);
     localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
     setOpenMenuId(null);
@@ -427,7 +579,8 @@ export default function DeliveryOrderTable({
   };
 
   // Filter Bookings in Step 1
-  const filteredBookings = bookings.filter((b) => {
+  const effectiveBookings = bookingsList.length > 0 ? bookingsList : bookings;
+  const filteredBookings = effectiveBookings.filter((b) => {
     const q = bookingSearchQuery.toLowerCase().trim();
     if (!q) return true;
     const no = (b.booking_no || '').toLowerCase();
@@ -905,19 +1058,23 @@ export default function DeliveryOrderTable({
                     <div className="form-group">
                       <label className="form-label">Date of Load</label>
                       <input
-                        type="date"
+                        type="text"
                         className="form-input"
-                        value={formData.date_of_load}
-                        onChange={(e) => setFormData({ ...formData, date_of_load: e.target.value })}
+                        placeholder="Date of Load (ดึงตาม Booking)"
+                        value={formatDate(formData.date_of_load)}
+                        readOnly
+                        style={{ backgroundColor: '#f8fafc', color: '#1e293b', cursor: 'default' }}
                       />
                     </div>
                     <div className="form-group">
                       <label className="form-label">ETA</label>
                       <input
-                        type="date"
+                        type="text"
                         className="form-input"
-                        value={formData.eta}
-                        onChange={(e) => setFormData({ ...formData, eta: e.target.value })}
+                        placeholder="ETA (ดึงตาม Booking)"
+                        value={formatDate(formData.eta)}
+                        readOnly
+                        style={{ backgroundColor: '#f8fafc', color: '#1e293b', cursor: 'default' }}
                       />
                     </div>
                   </div>
@@ -940,35 +1097,38 @@ export default function DeliveryOrderTable({
                   </h4>
 
                   <div className="form-group">
-                    <label className="form-label">Truck No.</label>
+                    <label className="form-label">Truck No. / ทะเบียนรถ</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="เช่น 70-1234 (10-Wheeler)"
-                      value={formData.truck_number}
-                      onChange={(e) => setFormData({ ...formData, truck_number: e.target.value })}
+                      placeholder="ทะเบียนรถ (ดึงตาม Booking)"
+                      value={formData.truck_number || ''}
+                      readOnly
+                      style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Driver Name</label>
+                    <label className="form-label">Driver Name / พนักงานขับรถ</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ชื่อคนขับ เช่น Manop Srisuwan"
-                      value={formData.driver_name}
-                      onChange={(e) => setFormData({ ...formData, driver_name: e.target.value })}
+                      placeholder="ชื่อคนขับ (ดึงตาม Booking)"
+                      value={formData.driver_name || ''}
+                      readOnly
+                      style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Driver Phone / H/P</label>
+                    <label className="form-label">Driver Phone / เบอร์โทรคนขับ</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="081-111-1111"
-                      value={formData.driver_phone}
-                      onChange={(e) => setFormData({ ...formData, driver_phone: e.target.value })}
+                      placeholder="เบอร์โทรคนขับ (ดึงตาม Booking)"
+                      value={formData.driver_phone || ''}
+                      readOnly
+                      style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
                     />
                   </div>
                 </div>
@@ -1025,7 +1185,7 @@ export default function DeliveryOrderTable({
                           type="text"
                           className="form-input"
                           placeholder="Steel Pipes"
-                          value={item.description}
+                          value={item.description || ''}
                           onChange={(e) => handleGoodsChange(idx, 'description', e.target.value)}
                         />
                       </div>
@@ -1036,7 +1196,7 @@ export default function DeliveryOrderTable({
                           type="text"
                           className="form-input"
                           placeholder="10"
-                          value={item.quantity}
+                          value={item.quantity || ''}
                           onChange={(e) => handleGoodsChange(idx, 'quantity', e.target.value)}
                         />
                       </div>
@@ -1046,8 +1206,8 @@ export default function DeliveryOrderTable({
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Chonburi Steel Mill"
-                          value={item.load_from}
+                          placeholder="Load From / ต้นทาง"
+                          value={item.load_from || ''}
                           onChange={(e) => handleGoodsChange(idx, 'load_from', e.target.value)}
                         />
                       </div>
@@ -1057,8 +1217,8 @@ export default function DeliveryOrderTable({
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Chachoengsao Site"
-                          value={item.destination}
+                          placeholder="Destination / ปลายทาง"
+                          value={item.destination || ''}
                           onChange={(e) => handleGoodsChange(idx, 'destination', e.target.value)}
                         />
                       </div>
@@ -1184,7 +1344,9 @@ export default function DeliveryOrderTable({
                 {/* 2. Parties */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>CONSIGNOR (ผู้ส่ง)</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
+                      CONSIGNOR (ผู้ส่ง)
+                    </div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.consignor_name || '-'}</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
                       {[formData.consignor_address, formData.consignor_city, formData.consignor_state, formData.consignor_postal_code, formData.consignor_country].filter(Boolean).join(', ') || '-'}
@@ -1192,7 +1354,9 @@ export default function DeliveryOrderTable({
                   </div>
 
                   <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>CONSIGNEE (ผู้รับ)</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
+                      CONSIGNEE (ผู้รับ)
+                    </div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.consignee_name || '-'}</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
                       {[formData.consignee_address, formData.consignee_city, formData.consignee_state, formData.consignee_postal_code, formData.consignee_country].filter(Boolean).join(', ') || '-'}

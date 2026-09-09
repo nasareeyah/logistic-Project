@@ -156,16 +156,27 @@ CREATE TABLE document_items (
 
 -- 15. delivery_orders
 CREATE TABLE delivery_orders (
-  delivery_orders_id VARCHAR(10) PRIMARY KEY,
-  document_id VARCHAR(10),
-  service_id VARCHAR(10),
-  description TEXT,
-  quantity DECIMAL(10,2),
-  unit VARCHAR(50),
+  delivery_orders_id VARCHAR(50) PRIMARY KEY,
+  do_no VARCHAR(100) UNIQUE,
   booking_id VARCHAR(50),
-  FOREIGN KEY (document_id) REFERENCES document(document_id),
-  FOREIGN KEY (service_id) REFERENCES service(service_id)
+  cargo_id VARCHAR(50),
+  consigner_id VARCHAR(50),
+  consignee_id VARCHAR(50),
+  car_id VARCHAR(50),
+  driver_id VARCHAR(50),
+  customer_name VARCHAR(255),
+  date_of_load DATE,
+  eta DATE,
+  warehouse VARCHAR(255),
+  remark TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cargo_id) REFERENCES booking_cargo(cargo_id) ON DELETE SET NULL,
+  FOREIGN KEY (consigner_id) REFERENCES consigner(consigner_id) ON DELETE SET NULL,
+  FOREIGN KEY (consignee_id) REFERENCES consignee(consignee_id) ON DELETE SET NULL,
+  FOREIGN KEY (car_id) REFERENCES cars(car_id) ON DELETE SET NULL,
+  FOREIGN KEY (driver_id) REFERENCES driver(driver_id) ON DELETE SET NULL
 );
+
 
 -- 16. bookings
 CREATE TABLE bookings (
@@ -188,6 +199,7 @@ CREATE TABLE bookings (
 CREATE TABLE booking_cargo (
   cargo_id VARCHAR(50) PRIMARY KEY,
   booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+  inv_no VARCHAR(100),
   product_name VARCHAR(255),
   quantity NUMERIC,
   unit VARCHAR(50),

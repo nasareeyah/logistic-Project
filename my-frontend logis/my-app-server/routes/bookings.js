@@ -156,6 +156,7 @@ async function initBookingTables() {
         await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS load_from VARCHAR(255);`);
         await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS destination VARCHAR(255);`);
         await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS country VARCHAR(100);`);
+        await db.query(`ALTER TABLE booking_cargo ADD COLUMN IF NOT EXISTS inv_no VARCHAR(100);`);
 
         await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS address_line VARCHAR(255);`);
         await db.query(`ALTER TABLE consigner ADD COLUMN IF NOT EXISTS city VARCHAR(100);`);
@@ -350,11 +351,12 @@ router.post('/bookings', async (req, res) => {
                 const item = cargo_details[i];
                 const cId = await nextId('seq_booking_cargo', 'cg-', 6);
                 await db.query(
-                    `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                    `INSERT INTO booking_cargo (cargo_id, booking_id, inv_no, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                     [
                         cId,
                         booking_id,
+                        item.inv_no || null,
                         item.product_name || null,
                         item.quantity ? parseFloat(item.quantity) : null,
                         item.unit || null,
@@ -444,11 +446,12 @@ router.put('/bookings/:id', async (req, res) => {
                     const item = cargo_details[i];
                     const cId = await nextId('seq_booking_cargo', 'cg-', 6);
                     await db.query(
-                        `INSERT INTO booking_cargo (cargo_id, booking_id, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+                        `INSERT INTO booking_cargo (cargo_id, booking_id, inv_no, product_name, quantity, unit, weight, wt_unit, remark, load_from, destination, country) 
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
                         [
                             cId,
                             req.params.id,
+                            item.inv_no || null,
                             item.product_name || null,
                             item.quantity ? parseFloat(item.quantity) : null,
                             item.unit || null,
