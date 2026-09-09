@@ -18,6 +18,7 @@ import {
   MoreVertical,
   Edit
 } from 'lucide-react';
+import ActionDropdown from '../Common/ActionDropdown';
 
 function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,17 +26,6 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   const countries = [
     'Thailand',
@@ -637,7 +627,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
         </div>
 
         {/* Clean UI table */}
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-responsive-wrapper">
           <table className="custom-clean-table">
             <thead>
               <tr>
@@ -673,44 +663,21 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   <td>{c.phone || '-'}</td>
                   <td>{c.email || '-'}</td>
                   <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                    <div className="action-menu-container">
-                      <button 
-                        className="action-dots-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(openMenuId === c.customer_id ? null : c.customer_id);
-                        }}
-                        title="Actions"
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-
-                      {openMenuId === c.customer_id && (
-                        <div className="action-dropdown-menu">
-                          <button 
-                            className="dropdown-item"
-                            onClick={() => {
-                              setOpenMenuId(null);
-                              openEditModal(c);
-                            }}
-                          >
-                            <Edit size={16} className="menu-icon" />
-                            <span>Edit</span>
-                          </button>
-
-                          <button 
-                            className="dropdown-item delete-item"
-                            onClick={() => {
-                              setOpenMenuId(null);
-                              onDelete(c.customer_id);
-                            }}
-                          >
-                            <Trash2 size={16} className="menu-icon danger" />
-                            <span className="danger-text">Delete</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <ActionDropdown
+                      items={[
+                        {
+                          label: 'Edit',
+                          icon: <Edit size={16} className="menu-icon" />,
+                          onClick: () => openEditModal(c)
+                        },
+                        {
+                          label: 'Delete',
+                          icon: <Trash2 size={16} className="menu-icon danger" />,
+                          danger: true,
+                          onClick: () => onDelete(c.customer_id)
+                        }
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}

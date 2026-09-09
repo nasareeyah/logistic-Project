@@ -10,23 +10,13 @@ import {
   MoreVertical,
   Edit
 } from 'lucide-react';
+import ActionDropdown from '../Common/ActionDropdown';
 
 function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingDriverId, setEditingDriverId] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -175,7 +165,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
         </div>
 
         {/* Clean UI table */}
-        <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+        <div className="table-responsive-wrapper" style={{ marginTop: '16px' }}>
           {filteredDrivers.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 24px', color: '#64748b' }}>
               <Inbox size={48} style={{ margin: '0 auto 16px auto', opacity: 0.5 }} />
@@ -205,44 +195,21 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
                     <td>{driver.email || '-'}</td>
                     <td>{getCarNumber(driver.assigned_car_id)}</td>
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                      <div className="action-menu-container">
-                        <button 
-                          className="action-dots-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setOpenMenuId(openMenuId === driver.driver_id ? null : driver.driver_id);
-                          }}
-                          title="Actions"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
-
-                        {openMenuId === driver.driver_id && (
-                          <div className="action-dropdown-menu">
-                            <button 
-                              className="dropdown-item"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                openEditModal(driver);
-                              }}
-                            >
-                              <Edit size={16} className="menu-icon" />
-                              <span>Edit</span>
-                            </button>
-
-                            <button 
-                              className="dropdown-item delete-item"
-                              onClick={() => {
-                                setOpenMenuId(null);
-                                onDelete(driver.driver_id);
-                              }}
-                            >
-                              <Trash2 size={16} className="menu-icon danger" />
-                              <span className="danger-text">Delete</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      <ActionDropdown
+                        items={[
+                          {
+                            label: 'Edit',
+                            icon: <Edit size={16} className="menu-icon" />,
+                            onClick: () => openEditModal(driver)
+                          },
+                          {
+                            label: 'Delete',
+                            icon: <Trash2 size={16} className="menu-icon danger" />,
+                            danger: true,
+                            onClick: () => onDelete(driver.driver_id)
+                          }
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))}

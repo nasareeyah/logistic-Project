@@ -11,6 +11,7 @@ import {
   MoreVertical,
   Edit
 } from 'lucide-react';
+import ActionDropdown from '../Common/ActionDropdown';
 
 function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,17 +19,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
   const [editingCarId, setEditingCarId] = useState(null);
   const [selectedCarId, setSelectedCarId] = useState(null);
-  const [openMenuId, setOpenMenuId] = useState(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
 
   const [formData, setFormData] = useState({
     car_number: '',
@@ -390,7 +380,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
         </div>
 
         {/* Clean UI table */}
-        <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+        <div className="table-responsive-wrapper" style={{ marginTop: '16px' }}>
           {filteredCars.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 24px', color: '#64748b' }}>
               <Inbox size={48} style={{ margin: '0 auto 16px auto', opacity: 0.5 }} />
@@ -445,44 +435,21 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
                         )}
                       </td>
                       <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                        <div className="action-menu-container">
-                          <button 
-                            className="action-dots-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(openMenuId === car.car_id ? null : car.car_id);
-                            }}
-                            title="Actions"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-
-                          {openMenuId === car.car_id && (
-                            <div className="action-dropdown-menu">
-                              <button 
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  openEditModal(car);
-                                }}
-                              >
-                                <Edit size={16} className="menu-icon" />
-                                <span>Edit</span>
-                              </button>
-
-                              <button 
-                                className="dropdown-item delete-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  onDelete(car.car_id);
-                                }}
-                              >
-                                <Trash2 size={16} className="menu-icon danger" />
-                                <span className="danger-text">Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <ActionDropdown
+                          items={[
+                            {
+                              label: 'Edit',
+                              icon: <Edit size={16} className="menu-icon" />,
+                              onClick: () => openEditModal(car)
+                            },
+                            {
+                              label: 'Delete',
+                              icon: <Trash2 size={16} className="menu-icon danger" />,
+                              danger: true,
+                              onClick: () => onDelete(car.car_id)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );

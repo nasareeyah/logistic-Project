@@ -19,6 +19,7 @@ import {
   Check,
   Pencil
 } from 'lucide-react';
+import ActionDropdown from '../Common/ActionDropdown';
 
 export default function DeliveryOrderTable({
   customers = [],
@@ -43,7 +44,6 @@ export default function DeliveryOrderTable({
   });
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedDoForView, setSelectedDoForView] = useState(null);
 
   // Step 1 Booking Search
@@ -191,17 +191,6 @@ export default function DeliveryOrderTable({
   useEffect(() => {
     fetchDeliveryOrders();
     fetchBookingsList();
-  }, []);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest('.action-menu-container')) {
-        setOpenMenuId(null);
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   // Format date helper: "22 Jul 2026"
@@ -1645,7 +1634,7 @@ export default function DeliveryOrderTable({
         </div>
 
         {/* Clean UI table */}
-        <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+        <div className="table-responsive-wrapper" style={{ marginTop: '16px' }}>
           <table className="custom-clean-table">
             <thead>
               <tr>
@@ -1672,7 +1661,6 @@ export default function DeliveryOrderTable({
               ) : (
                 filteredOrders.map((order) => {
                   const itemKey = order.do_id || order.do_no;
-                  const isMenuOpen = openMenuId === itemKey;
 
                   return (
                     <tr key={itemKey}>
@@ -1721,53 +1709,26 @@ export default function DeliveryOrderTable({
 
                       {/* Actions Menu (3 dots) */}
                       <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                        <div className="action-menu-container">
-                          <button
-                            className="action-dots-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(isMenuOpen ? null : itemKey);
-                            }}
-                            title="Actions"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-
-                          {isMenuOpen && (
-                            <div className="action-dropdown-menu">
-                              <button
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleOpenDetails(order);
-                                }}
-                              >
-                                <FileText size={16} className="menu-icon" />
-                                <span>View Details</span>
-                              </button>
-                              <button
-                                className="dropdown-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleOpenEditWizard(order);
-                                }}
-                              >
-                                <Edit size={16} className="menu-icon" />
-                                <span>Edit</span>
-                              </button>
-                              <button
-                                className="dropdown-item delete-item"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  handleDeleteDo(order.do_id, order.do_no);
-                                }}
-                              >
-                                <Trash2 size={16} className="menu-icon" />
-                                <span>Delete</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <ActionDropdown
+                          items={[
+                            {
+                              label: 'View Details',
+                              icon: <FileText size={16} className="menu-icon" />,
+                              onClick: () => handleOpenDetails(order)
+                            },
+                            {
+                              label: 'Edit',
+                              icon: <Edit size={16} className="menu-icon" />,
+                              onClick: () => handleOpenEditWizard(order)
+                            },
+                            {
+                              label: 'Delete',
+                              icon: <Trash2 size={16} className="menu-icon danger" />,
+                              danger: true,
+                              onClick: () => handleDeleteDo(order.do_id, order.do_no)
+                            }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
