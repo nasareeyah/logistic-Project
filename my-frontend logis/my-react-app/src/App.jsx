@@ -49,7 +49,13 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setLoginError('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ หรือเซิร์ฟเวอร์ยังไม่พร้อมใช้งาน');
+        return;
+      }
       if (!res.ok || !data.success) {
         setLoginError(data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
         return;
