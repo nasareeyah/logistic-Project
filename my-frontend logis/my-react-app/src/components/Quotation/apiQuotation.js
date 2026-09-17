@@ -72,7 +72,6 @@ const createServiceRecord = async (serviceTypeId, item) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             service_typeID: serviceTypeId,
-            description: item.description,
             quantity: Number(item.quantity) || null,
             unit_quantity: item.unitQuantity || '',
             default_price: Number(item.pricePerUnit) || 0,

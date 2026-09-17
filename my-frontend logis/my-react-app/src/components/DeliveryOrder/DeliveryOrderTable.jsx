@@ -20,6 +20,7 @@ import {
   Pencil
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
+import DeliveryOrderPreview from './DeliveryOrderPreview';
 
 export default function DeliveryOrderTable({
   customers = [],
@@ -45,6 +46,7 @@ export default function DeliveryOrderTable({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDoForView, setSelectedDoForView] = useState(null);
+  const [previewDo, setPreviewDo] = useState(null);
 
   // Step 1 Booking Search
   const [bookingSearchQuery, setBookingSearchQuery] = useState('');
@@ -238,7 +240,7 @@ export default function DeliveryOrderTable({
     } catch {
       // fallback to local sequence
     }
-
+    
     setFormData({
       ...initialFormData,
       do_no: nextDo,
@@ -561,10 +563,14 @@ export default function DeliveryOrderTable({
     setOpenMenuId(null);
   };
 
-  // View Summary
+  // View Summary / Preview
   const handleOpenDetails = (item) => {
     setSelectedDoForView(item);
     setViewMode('summary');
+  };
+
+  const handleOpenPreview = (item) => {
+    setPreviewDo(item);
   };
 
   // Filter Bookings in Step 1
@@ -1149,7 +1155,7 @@ export default function DeliveryOrderTable({
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px' }}
                   >
                     <Plus size={14} />
-                    <span>+ Add Item</span>
+                    <span>Add Item</span>
                   </button>
                 </div>
 
@@ -1513,11 +1519,11 @@ export default function DeliveryOrderTable({
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => window.print()}
+              onClick={() => setPreviewDo(selectedDoForView)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Printer size={16} />
-              <span>Print D.O.</span>
+              <span>Preview / Print A4</span>
             </button>
             <button
               type="button"
@@ -1667,7 +1673,7 @@ export default function DeliveryOrderTable({
                       {/* D.O. # Link */}
                       <td style={{ paddingLeft: '24px' }}>
                         <button
-                          onClick={() => handleOpenDetails(order)}
+                          onClick={() => handleOpenPreview(order)}
                           style={{
                             background: 'none',
                             border: 'none',
@@ -1712,9 +1718,9 @@ export default function DeliveryOrderTable({
                         <ActionDropdown
                           items={[
                             {
-                              label: 'View Details',
-                              icon: <FileText size={16} className="menu-icon" />,
-                              onClick: () => handleOpenDetails(order)
+                              label: 'Preview / Print A4',
+                              icon: <Printer size={16} className="menu-icon" />,
+                              onClick: () => handleOpenPreview(order)
                             },
                             {
                               label: 'Edit',
@@ -1738,6 +1744,14 @@ export default function DeliveryOrderTable({
           </table>
         </div>
       </div>
+
+      {/* A4 Delivery Order Preview Modal */}
+      {previewDo && (
+        <DeliveryOrderPreview
+          doc={previewDo}
+          onClose={() => setPreviewDo(null)}
+        />
+      )}
     </div>
   );
 }

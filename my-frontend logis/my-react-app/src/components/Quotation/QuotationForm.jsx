@@ -127,7 +127,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Step 4 Service Items
   const [items, setItems] = useState([
-    { id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
+    { id: 1, serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
   ]);
 
   // Update Quotation No and Expiry Date when Issue Date changes
@@ -161,7 +161,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       remark: ''
     });
     setRoutes([{ id: 1, origin: '', destination: '' }]);
-    setItems([{ id: 1, serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+    setItems([{ id: 1, serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
     setEditingDocId(null);
     setCurrentStep(1);
     setViewMode('create');
@@ -217,7 +217,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const handleAddItem = () => {
     setItems(prev => [
       ...prev,
-      { id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
+      { id: Date.now(), serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }
     ]);
   };
   const handleRemoveItem = (id) => {
@@ -274,7 +274,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         setItems(docItems.map((di, idx) => ({
           id: Date.now() + idx,
           serviceType: di.service_typename || '',
-          description: di.description || '',
           quantity: Number(di.item_quantity) || 1,
           unitQuantity: di.unit || '',
           pricePerUnit: Number(di.unit_price) || 0,
@@ -282,7 +281,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           total: (Number(di.item_quantity) || 1) * (Number(di.unit_price) || 0)
         })));
       } else {
-        setItems([{ id: Date.now(), serviceType: '', description: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+        setItems([{ id: Date.now(), serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
       }
     } catch (e) {
       console.error('Load items error:', e);
@@ -810,13 +809,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 12px', width: '20%' }}>Service Type</th>
-                    <th style={{ padding: '8px 12px' }}>Description</th>
-                    <th style={{ padding: '8px 12px', width: '8%', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '8px 12px', width: '13%', textAlign: 'center' }}>Unit Quantity</th>
-                    <th style={{ padding: '8px 12px', width: '13%', textAlign: 'right' }}>Unit Price</th>
-                    <th style={{ padding: '8px 12px', width: '10%', textAlign: 'center' }}>Unit</th>
-                    <th style={{ padding: '8px 12px', width: '14%', textAlign: 'right' }}>Total</th>
+                    <th style={{ padding: '8px 12px', width: '28%' }}>Service Type</th>
+                    <th style={{ padding: '8px 12px', width: '10%', textAlign: 'center' }}>Qty</th>
+                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'center' }}>Unit Quantity</th>
+                    <th style={{ padding: '8px 12px', width: '16%', textAlign: 'right' }}>Unit Price</th>
+                    <th style={{ padding: '8px 12px', width: '12%', textAlign: 'center' }}>Unit</th>
+                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'right' }}>Total</th>
                     <th style={{ padding: '8px 12px', width: '40px' }}></th>
                   </tr>
                 </thead>
@@ -838,17 +836,6 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                             <option key={st.service_typeid} value={st.service_typename} />
                           ))}
                         </datalist>
-                      </td>
-
-                      <td style={{ padding: '8px 6px' }}>
-                        <input 
-                          type="text"
-                          className="form-input"
-                          style={{ fontSize: '13px', padding: '8px' }}
-                          placeholder="รายละเอียดบริการ..."
-                          value={item.description}
-                          onChange={e => handleItemChange(item.id, 'description', e.target.value)}
-                        />
                       </td>
                       <td style={{ padding: '8px 6px' }}>
                         <input 

@@ -304,10 +304,10 @@ export default function QuotationPreview({ doc, items = [], customerList = [], o
                 const routeText = [doc.consigner_address, doc.consignee_address].filter(Boolean).join(' → ');
 
                 if (mainService) {
-                  mainName = it.description ? `${mainService} - ${it.description}` : mainService;
+                  mainName = mainService;
                   subName = routeText;
                 } else {
-                  mainName = it.description || '-';
+                  mainName = 'บริการขนส่ง';
                   subName = routeText;
                 }
 
