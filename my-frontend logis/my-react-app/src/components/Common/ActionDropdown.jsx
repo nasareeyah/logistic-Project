@@ -16,12 +16,14 @@ import { MoreVertical } from 'lucide-react';
  */
 export default function ActionDropdown({
   items = [],
+  menuItems = [],
   trigger,
   title = "Actions",
   children,
   className = "",
   align = "right"
 }) {
+  const effectiveItems = Array.isArray(items) && items.length > 0 ? items : (Array.isArray(menuItems) ? menuItems : []);
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, openUpward: false });
   const triggerRef = useRef(null);
@@ -173,7 +175,7 @@ export default function ActionDropdown({
             ) : children ? (
               children
             ) : (
-              items.map((item, idx) => (
+              effectiveItems.map((item, idx) => (
                 <button
                   key={idx}
                   type="button"

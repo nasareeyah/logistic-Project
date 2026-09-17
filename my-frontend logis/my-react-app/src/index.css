@@ -1707,12 +1707,15 @@ code {
     visibility: hidden;
   }
   .quotation-preview-print,
-  .quotation-preview-print * {
+  .quotation-preview-print *,
+  .do-preview-print,
+  .do-preview-print * {
     visibility: visible;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-  .quotation-preview-print {
+  .quotation-preview-print,
+  .do-preview-print {
     position: absolute;
     left: 0;
     top: 0;

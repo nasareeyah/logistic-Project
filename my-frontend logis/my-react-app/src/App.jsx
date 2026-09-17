@@ -9,6 +9,7 @@ import DriverTable from './components/MasterData/DriverTable';
 import QuotationForm from './components/Quotation/QuotationForm';
 import BookingForm from './components/Booking/BookingForm';
 import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
+import InvoiceTable from './components/Invoice/InvoiceTable';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -387,6 +388,8 @@ function App() {
               consigners={consigners}
               consignees={consignees}
               bookings={bookings}
+              services={services}
+              documents={documents}
               fetchData={fetchData}
             />
           )}
@@ -398,19 +401,15 @@ function App() {
               bookings={bookings}
             />
           )}
-          {/* {activeTab === 'invoice' && (
-            <DocumentTable
-              title="เอกสารใบแจ้งหนี้ (Invoice)"
-              documents={invoices}
+          {activeTab === 'invoice' && (
+            <InvoiceTable
               customers={customers}
-              services={services}
-              serviceTypes={serviceTypes}
-              onAddDocument={(data, reset) => handleAddDocument('Invoice', data, reset)}
-              onUpdateDocument={handleSaveDocumentEdit}
-              onDeleteDocument={handleDeleteDocument}
+              bookings={bookings}
+              documents={documents}
+              fetchData={fetchData}
             />
           )}
-          {activeTab === 'receipt' && (
+          {/* {activeTab === 'receipt' && (
             <DocumentTable
               title="เอกสารใบเสร็จรับเงิน (Receipt)"
               documents={receipts}

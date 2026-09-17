@@ -35,10 +35,13 @@ import './BookingTable.css';
 import './BookingWizard.css';
 import ActionDropdown from '../Common/ActionDropdown';
 
-export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], fetchData }) {
+export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], fetchData }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableSearch, setTableSearch] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedQuotationId, setSelectedQuotationId] = useState('');
+  const quotationList = (Array.isArray(documents) ? documents : []).filter(d => d.document_type === 'Quotation');
 
   // View Mode: 'table' or 'wizard'
   const [viewMode, setViewMode] = useState('table');
@@ -207,6 +210,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleOpenCreateWizard = () => {
     setEditingBooking(null);
     setSelectedCustomer(null);
+    setSelectedServiceId('');
+    setSelectedQuotationId('');
     setCargoItems([{ inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }]);
     setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
     setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
@@ -219,7 +224,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // Open 5-Step Wizard for Edit
   const handleOpenEditWizard = (booking) => {
     setEditingBooking(booking);
-    setOpenMenuId(null);
+    setSelectedServiceId(booking.service_id || '');
+    setSelectedQuotationId(booking.quotation_id || '');
 
     const matchCust = mergedCustomers.find(c => c.customer_name === booking.customer_name);
     setSelectedCustomer(matchCust || { customer_name: booking.customer_name || '', contact_person: '', phone: '' });
@@ -285,7 +291,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   // Delete Booking
   const handleDeleteBooking = async (bookingId) => {
-    setOpenMenuId(null);
     if (!window.confirm('คุณต้องการลบ Booking นี้ใช่หรือไม่?')) return;
     try {
       await deleteBooking(bookingId);
@@ -301,7 +306,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleOpenAttachModal = (booking) => {
     setSelectedBookingForAttach(booking);
     setSelectedFiles([]);
-    setOpenMenuId(null);
     setIsAttachModalOpen(true);
   };
 
@@ -389,6 +393,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         delivery_date: receiversList[0]?.delivery_date || todayStr,
         truck_name: editingBooking?.truck_name || '— Select truck —',
         status: editingBooking?.status || 'Active',
+        service_id: selectedServiceId || null,
+        quotation_id: selectedQuotationId || null,
         cargo_details: cargoItems,
         sender_details: sendersList,
         receiver_details: receiversList
@@ -520,7 +526,52 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {/* STEP 1: SELECT CUSTOMER */}
           {currentStep === 1 && (
             <div className="wizard-step-body">
-              <h2 className="step-section-heading">Select Customer</h2>
+              <h2 className="step-section-heading">Select Customer & Quotation</h2>
+
+              {/* Quotation Reference Selector */}
+              {quotationList.length > 0 && (
+                <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>
+                    อ้างอิงใบเสนอราคา / Quotation Ref (หากมี)
+                  </label>
+                  <select
+                    value={selectedQuotationId}
+                    onChange={(e) => {
+                      const qId = e.target.value;
+                      setSelectedQuotationId(qId);
+                      if (qId) {
+                        const qt = quotationList.find(d => d.document_id === qId);
+                        if (qt) {
+                          if (qt.customer_id) {
+                            const c = mergedCustomers.find(cust => cust.customer_id === qt.customer_id);
+                            if (c) setSelectedCustomer(c);
+                          }
+                          if (qt.service_id) {
+                            setSelectedServiceId(qt.service_id);
+                          }
+                        }
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      maxWidth: '520px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      backgroundColor: '#ffffff',
+                      fontSize: '13px',
+                      color: '#0f172a'
+                    }}
+                  >
+                    <option value="">— เลือกใบเสนอราคาเพื่อดึงข้อมูลลูกค้าและบริการอัตโนมัติ —</option>
+                    {quotationList.map(q => (
+                      <option key={q.document_id} value={q.document_id}>
+                        {q.document_no || q.document_id} — {q.customer_name || 'ลูกค้า'} ({q.grand_total ? `${Number(q.grand_total).toLocaleString()} บาท` : ''})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="step1-controls-row">
                 <div className="customer-search-box" style={{ width: '100%' }}>
@@ -558,6 +609,34 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       </div>
                     );
                   })}
+              </div>
+
+              {/* Service Selection */}
+              <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', textAlign: 'left' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: '#1e293b' }}>
+                  Service / บริการ (Optional)
+                </label>
+                <select
+                  value={selectedServiceId}
+                  onChange={(e) => setSelectedServiceId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    maxWidth: '480px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    fontSize: '14px',
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="">— เลือกประเภทบริการ —</option>
+                  {(Array.isArray(services) ? services : []).map(s => (
+                    <option key={s.service_id} value={s.service_id}>
+                      {s.service_typename || s.service_id} {s.default_price ? `(${Number(s.default_price).toLocaleString()} บาท)` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           )}
@@ -973,6 +1052,23 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 </div>
 
                 <div className="review-card-item">
+                  <span className="review-label">QUOTATION REF</span>
+                  <span className="review-value-bold">
+                    {quotationList.find(q => q.document_id === selectedQuotationId)?.document_no ||
+                     editingBooking?.quotation_no || '-'}
+                  </span>
+                </div>
+
+                <div className="review-card-item">
+                  <span className="review-label">SERVICE</span>
+                  <span className="review-value-bold">
+                    {(Array.isArray(services) ? services : []).find(s => s.service_id === selectedServiceId)?.description ||
+                     editingBooking?.service_name ||
+                     editingBooking?.service_typename || '-'}
+                  </span>
+                </div>
+
+                <div className="review-card-item">
                   <span className="review-label">BOOKING DATE</span>
                   <span className="review-value-bold">
                     {new Date(sendersList[0]?.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -1128,6 +1224,23 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               </div>
 
               <div className="review-card-item">
+                <span className="review-label">QUOTATION REF</span>
+                <span className="review-value-bold">
+                  {quotationList.find(q => q.document_id === (selectedQuotationId || editingBooking?.quotation_id))?.document_no ||
+                   editingBooking?.quotation_no || '-'}
+                </span>
+              </div>
+
+              <div className="review-card-item">
+                <span className="review-label">SERVICE</span>
+                <span className="review-value-bold">
+                  {(Array.isArray(services) ? services : []).find(s => s.service_id === (selectedServiceId || editingBooking?.service_id))?.description ||
+                   editingBooking?.service_name ||
+                   editingBooking?.service_typename || '-'}
+                </span>
+              </div>
+
+              <div className="review-card-item">
                 <span className="review-label">ASSIGNED TRUCK</span>
                 <span className="review-value-bold">{editingBooking?.truck_name || '— Select truck —'}</span>
               </div>
@@ -1280,19 +1393,20 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '14%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
-                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Customer</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Pickup Date</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Delivery Date</th>
-                <th style={{ width: '15%', whiteSpace: 'nowrap' }}>Truck</th>
-                <th style={{ width: '21%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
-                <th style={{ width: '9%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '13%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
+                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>Customer</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Service</th>
+                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>Pickup Date</th>
+                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>Delivery Date</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Truck</th>
+                <th style={{ width: '17%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
+                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                     ⏳ Loading bookings...
                   </td>
                 </tr>
@@ -1317,6 +1431,11 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       {/* Customer */}
                       <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>
                         {booking.customer_name || '-'}
+                      </td>
+
+                      {/* Service */}
+                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>
+                        {booking.service_name || booking.service_typename || '-'}
                       </td>
 
                       {/* Pickup Date */}
