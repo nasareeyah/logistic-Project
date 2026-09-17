@@ -134,6 +134,9 @@ async function initBookingTables() {
         `);
         await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS consigner_id VARCHAR(50);`);
         await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS consignee_id VARCHAR(50);`);
+        await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS service_id VARCHAR(50);`);
+        await db.query(`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS quotation_id VARCHAR(50);`);
+        await db.query(`ALTER TABLE service ADD COLUMN IF NOT EXISTS description TEXT;`);
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking;`);
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_cargo;`);
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_attachment;`);
@@ -197,6 +200,9 @@ router.get('/bookings', async (req, res) => {
         await initBookingTables();
         const bookingsRes = await db.query(`
             SELECT b.*, 
+              COALESCE(st.service_typename, '') AS service_name,
+              st.service_typename,
+              qd.document_no AS quotation_no,
               cgr.consigner_name,
               cgr.address_line AS consigner_address,
               cgr.address_line AS consigner_address_line,
@@ -218,6 +224,9 @@ router.get('/bookings', async (req, res) => {
             FROM bookings b
             LEFT JOIN customers c ON b.customer_id = c.customer_id
             LEFT JOIN cars ca ON b.car_id = ca.car_id
+            LEFT JOIN service s ON b.service_id = s.service_id
+            LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
+            LEFT JOIN document qd ON b.quotation_id = qd.document_id
             LEFT JOIN consigner cgr ON b.consigner_id = cgr.consigner_id
             LEFT JOIN consignee cge ON b.consignee_id = cge.consignee_id
             ORDER BY b.created_at DESC, b.booking_id DESC
@@ -277,7 +286,7 @@ router.get('/bookings', async (req, res) => {
 router.post('/bookings', async (req, res) => {
     try {
         await initBookingTables();
-        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, cargo_details, sender_details, receiver_details } = req.body;
+        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, service_id, quotation_id, cargo_details, sender_details, receiver_details } = req.body;
         
         const booking_id = await nextId('seq_booking', 'bk-', 5);
         
@@ -327,8 +336,8 @@ router.post('/bookings', async (req, res) => {
         }
 
         await db.query(
-            `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, consigner_id, consignee_id) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, consigner_id, consignee_id, service_id, quotation_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
             [
                 booking_id,
                 finalBookingNo,
@@ -341,7 +350,9 @@ router.post('/bookings', async (req, res) => {
                 status || 'Pending',
                 remark || null,
                 firstConsignerId,
-                firstConsigneeId
+                firstConsigneeId,
+                service_id || null,
+                quotation_id || null
             ]
         );
 
@@ -381,7 +392,7 @@ router.post('/bookings', async (req, res) => {
 router.put('/bookings/:id', async (req, res) => {
     try {
         await initBookingTables();
-        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, cargo_details, sender_details, receiver_details } = req.body;
+        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, service_id, quotation_id, cargo_details, sender_details, receiver_details } = req.body;
 
         // Save senders to consigner table and get the first one's ID
         let firstConsignerId = null;
@@ -406,6 +417,8 @@ router.put('/bookings/:id', async (req, res) => {
         }
 
         const hasCarId = req.body.hasOwnProperty('car_id');
+        const hasServiceId = req.body.hasOwnProperty('service_id');
+        const hasQuotationId = req.body.hasOwnProperty('quotation_id');
 
         await db.query(
             `UPDATE bookings SET 
@@ -419,8 +432,10 @@ router.put('/bookings/:id', async (req, res) => {
                 status = COALESCE(NULLIF($8, ''), status),
                 remark = COALESCE(NULLIF($9, ''), remark),
                 consigner_id = COALESCE($10, consigner_id),
-                consignee_id = COALESCE($11, consignee_id)
-             WHERE booking_id = $13`,
+                consignee_id = COALESCE($11, consignee_id),
+                service_id = CASE WHEN $14::boolean THEN NULLIF($13, '') ELSE service_id END,
+                quotation_id = CASE WHEN $16::boolean THEN NULLIF($15, '') ELSE quotation_id END
+             WHERE booking_id = $17`,
             [
                 booking_no || null, 
                 customer_id || null, 
@@ -434,6 +449,10 @@ router.put('/bookings/:id', async (req, res) => {
                 firstConsignerId,
                 firstConsigneeId,
                 hasCarId,
+                service_id || null,
+                hasServiceId,
+                quotation_id || null,
+                hasQuotationId,
                 req.params.id
             ]
         );

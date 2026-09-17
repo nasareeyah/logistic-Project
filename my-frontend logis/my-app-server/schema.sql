@@ -131,15 +131,9 @@ CREATE TABLE document (
   net_total DECIMAL(12,2),
   status VARCHAR(50),
   remark TEXT,
-  driver_id VARCHAR(10),
-  car_id VARCHAR(10),
-  do_no VARCHAR(50),
-  do_date DATE,
   consigner_id VARCHAR(10),
   consignee_id VARCHAR(10),
   FOREIGN KEY (customer_id) REFERENCES customers(customer_id), 
-  FOREIGN KEY (driver_id) REFERENCES driver(driver_id),
-  FOREIGN KEY (car_id) REFERENCES cars(car_id),                
   FOREIGN KEY (consigner_id) REFERENCES consigner(consigner_id),
   FOREIGN KEY (consignee_id) REFERENCES consignee(consignee_id)
 );
@@ -192,7 +186,10 @@ CREATE TABLE bookings (
   remark TEXT,
   consigner_id VARCHAR(50),
   consignee_id VARCHAR(50),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  service_id VARCHAR(50),
+  quotation_id VARCHAR(50),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE SET NULL
 );
 
 -- 17. booking_cargo
@@ -233,4 +230,32 @@ CREATE TABLE users (
   role VARCHAR(50) NOT NULL, -- 'operator_accounting' or 'employee'
   department VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 20. invoices
+CREATE TABLE invoices (
+  invoice_id VARCHAR(50) PRIMARY KEY,
+  invoice_no VARCHAR(50) UNIQUE NOT NULL,
+  invoice_date DATE,
+  due_date DATE,
+  credit_term INT DEFAULT 30,
+  customer_id VARCHAR(50) REFERENCES customers(customer_id) ON DELETE SET NULL,
+  booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE SET NULL,
+  quotation_id VARCHAR(50),
+  do_no VARCHAR(100),
+  total_amount DECIMAL(12,2) DEFAULT 0,
+  remark TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 21. invoice_items
+CREATE TABLE invoice_items (
+  item_id VARCHAR(50) PRIMARY KEY,
+  invoice_id VARCHAR(50) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+  service_id VARCHAR(50) REFERENCES service(service_id) ON DELETE SET NULL,
+  description TEXT,
+  quantity DECIMAL(10,2) DEFAULT 1,
+  unit VARCHAR(50) DEFAULT 'คันรถ',
+  unit_price DECIMAL(12,2) DEFAULT 0,
+  total_amount DECIMAL(12,2) DEFAULT 0
 );

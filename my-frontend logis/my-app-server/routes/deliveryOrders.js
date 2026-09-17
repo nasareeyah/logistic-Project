@@ -20,6 +20,7 @@ async function initDeliveryOrdersTable() {
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS date_of_load DATE;`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS eta DATE;`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS warehouse VARCHAR(100);`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS shipping VARCHAR(255);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS remark TEXT;`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;`);
 
@@ -72,11 +73,18 @@ const DO_SELECT_QUERY = `
         -- Dates synced with booking
         COALESCE(bk.pickup_date, d.date_of_load) AS date_of_load,
         COALESCE(bk.delivery_date, d.eta) AS eta,
+        -- Customer details from customers
+        cust.tax_id AS customer_tax_id,
+        cust.address AS customer_address,
+        cust.phone AS customer_phone,
+        cust.email AS customer_email,
+        cust.contact_person AS customer_contact_person,
         -- Driver details from driver
         dr.full_name AS driver_name,
         dr.phone AS driver_phone
     FROM delivery_orders d
     LEFT JOIN bookings bk ON d.booking_id = bk.booking_id
+    LEFT JOIN customers cust ON (bk.customer_id = cust.customer_id OR d.customer_name = cust.customer_name)
     LEFT JOIN booking_cargo bc ON d.cargo_id = bc.cargo_id
     LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
     LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
@@ -144,6 +152,7 @@ router.post('/delivery-orders', async (req, res) => {
             date_of_load,
             eta,
             warehouse,
+            shipping,
             remark,
             goods_items
         } = req.body;
@@ -273,10 +282,11 @@ router.post('/delivery-orders', async (req, res) => {
                 date_of_load,
                 eta,
                 warehouse,
+                shipping,
                 remark
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13
+                $11, $12, $13, $14
             )`,
             [
                 finalId,
@@ -291,6 +301,7 @@ router.post('/delivery-orders', async (req, res) => {
                 resolvedDateOfLoad,
                 resolvedEta,
                 warehouse || null,
+                shipping || null,
                 remark || null
             ]
         );
@@ -334,6 +345,7 @@ router.put('/delivery-orders/:id', async (req, res) => {
             date_of_load,
             eta,
             warehouse,
+            shipping,
             remark,
             goods_items
         } = req.body;
@@ -350,8 +362,9 @@ router.put('/delivery-orders/:id', async (req, res) => {
                 date_of_load = COALESCE($8, date_of_load),
                 eta = COALESCE($9, eta),
                 warehouse = COALESCE($10, warehouse),
-                remark = COALESCE($11, remark)
-             WHERE delivery_orders_id = $12 OR do_no = $12`,
+                shipping = COALESCE($11, shipping),
+                remark = COALESCE($12, remark)
+             WHERE delivery_orders_id = $13 OR do_no = $13`,
             [
                 booking_id !== undefined ? booking_id : null,
                 cargo_id !== undefined ? cargo_id : null,
@@ -363,6 +376,7 @@ router.put('/delivery-orders/:id', async (req, res) => {
                 date_of_load ? date_of_load : null,
                 eta ? eta : null,
                 warehouse !== undefined ? warehouse : null,
+                shipping !== undefined ? shipping : null,
                 remark !== undefined ? remark : null,
                 id
             ]
