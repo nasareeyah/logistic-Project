@@ -29,13 +29,14 @@ import {
   CheckCircle2,
   FileText,
   FolderOpen,
-  Pencil
+  Pencil,
+  User
 } from 'lucide-react';
 import './BookingTable.css';
 import './BookingWizard.css';
 import ActionDropdown from '../Common/ActionDropdown';
 
-export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], fetchData }) {
+export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], documentItems = [], fetchData }) {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableSearch, setTableSearch] = useState('');
@@ -56,7 +57,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const fileInputRef = useRef(null);
 
   // ----------------------------------------------------
-  // WIZARD STATE (5 Steps)
+  // WIZARD STATE (6 Steps)
   // ----------------------------------------------------
   const [currentStep, setCurrentStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -69,7 +70,74 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const [isAddCustModalOpen, setIsAddCustModalOpen] = useState(false);
   const [newCustForm, setNewCustForm] = useState({ customer_name: '', contact_person: '', phone: '' });
 
-  // Step 2: Cargo
+  // Step 2: Pricing Mode & Service Items
+  const [pricingMode, setPricingMode] = useState('quotation'); // 'quotation' | 'custom'
+  const [serviceItems, setServiceItems] = useState([
+    { id: 1, description: '', quantity: 1, unit: 'trip', unit_price: 0, total: 0 }
+  ]);
+
+  const handleServiceItemChange = (idx, field, value) => {
+    setServiceItems(prev => {
+      const updated = [...prev];
+      const currentItem = { ...updated[idx], [field]: value };
+      if (field === 'quantity' || field === 'unit_price') {
+        const q = field === 'quantity' ? Number(value) || 0 : Number(currentItem.quantity) || 0;
+        const p = field === 'unit_price' ? Number(value) || 0 : Number(currentItem.unit_price) || 0;
+        currentItem.total = q * p;
+      }
+      updated[idx] = currentItem;
+      return updated;
+    });
+  };
+
+  const handleAddServiceItem = () => {
+    setServiceItems(prev => [
+      ...prev,
+      { id: Date.now(), description: '', quantity: 1, unit: 'trip', unit_price: 0, total: 0 }
+    ]);
+  };
+
+  const handleRemoveServiceItem = (idx) => {
+    if (serviceItems.length <= 1) return;
+    setServiceItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleSelectQuotation = (qt) => {
+    setSelectedQuotationId(qt.document_id);
+    if (qt.service_id) {
+      setSelectedServiceId(qt.service_id);
+    }
+    const matchingItems = (Array.isArray(documentItems) ? documentItems : []).filter(
+      di => di.document_id === qt.document_id
+    );
+    if (matchingItems.length > 0) {
+      setServiceItems(matchingItems.map((it, idx) => ({
+        id: it.document_items_id || idx + 1,
+        description: it.description || it.service_typename || 'Logistics Service',
+        quantity: Number(it.item_quantity || 1),
+        unit: it.unit || 'trip',
+        unit_price: Number(it.unit_price || 0),
+        total: (Number(it.item_quantity || 1)) * (Number(it.unit_price || 0))
+      })));
+    } else {
+      const totalVal = Number(qt.grand_total || qt.net_total || 0);
+      setServiceItems([{
+        id: 1,
+        description: qt.remarks || qt.remark || qt.subject || qt.customer_name || 'Logistics Service',
+        quantity: 1,
+        unit: 'trip',
+        unit_price: totalVal,
+        total: totalVal
+      }]);
+    }
+  };
+
+  const serviceItemsSubtotal = serviceItems.reduce(
+    (acc, it) => acc + (Number(it.total) || 0),
+    0
+  );
+
+  // Step 3: Cargo
   const [cargoItems, setCargoItems] = useState([
     { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
   ]);
@@ -206,12 +274,16 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     }
   };
 
-  // Open 5-Step Wizard for Create
+  // Open 6-Step Wizard for Create
   const handleOpenCreateWizard = () => {
     setEditingBooking(null);
     setSelectedCustomer(null);
     setSelectedServiceId('');
     setSelectedQuotationId('');
+    setPricingMode('quotation');
+    setServiceItems([
+      { id: 1, description: '', quantity: 1, unit: 'trip', unit_price: 0, total: 0 }
+    ]);
     setCargoItems([{ inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }]);
     setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
     setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
@@ -221,11 +293,35 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     setViewMode('wizard');
   };
 
-  // Open 5-Step Wizard for Edit
+  // Open 6-Step Wizard for Edit
   const handleOpenEditWizard = (booking) => {
     setEditingBooking(booking);
     setSelectedServiceId(booking.service_id || '');
-    setSelectedQuotationId(booking.quotation_id || '');
+
+    if (booking.quotation_id) {
+      setPricingMode('quotation');
+      setSelectedQuotationId(booking.quotation_id);
+    } else {
+      setPricingMode('custom');
+      setSelectedQuotationId('');
+    }
+
+    if (Array.isArray(booking.service_items) && booking.service_items.length > 0) {
+      setServiceItems(booking.service_items);
+    } else if (booking.service_name || booking.service_typename) {
+      setServiceItems([{
+        id: 1,
+        description: booking.service_name || booking.service_typename || '',
+        quantity: 1,
+        unit: 'trip',
+        unit_price: 0,
+        total: 0
+      }]);
+    } else {
+      setServiceItems([
+        { id: 1, description: '', quantity: 1, unit: 'trip', unit_price: 0, total: 0 }
+      ]);
+    }
 
     const matchCust = mergedCustomers.find(c => c.customer_name === booking.customer_name);
     setSelectedCustomer(matchCust || { customer_name: booking.customer_name || '', contact_person: '', phone: '' });
@@ -285,7 +381,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // Open Summary View (Read Only Details) when clicking Booking # link
   const handleOpenSummaryView = (booking) => {
     handleOpenEditWizard(booking);
-    setCurrentStep(5);
+    setCurrentStep(6);
     setViewMode('summary');
   };
 
@@ -394,10 +490,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         truck_name: editingBooking?.truck_name || '— Select truck —',
         status: editingBooking?.status || 'Active',
         service_id: selectedServiceId || null,
-        quotation_id: selectedQuotationId || null,
+        quotation_id: pricingMode === 'quotation' ? (selectedQuotationId || null) : null,
         cargo_details: cargoItems,
         sender_details: sendersList,
-        receiver_details: receiversList
+        receiver_details: receiversList,
+        service_items: serviceItems,
+        pricing_mode: pricingMode
       };
 
       let bookingId = editingBooking?.booking_id;
@@ -437,10 +535,11 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   const stepsList = [
     { num: 1, label: 'Customer' },
-    { num: 2, label: 'Cargo' },
-    { num: 3, label: 'Transport' },
-    { num: 4, label: 'Attachments' },
-    { num: 5, label: 'Review' }
+    { num: 2, label: 'Quotation' },
+    { num: 3, label: 'Cargo' },
+    { num: 4, label: 'Route' },
+    { num: 5, label: 'Attachments' },
+    { num: 6, label: 'Review' }
   ];
 
   // ----------------------------------------------------
@@ -477,7 +576,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               return (
                 <div
                   key={step.num}
-                  onClick={() => setCurrentStep(step.num)}
+                  onClick={() => {
+                    if (step.num > 1 && !selectedCustomer) {
+                      alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      return;
+                    }
+                    setCurrentStep(step.num);
+                  }}
                   style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: '160px', cursor: 'pointer' }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -526,66 +631,22 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {/* STEP 1: SELECT CUSTOMER */}
           {currentStep === 1 && (
             <div className="wizard-step-body">
-              <h2 className="step-section-heading">Select Customer & Quotation</h2>
-
-              {/* Quotation Reference Selector */}
-              {quotationList.length > 0 && (
-                <div style={{ marginBottom: '20px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
-                  <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>
-                    อ้างอิงใบเสนอราคา / Quotation Ref (หากมี)
-                  </label>
-                  <select
-                    value={selectedQuotationId}
-                    onChange={(e) => {
-                      const qId = e.target.value;
-                      setSelectedQuotationId(qId);
-                      if (qId) {
-                        const qt = quotationList.find(d => d.document_id === qId);
-                        if (qt) {
-                          if (qt.customer_id) {
-                            const c = mergedCustomers.find(cust => cust.customer_id === qt.customer_id);
-                            if (c) setSelectedCustomer(c);
-                          }
-                          if (qt.service_id) {
-                            setSelectedServiceId(qt.service_id);
-                          }
-                        }
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      maxWidth: '520px',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      backgroundColor: '#ffffff',
-                      fontSize: '13px',
-                      color: '#0f172a'
-                    }}
-                  >
-                    <option value="">— เลือกใบเสนอราคาเพื่อดึงข้อมูลลูกค้าและบริการอัตโนมัติ —</option>
-                    {quotationList.map(q => (
-                      <option key={q.document_id} value={q.document_id}>
-                        {q.document_no || q.document_id} — {q.customer_name || 'ลูกค้า'} ({q.grand_total ? `${Number(q.grand_total).toLocaleString()} บาท` : ''})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="step1-controls-row">
-                <div className="customer-search-box" style={{ width: '100%' }}>
-                  <Search size={18} className="search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search customers..."
-                    value={customerSearch}
-                    onChange={(e) => setCustomerSearch(e.target.value)}
-                  />
-                </div>
+              <div className="step-header-title-row">
+                <User size={18} color="#0284c7" />
+                <span>Select Customer</span>
               </div>
 
-              <div className="customer-cards-grid">
+              <div className="customer-search-field-container">
+                <Search size={16} className="search-icon-inside" />
+                <input
+                  type="text"
+                  placeholder="Search by company, contact, phone..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 {mergedCustomers
                   .filter(c => {
                     const q = customerSearch.toLowerCase().trim();
@@ -595,54 +656,253 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       (c.phone || '').toLowerCase().includes(q);
                   })
                   .map((cust, idx) => {
-                    const isSelected = selectedCustomer?.customer_name === cust.customer_name;
+                    const isSelected = selectedCustomer?.customer_id === cust.customer_id ||
+                      (cust.customer_name && selectedCustomer?.customer_name === cust.customer_name);
 
                     return (
                       <div
-                        key={idx}
-                        className={`customer-select-card ${isSelected ? 'selected' : ''}`}
-                        onClick={() => setSelectedCustomer(cust)}
+                        key={cust.customer_id || idx}
+                        className={`single-customer-card ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedCustomer(cust);
+                          const custQts = quotationList.filter(q =>
+                            (q.customer_id && q.customer_id === cust.customer_id) ||
+                            (q.customer_name && q.customer_name.trim().toLowerCase() === cust.customer_name?.trim().toLowerCase())
+                          );
+                          if (custQts.length > 0) {
+                            handleSelectQuotation(custQts[0]);
+                          } else {
+                            setSelectedQuotationId('');
+                          }
+                        }}
                       >
-                        <div className="cust-card-name">{cust.customer_name}</div>
-                        <div className="cust-card-contact">{cust.contact_person || 'Contact Person'}</div>
-                        <div className="cust-card-phone">{cust.phone || 'Phone number'}</div>
+                        <div className="cust-name">{cust.customer_name}</div>
+                        <div className="cust-contact">{cust.contact_person || 'Contact Person'}</div>
+                        <div className="cust-phone">{cust.phone || 'Phone number'}</div>
                       </div>
                     );
                   })}
               </div>
-
-              {/* Service Selection */}
-              <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', textAlign: 'left' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px', color: '#1e293b' }}>
-                  Service / บริการ (Optional)
-                </label>
-                <select
-                  value={selectedServiceId}
-                  onChange={(e) => setSelectedServiceId(e.target.value)}
-                  style={{
-                    width: '100%',
-                    maxWidth: '480px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    fontSize: '14px',
-                    color: '#0f172a'
-                  }}
-                >
-                  <option value="">— เลือกประเภทบริการ —</option>
-                  {(Array.isArray(services) ? services : []).map(s => (
-                    <option key={s.service_id} value={s.service_id}>
-                      {s.service_typename || s.service_id} {s.default_price ? `(${Number(s.default_price).toLocaleString()} บาท)` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
           )}
 
-          {/* STEP 2: CARGO INFORMATION */}
+          {/* STEP 2: PRICING MODE & SERVICE ITEMS */}
           {currentStep === 2 && (
+            <div className="wizard-step-body">
+              <div className="step-header-title-row">
+                <FileText size={18} color="#0284c7" />
+                <span>Pricing Mode</span>
+              </div>
+
+              {/* Pricing Mode Dual Toggle Cards */}
+              {(() => {
+                const customerQuotations = quotationList.filter(q => {
+                  if (!selectedCustomer) return false;
+                  return (q.customer_id && q.customer_id === selectedCustomer.customer_id) ||
+                         (q.customer_name && selectedCustomer.customer_name && q.customer_name.trim().toLowerCase() === selectedCustomer.customer_name.trim().toLowerCase());
+                });
+
+                return (
+                  <div>
+                    <div className="pricing-mode-cards-grid">
+                      {/* Option 1: เลือกจากใบเสนอราคา */}
+                      <div
+                        className={`pricing-mode-toggle-card ${pricingMode === 'quotation' ? 'active' : ''}`}
+                        onClick={() => {
+                          setPricingMode('quotation');
+                          if (!selectedQuotationId && customerQuotations.length > 0) {
+                            handleSelectQuotation(customerQuotations[0]);
+                          }
+                        }}
+                      >
+                        <div className="pricing-mode-icon-circle">
+                          <FileText size={18} />
+                        </div>
+                        <div className="pricing-mode-text-wrap">
+                          <div className="pricing-mode-title-row">
+                            <span>เลือกจากใบเสนอราคา</span>
+                            {pricingMode === 'quotation' && <Check size={16} color="#0284c7" />}
+                          </div>
+                          <span className="pricing-mode-subtitle">เลือกใบเสนอราคาที่เคยทำไว้</span>
+                        </div>
+                      </div>
+
+                      {/* Option 2: กำหนดราคาเอง */}
+                      <div
+                        className={`pricing-mode-toggle-card ${pricingMode === 'custom' ? 'active' : ''}`}
+                        onClick={() => {
+                          setPricingMode('custom');
+                          setSelectedQuotationId('');
+                        }}
+                      >
+                        <div className="pricing-mode-icon-circle">
+                          <Pencil size={18} />
+                        </div>
+                        <div className="pricing-mode-text-wrap">
+                          <div className="pricing-mode-title-row">
+                            <span>กำหนดราคาเอง</span>
+                            {pricingMode === 'custom' && <Check size={16} color="#0284c7" />}
+                          </div>
+                          <span className="pricing-mode-subtitle">งานด่วน ยังไม่มีใบเสนอ</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quotation Cards in Quotation Mode */}
+                    {pricingMode === 'quotation' && (
+                      <div>
+                        {customerQuotations.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                            {customerQuotations.map(qt => {
+                              const isSelected = selectedQuotationId === qt.document_id;
+                              const qtItems = (Array.isArray(documentItems) ? documentItems : []).filter(di => di.document_id === qt.document_id);
+                              const itemCount = qtItems.length > 0 ? qtItems.length : 1;
+                              const totalAmount = qt.grand_total || qt.net_total || 0;
+
+                              return (
+                                <div
+                                  key={qt.document_id}
+                                  className="selected-quotation-card"
+                                  style={{
+                                    cursor: 'pointer',
+                                    borderColor: isSelected ? '#0284c7' : '#e2e8f0',
+                                    backgroundColor: isSelected ? '#f8fafc' : '#ffffff'
+                                  }}
+                                  onClick={() => handleSelectQuotation(qt)}
+                                >
+                                  <div className="qt-top-row">
+                                    <span className="qt-code">{qt.document_no || qt.document_id}</span>
+                                    <span className="qt-status-badge">
+                                      <span className="qt-status-dot" style={{ backgroundColor: qt.status === 'Approved' ? '#16a34a' : '#94a3b8' }} />
+                                      <span>{qt.status || 'Draft'}</span>
+                                    </span>
+                                  </div>
+                                  <div className="qt-remark">
+                                    {qt.remarks || qt.remark || qt.subject || 'ใบเสนอราคาบริการขนส่ง'}
+                                  </div>
+                                  <div className="qt-summary">
+                                    {itemCount} items · THB {Number(totalAmount).toLocaleString()}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{
+                            padding: '16px 20px',
+                            backgroundColor: '#f8fafc',
+                            borderRadius: '10px',
+                            border: '1px solid #e2e8f0',
+                            marginBottom: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px'
+                          }}>
+                            <AlertCircle size={20} color="#0284c7" />
+                            <div style={{ fontSize: '13px', color: '#64748b' }}>
+                              ลูกค้ารายนี้ยังไม่มีประวัติใบเสนอราคาในระบบ ท่านสามารถเลือกโหมด <strong>"กำหนดราคาเอง"</strong> เพื่อระบุรายการบริการได้ทันที
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Service Items Table (Rendered in BOTH Modes) */}
+                    <div className="service-items-container">
+                      <div className="service-items-header-bar">
+                        <span className="service-items-header-title">Service Items</span>
+                        <button
+                          type="button"
+                          className="btn-add-service-item"
+                          onClick={handleAddServiceItem}
+                        >
+                          <Plus size={15} />
+                          <span>Add</span>
+                        </button>
+                      </div>
+
+                      <div className="service-items-table-wrap">
+                        <div className="service-items-table-grid">
+                          <div className="service-items-cols-header">
+                            <div>Description</div>
+                            <div style={{ textAlign: 'center' }}>Qty</div>
+                            <div style={{ textAlign: 'center' }}>Unit</div>
+                            <div style={{ textAlign: 'right' }}>Unit Price</div>
+                            <div style={{ textAlign: 'right' }}>Total</div>
+                            <div></div>
+                          </div>
+
+                          {serviceItems.map((item, idx) => (
+                            <div key={item.id || idx} className="service-item-row-input">
+                              <div className="col-desc">
+                                <input
+                                  type="text"
+                                  placeholder="Description"
+                                  value={item.description}
+                                  onChange={(e) => handleServiceItemChange(idx, 'description', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-qty">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleServiceItemChange(idx, 'quantity', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-unit">
+                                <input
+                                  type="text"
+                                  placeholder="trip"
+                                  value={item.unit}
+                                  onChange={(e) => handleServiceItemChange(idx, 'unit', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-price">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  value={item.unit_price}
+                                  onChange={(e) => handleServiceItemChange(idx, 'unit_price', e.target.value)}
+                                />
+                              </div>
+                              <div className="col-total">
+                                {Number(item.total || 0).toLocaleString()}
+                              </div>
+                              <div className="col-action">
+                                {serviceItems.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="btn-remove-item"
+                                    onClick={() => handleRemoveServiceItem(idx)}
+                                    title="Remove item"
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Subtotal Row */}
+                        <div className="service-subtotal-row">
+                          <span className="service-subtotal-label">Subtotal</span>
+                          <span className="service-subtotal-amount">
+                            THB {serviceItemsSubtotal.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* STEP 3: CARGO INFORMATION */}
+          {currentStep === 3 && (
             <div className="wizard-step-body">
               <div className="step-header-with-action">
                 <h2 className="step-section-heading">Cargo Information</h2>
@@ -773,8 +1033,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
           )}
 
-          {/* STEP 3: TRANSPORT */}
-          {currentStep === 3 && (
+          {/* STEP 4: TRANSPORT */}
+          {currentStep === 4 && (
             <div className="wizard-step-body">
               <div className="transport-dual-grid">
                 {/* PICKUP (SENDER) COLUMN */}
@@ -986,8 +1246,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
           )}
 
-          {/* STEP 4: ATTACHMENTS */}
-          {currentStep === 4 && (
+          {/* STEP 5: ATTACHMENTS */}
+          {currentStep === 5 && (
             <div className="wizard-step-body">
               <h2 className="step-section-heading">Attachments</h2>
 
@@ -1040,8 +1300,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
           )}
 
-          {/* STEP 5: REVIEW */}
-          {currentStep === 5 && (
+          {/* STEP 6: REVIEW */}
+          {currentStep === 6 && (
             <div className="wizard-step-body">
               <h2 className="step-section-heading">Review & Confirm</h2>
 
@@ -1052,19 +1312,25 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">QUOTATION REF</span>
+                  <span className="review-label">PRICING MODE & QUOTATION</span>
                   <span className="review-value-bold">
-                    {quotationList.find(q => q.document_id === selectedQuotationId)?.document_no ||
-                     editingBooking?.quotation_no || '-'}
+                    {pricingMode === 'quotation'
+                      ? `เลือกจากใบเสนอราคา (${quotationList.find(q => q.document_id === selectedQuotationId)?.document_no || selectedQuotationId || 'ไม่ได้ระบุ'})`
+                      : 'กำหนดราคาเอง (Custom Pricing)'}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">SERVICE</span>
-                  <span className="review-value-bold">
-                    {(Array.isArray(services) ? services : []).find(s => s.service_id === selectedServiceId)?.description ||
-                     editingBooking?.service_name ||
-                     editingBooking?.service_typename || '-'}
+                  <span className="review-label">SERVICE ITEMS</span>
+                  <span className="review-value">
+                    {serviceItems.map((it, idx) => (
+                      <div key={idx} style={{ marginBottom: '2px' }}>
+                        • {it.description || 'Service'} ({it.quantity} {it.unit}) — THB {Number(it.total || 0).toLocaleString()}
+                      </div>
+                    ))}
+                    <div style={{ marginTop: '4px', fontWeight: 700, color: '#0284c7' }}>
+                      Subtotal: THB {serviceItemsSubtotal.toLocaleString()}
+                    </div>
                   </span>
                 </div>
 
@@ -1143,11 +1409,17 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
 
             <div>
-              {currentStep < 5 ? (
+              {currentStep < 6 ? (
                 <button
                   type="button"
                   className="btn-primary"
-                  onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
+                  onClick={() => {
+                    if (currentStep === 1 && !selectedCustomer) {
+                      alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      return;
+                    }
+                    setCurrentStep(prev => Math.min(6, prev + 1));
+                  }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <span>Next</span>

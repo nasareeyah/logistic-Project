@@ -10,7 +10,8 @@ import {
   ArrowRight,
   FolderOpen,
   MoreVertical,
-  Edit
+  Edit,
+  User
 } from 'lucide-react';
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 import QuotationPreview from './QuotationPreview';
@@ -74,6 +75,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [customerList, setCustomerList] = useState(Array.isArray(propCustomers) ? propCustomers : []);
   const [quotationList, setQuotationList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
   const [previewData, setPreviewData] = useState(null);
@@ -163,14 +165,14 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     setRoutes([{ id: 1, origin: '', destination: '' }]);
     setItems([{ id: 1, serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
     setEditingDocId(null);
+    setCustomerSearch('');
     setCurrentStep(1);
     setViewMode('create');
   };
 
   // Step 2 Customer Selection Handler
-  const handleCustomerSelect = (e) => {
-    const selectedId = e.target.value;
-    if (!selectedId) {
+  const handleSelectCustomerCard = (cust) => {
+    if (!cust) {
       setFormData(prev => ({
         ...prev,
         customerId: '',
@@ -184,22 +186,16 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       return;
     }
 
-    const selectedCust = Array.isArray(customerList)
-      ? customerList.find(c => String(c.customer_id) === String(selectedId) || String(c.id) === String(selectedId))
-      : null;
-
-    if (selectedCust) {
-      setFormData(prev => ({
-        ...prev,
-        customerId: selectedCust.customer_id || selectedCust.id,
-        customerName: selectedCust.customer_name || selectedCust.name || '',
-        address: selectedCust.address || '',
-        taxId: selectedCust.tax_id || selectedCust.taxId || '',
-        contactPerson: selectedCust.contact_person || selectedCust.contactPerson || '',
-        phone: selectedCust.phone || '',
-        email: selectedCust.email || ''
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      customerId: cust.customer_id || cust.id,
+      customerName: cust.customer_name || cust.name || '',
+      address: cust.address || '',
+      taxId: cust.tax_id || cust.taxId || '',
+      contactPerson: cust.contact_person || cust.contactPerson || '',
+      phone: cust.phone || '',
+      email: cust.email || ''
+    }));
   };
 
   // Route Handlers
@@ -619,94 +615,65 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {/* STEP 2: Customer */}
         {currentStep === 2 && (
           <div style={{ textAlign: 'left' }}>
-            {/* Customer Dropdown */}
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label">Select existing customer (optional)</label>
-              <select 
-                className="form-select"
-                value={formData.customerId || ''}
-                onChange={handleCustomerSelect}
-              >
-                <option value="">— Select customer —</option>
-                {Array.isArray(customerList) && customerList.map(c => (
-                  <option key={c.customer_id || c.id} value={c.customer_id || c.id}>
-                    {c.customer_name || c.name} {c.tax_id ? `(${c.tax_id})` : ''}
-                  </option>
-                ))}
-              </select>
-              <span style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
-                * หากไม่มีข้อมูลลูกค้า กรุณาไปเพิ่มข้อมูลลูกค้าใน Master Data &gt; Customers ก่อน
-              </span>
+            <div className="step-header-title-row">
+              <User size={18} color="#0284c7" />
+              <span>Select Customer</span>
             </div>
 
-            {/* Customer Details */}
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label className="form-label">Company / Customer Name</label>
+            <div className="customer-search-field-container">
+              <Search size={16} className="search-icon-inside" />
               <input 
                 type="text" 
-                className="form-input" 
-                placeholder="ชื่อบริษัทหรือลูกค้า..." 
-                value={formData.customerName || ''}
-                onChange={e => setFormData({ ...formData, customerName: e.target.value })}
+                placeholder="Search by company, contact, phone..." 
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
               />
             </div>
 
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label className="form-label">Address</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="ที่อยู่..." 
-                value={formData.address || ''}
-                onChange={e => setFormData({ ...formData, address: e.target.value })}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              {Array.isArray(customerList) && customerList
+                .filter(c => {
+                  const q = customerSearch.toLowerCase().trim();
+                  if (!q) return true;
+                  return (c.customer_name || c.name || '').toLowerCase().includes(q) ||
+                    (c.contact_person || c.contactPerson || '').toLowerCase().includes(q) ||
+                    (c.phone || '').toLowerCase().includes(q) ||
+                    (c.tax_id || c.taxId || '').toLowerCase().includes(q);
+                })
+                .map((cust, idx) => {
+                  const isSelected = String(formData.customerId) === String(cust.customer_id || cust.id);
+
+                  return (
+                    <div
+                      key={cust.customer_id || cust.id || idx}
+                      className={`single-customer-card ${isSelected ? 'selected' : ''}`}
+                      onClick={() => handleSelectCustomerCard(cust)}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div className="cust-name">{cust.customer_name || cust.name}</div>
+                        {isSelected && <Check size={18} color="#0284c7" />}
+                      </div>
+                      <div className="cust-contact">{cust.contact_person || cust.contactPerson || 'Contact Person'}</div>
+                      <div className="cust-phone">{cust.phone || 'Phone number'}</div>
+                    </div>
+                  );
+                })}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-              <div className="form-group">
-                <label className="form-label">Tax ID</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="เลขประจำตัวผู้เสียภาษี..." 
-                  value={formData.taxId || ''}
-                  onChange={e => setFormData({ ...formData, taxId: e.target.value })}
-                />
+            {Array.isArray(customerList) && customerList.filter(c => {
+              const q = customerSearch.toLowerCase().trim();
+              if (!q) return true;
+              return (c.customer_name || c.name || '').toLowerCase().includes(q) ||
+                (c.contact_person || c.contactPerson || '').toLowerCase().includes(q) ||
+                (c.phone || '').toLowerCase().includes(q) ||
+                (c.tax_id || c.taxId || '').toLowerCase().includes(q);
+            }).length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                <User size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
+                <div style={{ fontSize: '15px', fontWeight: 500 }}>ไม่พบข้อมูลลูกค้า</div>
+                <div style={{ fontSize: '13px', marginTop: '4px' }}>ลองค้นหาด้วยคำอื่น หรือเพิ่มข้อมูลลูกค้าใน Master Data &gt; Customers</div>
               </div>
-              <div className="form-group">
-                <label className="form-label">Contact Person</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="ผู้ติดต่อ..." 
-                  value={formData.contactPerson || ''}
-                  onChange={e => setFormData({ ...formData, contactPerson: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              <div className="form-group">
-                <label className="form-label">Phone</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="เบอร์โทร..." 
-                  value={formData.phone || ''}
-                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input 
-                  type="email" 
-                  className="form-input" 
-                  placeholder="อีเมล..." 
-                  value={formData.email || ''}
-                  onChange={e => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-            </div>
+            )}
           </div>
         )}
 

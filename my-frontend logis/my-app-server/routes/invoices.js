@@ -14,19 +14,58 @@ router.get('/invoices', async (req, res) => {
                 c.phone AS customer_phone,
                 b.booking_no,
                 qd.document_no AS quotation_no,
+                a.account_name,
+                a.bank_branch,
+                bnk.bank_name,
                 COUNT(ii.item_id) AS item_count
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
             LEFT JOIN bookings b ON i.booking_id = b.booking_id
             LEFT JOIN document qd ON i.quotation_id = qd.document_id
+            LEFT JOIN account a ON i.account_no = a.account_no
+            LEFT JOIN bank bnk ON a.bank_id = bnk.bank_id
             LEFT JOIN invoice_items ii ON i.invoice_id = ii.invoice_id
-            GROUP BY i.invoice_id, c.customer_name, c.address, c.phone, b.booking_no, qd.document_no
+            GROUP BY i.invoice_id, c.customer_name, c.address, c.phone, b.booking_no, qd.document_no, a.account_name, a.bank_branch, bnk.bank_name
             ORDER BY i.created_at DESC, i.invoice_no DESC;
         `;
         const result = await db.query(sql);
         res.json(result.rows);
     } catch (err) {
         console.error('Error fetching invoices:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET all bank accounts
+router.get('/accounts', async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                a.account_no,
+                a.account_name,
+                a.bank_branch,
+                a.bank_id,
+                b.bank_name
+            FROM account a
+            LEFT JOIN bank b ON a.bank_id = b.bank_id
+            ORDER BY a.account_no ASC;
+        `;
+        const result = await db.query(sql);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching accounts:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET all banks
+router.get('/banks', async (req, res) => {
+    try {
+        const sql = `SELECT * FROM bank ORDER BY bank_name ASC;`;
+        const result = await db.query(sql);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching banks:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -99,11 +138,17 @@ router.get('/invoices/:id', async (req, res) => {
                 c.phone AS customer_phone,
                 c.email AS customer_email,
                 b.booking_no,
-                qd.document_no AS quotation_no
+                qd.document_no AS quotation_no,
+                a.account_name,
+                a.bank_branch,
+                bnk.bank_id,
+                bnk.bank_name
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
             LEFT JOIN bookings b ON i.booking_id = b.booking_id
             LEFT JOIN document qd ON i.quotation_id = qd.document_id
+            LEFT JOIN account a ON i.account_no = a.account_no
+            LEFT JOIN bank bnk ON a.bank_id = bnk.bank_id
             WHERE i.invoice_id = $1 OR i.invoice_no = $1
         `, [req.params.id]);
 
@@ -129,6 +174,50 @@ router.get('/invoices/:id', async (req, res) => {
     }
 });
 
+// Helper: resolve bank (reuse if exists or insert new) and upsert account
+async function resolveAndSaveAccount(client, { account_no, account_name, bank_name, bank_branch }) {
+    if (!account_no || !account_no.trim()) {
+        return null;
+    }
+    const cleanAccountNo = account_no.trim();
+    const cleanAccountName = (account_name || '').trim();
+    const cleanBranch = (bank_branch || '').trim();
+    const cleanBankName = (bank_name || '').trim();
+
+    let resolvedBankId = null;
+
+    if (cleanBankName) {
+        // 1. Check if bank already exists (case-insensitive) -> reuse existing bank_id
+        const bankCheck = await client.query(
+            `SELECT bank_id FROM bank WHERE LOWER(TRIM(bank_name)) = LOWER(TRIM($1)) LIMIT 1`,
+            [cleanBankName]
+        );
+
+        if (bankCheck.rows.length > 0) {
+            resolvedBankId = bankCheck.rows[0].bank_id;
+        } else {
+            // New bank name -> create new bank_id and insert
+            resolvedBankId = await nextId('seq_bank', 'bnk-', 3);
+            await client.query(
+                `INSERT INTO bank (bank_id, bank_name) VALUES ($1, $2)`,
+                [resolvedBankId, cleanBankName]
+            );
+        }
+    }
+
+    // 2. Upsert into account table
+    await client.query(`
+        INSERT INTO account (account_no, account_name, bank_branch, bank_id)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (account_no) DO UPDATE SET
+            account_name = COALESCE(NULLIF(EXCLUDED.account_name, ''), account.account_name),
+            bank_branch = COALESCE(NULLIF(EXCLUDED.bank_branch, ''), account.bank_branch),
+            bank_id = COALESCE(EXCLUDED.bank_id, account.bank_id)
+    `, [cleanAccountNo, cleanAccountName, cleanBranch, resolvedBankId]);
+
+    return cleanAccountNo;
+}
+
 // CREATE new invoice
 router.post('/invoices', async (req, res) => {
     const client = await db.connect();
@@ -145,7 +234,11 @@ router.post('/invoices', async (req, res) => {
             quotation_id,
             do_no,
             remark,
-            items
+            items,
+            account_no,
+            account_name,
+            bank_name,
+            bank_branch
         } = req.body;
 
         const invId = await nextId('seq_invoice', 'inv-', 6);
@@ -177,12 +270,20 @@ router.post('/invoices', async (req, res) => {
             totalAmount += (qty * price);
         });
 
+        // Resolve and save bank & account
+        const savedAccountNo = await resolveAndSaveAccount(client, {
+            account_no,
+            account_name,
+            bank_name,
+            bank_branch
+        });
+
         // Insert into invoices
         const insertSql = `
             INSERT INTO invoices (
                 invoice_id, invoice_no, invoice_date, due_date, credit_term,
-                customer_id, booking_id, quotation_id, do_no, total_amount, remark
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                customer_id, booking_id, quotation_id, do_no, total_amount, remark, account_no
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         `;
         await client.query(insertSql, [
             invId,
@@ -195,7 +296,8 @@ router.post('/invoices', async (req, res) => {
             quotation_id || null,
             do_no || null,
             totalAmount,
-            remark || null
+            remark || null,
+            savedAccountNo
         ]);
 
         // Insert invoice_items
@@ -251,7 +353,11 @@ router.put('/invoices/:id', async (req, res) => {
             quotation_id,
             do_no,
             remark,
-            items
+            items,
+            account_no,
+            account_name,
+            bank_name,
+            bank_branch
         } = req.body;
 
         const invId = req.params.id;
@@ -265,6 +371,14 @@ router.put('/invoices/:id', async (req, res) => {
             totalAmount += (qty * price);
         });
 
+        // Resolve and save bank & account
+        const savedAccountNo = await resolveAndSaveAccount(client, {
+            account_no,
+            account_name,
+            bank_name,
+            bank_branch
+        });
+
         const updateSql = `
             UPDATE invoices SET
                 invoice_no = COALESCE(NULLIF($1, ''), invoice_no),
@@ -276,8 +390,9 @@ router.put('/invoices/:id', async (req, res) => {
                 quotation_id = NULLIF($7, ''),
                 do_no = $8,
                 total_amount = $9,
-                remark = $10
-            WHERE invoice_id = $11 OR invoice_no = $11
+                remark = $10,
+                account_no = $11
+            WHERE invoice_id = $12 OR invoice_no = $12
         `;
         await client.query(updateSql, [
             invoice_no || null,
@@ -290,6 +405,7 @@ router.put('/invoices/:id', async (req, res) => {
             do_no || null,
             totalAmount,
             remark || null,
+            savedAccountNo,
             invId
         ]);
 

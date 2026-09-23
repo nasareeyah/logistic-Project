@@ -245,6 +245,7 @@ CREATE TABLE invoices (
   do_no VARCHAR(100),
   total_amount DECIMAL(12,2) DEFAULT 0,
   remark TEXT,
+  account_no VARCHAR(50) REFERENCES account(account_no) ON DELETE SET NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

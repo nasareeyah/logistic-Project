@@ -388,6 +388,27 @@ export default function InvoicePreview({ invoice, onClose }) {
               </div>
             </div>
           </div>
+
+          {/* Payment Account Information */}
+          {(invoice.account_no || invoice.bank_name) && (
+            <div style={{ marginTop: '20px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}>
+              <div style={{ fontWeight: 'bold', color: '#0284c7', marginBottom: '6px', fontSize: '13px' }}>
+                ช่องทางการชำระเงิน (PAYMENT INFORMATION)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '16px', lineHeight: 1.6 }}>
+                <div>
+                  <span style={{ color: '#64748b' }}>ชื่อบัญชี: </span>
+                  <strong style={{ color: '#0f172a' }}>{invoice.account_name || 'บริษัท เอสที แทรนสปอร์ต แอนด์ โลจิสติกส์ จำกัด'}</strong><br />
+                  <span style={{ color: '#64748b' }}>ธนาคาร: </span>
+                  <strong style={{ color: '#0f172a' }}>{invoice.bank_name || '-'}</strong> {invoice.bank_branch ? `(${invoice.bank_branch})` : ''}
+                </div>
+                <div>
+                  <span style={{ color: '#64748b' }}>เลขที่บัญชี: </span>
+                  <strong style={{ fontSize: '14px', color: '#0284c7', letterSpacing: '0.5px' }}>{invoice.account_no}</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer / Signatures */}

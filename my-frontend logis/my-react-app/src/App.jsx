@@ -390,6 +390,7 @@ function App() {
               bookings={bookings}
               services={services}
               documents={documents}
+              documentItems={documentItems}
               fetchData={fetchData}
             />
           )}

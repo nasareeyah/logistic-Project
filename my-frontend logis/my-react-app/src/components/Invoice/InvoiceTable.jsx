@@ -15,12 +15,15 @@ import {
   ArrowLeft,
   Check,
   Building2,
-  FileCheck
+  FileCheck,
+  Landmark
 } from 'lucide-react';
 import {
   fetchInvoices,
   fetchInvoiceById,
   fetchEligibleBookings,
+  fetchAccounts,
+  fetchBanks,
   createInvoice,
   updateInvoice,
   deleteInvoice
@@ -31,6 +34,8 @@ import ActionDropdown from '../Common/ActionDropdown';
 export default function InvoiceTable({ customers = [], bookings = [], documents = [], fetchData }) {
   const [invoices, setInvoices] = useState([]);
   const [eligibleBookings, setEligibleBookings] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -45,7 +50,8 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
     { number: 1, title: 'Document Info' },
     { number: 2, title: 'Customer & Terms' },
     { number: 3, title: 'Service Items' },
-    { number: 4, title: 'Terms & Summary' }
+    { number: 4, title: 'Bank Account' },
+    { number: 5, title: 'Review & Summary' }
   ];
 
   // Form State
@@ -62,6 +68,10 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
     quotation_id: '',
     do_no: '',
     remark: '',
+    account_no: '',
+    account_name: '',
+    bank_name: '',
+    bank_branch: '',
     items: [
       {
         service_id: '',
@@ -77,12 +87,16 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [invList, eligList] = await Promise.all([
+      const [invList, eligList, accList, bankList] = await Promise.all([
         fetchInvoices(),
-        fetchEligibleBookings()
+        fetchEligibleBookings(),
+        fetchAccounts().catch(() => []),
+        fetchBanks().catch(() => [])
       ]);
       setInvoices(Array.isArray(invList) ? invList : []);
       setEligibleBookings(Array.isArray(eligList) ? eligList : []);
+      setAccounts(Array.isArray(accList) ? accList : []);
+      setBanks(Array.isArray(bankList) ? bankList : []);
     } catch (err) {
       console.error('Error loading invoices data:', err);
       setInvoices([]);
@@ -128,6 +142,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
   const handleOpenCreate = () => {
     setEditingInvoiceId(null);
     setCurrentStep(1);
+    const defaultAcc = accounts.length > 0 ? accounts[0] : null;
     setFormData({
       invoice_no: '',
       invoice_date: todayStr,
@@ -138,6 +153,10 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
       quotation_id: '',
       do_no: '',
       remark: '',
+      account_no: defaultAcc?.account_no || '',
+      account_name: defaultAcc?.account_name || '',
+      bank_name: defaultAcc?.bank_name || '',
+      bank_branch: defaultAcc?.bank_branch || '',
       items: [
         {
           service_id: '',
@@ -150,6 +169,29 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
       ]
     });
     setViewMode('wizard');
+  };
+
+  const handleSelectAccount = (accNo) => {
+    if (!accNo) {
+      setFormData(prev => ({
+        ...prev,
+        account_no: '',
+        account_name: '',
+        bank_name: '',
+        bank_branch: ''
+      }));
+      return;
+    }
+    const acc = accounts.find(a => a.account_no === accNo);
+    if (acc) {
+      setFormData(prev => ({
+        ...prev,
+        account_no: acc.account_no,
+        account_name: acc.account_name || '',
+        bank_name: acc.bank_name || '',
+        bank_branch: acc.bank_branch || ''
+      }));
+    }
   };
 
   const handleSelectBookingToInvoice = (bookingId) => {
@@ -268,6 +310,10 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
         quotation_id: detail.quotation_id || '',
         do_no: detail.do_no || '',
         remark: detail.remark || '',
+        account_no: detail.account_no || '',
+        account_name: detail.account_name || '',
+        bank_name: detail.bank_name || '',
+        bank_branch: detail.bank_branch || '',
         items: Array.isArray(detail.items) && detail.items.length > 0 ? detail.items.map(it => ({
           service_id: it.service_id || '',
           description: it.description || '',
@@ -469,31 +515,6 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div className="form-group">
-                  <label className="form-label">เลขที่ใบส่งสินค้า (DO No.)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="เช่น DO-202609-0001"
-                    value={formData.do_no}
-                    onChange={(e) => setFormData({ ...formData, do_no: e.target.value })}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">รหัสงานจองที่อ้างอิง (Booking Reference)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="เช่น bk-00031 (ดึงอัตโนมัติเมื่อเลือกงานจอง)"
-                    value={formData.booking_id}
-                    onChange={(e) => setFormData({ ...formData, booking_id: e.target.value })}
-                    disabled={!!formData.booking_id}
-                    style={{ backgroundColor: formData.booking_id ? '#f8fafc' : '#fff' }}
-                  />
-                </div>
-              </div>
             </div>
           )}
 
@@ -702,8 +723,105 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
             </div>
           )}
 
-          {/* STEP 4: Terms & Summary */}
+          {/* STEP 4: Bank Account */}
           {currentStep === 4 && (
+            <div style={{ textAlign: 'left' }}>
+              {/* Fast Account Selector */}
+              <div style={{
+                marginBottom: '24px',
+                padding: '16px 20px',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '10px',
+                border: '1px solid #bbf7d0'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: '700', color: '#15803d', fontSize: '14px' }}>
+                  <Landmark size={18} />
+                  <span>เลือกจากบัญชีธนาคารที่มีในระบบ (หรือกรอกข้อมูลใหม่ด้านล่าง)</span>
+                </div>
+                <select
+                  className="form-select"
+                  value={formData.account_no || ''}
+                  onChange={(e) => handleSelectAccount(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #86efac', backgroundColor: '#fff', fontSize: '13px' }}
+                >
+                  <option value="">— + กรอกข้อมูลบัญชีใหม่ —</option>
+                  {accounts.map(acc => (
+                    <option key={acc.account_no} value={acc.account_no}>
+                      {acc.bank_name || 'ธนาคาร'} | เลขที่: {acc.account_no} | {acc.account_name} ({acc.bank_branch || 'สำนักงานใหญ่'})
+                    </option>
+                  ))}
+                </select>
+                <small style={{ display: 'block', marginTop: '6px', color: '#166534', fontSize: '12px' }}>
+                  * เมื่อเลือก ข้อมูลจะถูกเติมลงในช่องด้านล่างอัตโนมัติ และคุณสามารถแก้ไขข้อมูลเพิ่มเติมได้ทันที
+                </small>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                  <label className="form-label">
+                    ชื่อธนาคาร (Bank Name)
+                  </label>
+                  <input
+                    type="text"
+                    list="bank-options-list"
+                    className="form-input"
+                    placeholder="พิมพ์หรือเลือก เช่น ธนาคารกสิกรไทย, ธนาคารไทยพาณิชย์"
+                    value={formData.bank_name}
+                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  />
+                  <datalist id="bank-options-list">
+                    {banks.map(b => (
+                      <option key={b.bank_id || b.bank_name} value={b.bank_name} />
+                    ))}
+                  </datalist>
+                  <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    หากชื่อธนาคารซ้ำกับที่มีอยู่ ระบบจะใช้รหัสธนาคารเดิมโดยอัตโนมัติ
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">สาขา (Branch)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="เช่น สาขาบางนา-ตราด, สำนักงานใหญ่"
+                    value={formData.bank_branch}
+                    onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-group">
+                  <label className="form-label">เลขที่บัญชี (Account No.)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="เช่น 123-4-56789-0"
+                    value={formData.account_no}
+                    onChange={(e) => setFormData({ ...formData, account_no: e.target.value })}
+                  />
+                  <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    เลขที่บัญชีจะถูกนำไปบันทึกและอ้างอิงในใบแจ้งหนี้
+                  </small>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">ชื่อบัญชี (Account Name)</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="เช่น บริษัท เอสที แทรนสปอร์ต แอนด์ โลจิสติกส์ จำกัด"
+                    value={formData.account_name}
+                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: Review & Summary */}
+          {currentStep === 5 && (
             <div style={{ textAlign: 'left' }}>
               <div className="form-group" style={{ marginBottom: '24px' }}>
                 <label className="form-label">หมายเหตุ (Remark / เงื่อนไขเพิ่มเติม)</label>
@@ -772,6 +890,30 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                   </table>
                 </div>
 
+                {/* Bank Account Summary Card */}
+                <div style={{
+                  padding: '14px 16px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                    <Landmark size={16} />
+                    <span>ข้อมูลบัญชีรับชำระเงิน (Bank Account)</span>
+                  </div>
+                  {formData.account_no ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px' }}>
+                      <div><span style={{ color: '#64748b' }}>ธนาคาร: </span><strong>{formData.bank_name || '-'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>เลขที่บัญชี: </span><strong style={{ color: '#0284c7', fontWeight: 700 }}>{formData.account_no}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>ชื่อบัญชี: </span><strong>{formData.account_name || '-'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>สาขา: </span><strong>{formData.bank_branch || '-'}</strong></div>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#94a3b8', fontSize: '13px' }}>ไม่ได้ระบุบัญชีธนาคาร (เว้นว่างไว้)</div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                   <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', marginRight: '16px' }}>ยอดรวมสุทธิทั้งสิ้น:</span>
                   <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#0284c7' }}>
@@ -804,7 +946,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
             </div>
 
             <div>
-              {currentStep < 4 ? (
+              {currentStep < 5 ? (
                 <button
                   type="button"
                   className="btn-primary"
@@ -813,7 +955,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                       alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
                       return;
                     }
-                    setCurrentStep(prev => Math.min(4, prev + 1));
+                    setCurrentStep(prev => Math.min(5, prev + 1));
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
@@ -826,10 +968,16 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                   className="btn-primary"
                   disabled={isSubmitting}
                   onClick={handleSubmit}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  style={{
+                    backgroundColor: '#16a34a',
+                    borderColor: '#16a34a',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
                 >
-                  <CheckCircle2 size={16} />
-                  <span>{isSubmitting ? 'กำลังบันทึก...' : (editingInvoiceId ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบแจ้งหนี้')}</span>
+                  <Check size={16} />
+                  <span>{isSubmitting ? 'กำลังบันทึก...' : (editingInvoiceId ? 'บันทึกการแก้ไข' : 'ยืนยันและสร้างใบแจ้งหนี้')}</span>
                 </button>
               )}
             </div>
@@ -884,25 +1032,23 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '15%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Invoice #</th>
-                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>ลูกค้า (Customer)</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>อ้างอิง DO #</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>อ้างอิง Booking #</th>
-                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>วันที่ออกเอกสาร</th>
-                <th style={{ width: '15%', textAlign: 'right', whiteSpace: 'nowrap' }}>ยอดเงินรวม (บาท)</th>
+                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Invoice #</th>
+                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>ลูกค้า (Customer)</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>วันที่ออกเอกสาร</th>
+                <th style={{ width: '18%', textAlign: 'right', whiteSpace: 'nowrap' }}>ยอดเงินรวม (บาท)</th>
                 <th style={{ width: '14%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                     ⏳ กำลังโหลดข้อมูลใบแจ้งหนี้...
                   </td>
                 </tr>
               ) : filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
                     ยังไม่มีข้อมูลใบแจ้งหนี้ คลิก "สร้างใบแจ้งหนี้ใหม่" เพื่อเริ่มต้น
                   </td>
                 </tr>
@@ -924,20 +1070,6 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                     {/* Customer */}
                     <td style={{ color: '#1e293b', fontWeight: '500', whiteSpace: 'nowrap' }}>
                       {inv.customer_name || inv.customer_id || '-'}
-                    </td>
-
-                    {/* DO Ref */}
-                    <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>
-                      {inv.do_no ? (
-                        <span style={{ backgroundColor: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                          {inv.do_no}
-                        </span>
-                      ) : '-'}
-                    </td>
-
-                    {/* Booking Ref */}
-                    <td style={{ color: '#475569', whiteSpace: 'nowrap' }}>
-                      {inv.booking_no || inv.booking_id || '-'}
                     </td>
 
                     {/* Invoice Date */}

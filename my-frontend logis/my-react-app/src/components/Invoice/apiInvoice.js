@@ -48,3 +48,16 @@ export const deleteInvoice = async (id) => {
     if (!res.ok) throw new Error(result.error || 'ลบใบแจ้งหนี้ไม่สำเร็จ');
     return result;
 };
+
+export const fetchAccounts = async () => {
+    const res = await fetch(`${BASE_URL}/accounts`);
+    if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลบัญชีธนาคารได้');
+    return await res.json();
+};
+
+export const fetchBanks = async () => {
+    const res = await fetch(`${BASE_URL}/banks`);
+    if (!res.ok) throw new Error('ไม่สามารถดึงรายชื่อธนาคารได้');
+    return await res.json();
+};
+

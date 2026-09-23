@@ -1693,6 +1693,92 @@ code {
 }
 
 /* =========================================================================
+   Universal Wizard Customer Selection (Shared across Booking, Quotation, etc.)
+   ========================================================================= */
+.step-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 16px;
+}
+
+.customer-search-field-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 20px;
+}
+
+.customer-search-field-container .search-icon-inside {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.customer-search-field-container input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.customer-search-field-container input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.single-customer-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.single-customer-card:hover {
+  border-color: #bae6fd;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.single-customer-card.selected {
+  border: 1.5px solid #0284c7;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
+}
+
+.single-customer-card .cust-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.single-customer-card .cust-contact {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.single-customer-card .cust-phone {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* =========================================================================
    PRINT STYLES — สำหรับพรีวิวใบเสนอราคา
    ========================================================================= */
 @media print {
