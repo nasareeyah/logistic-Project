@@ -10,6 +10,7 @@ import QuotationForm from './components/Quotation/QuotationForm';
 import BookingForm from './components/Booking/BookingForm';
 import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
 import InvoiceTable from './components/Invoice/InvoiceTable';
+import ReceiptTable from './components/Receipt/ReceiptTable';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
@@ -410,18 +411,13 @@ function App() {
               fetchData={fetchData}
             />
           )}
-          {/* {activeTab === 'receipt' && (
-            <DocumentTable
-              title="เอกสารใบเสร็จรับเงิน (Receipt)"
-              documents={receipts}
+          {activeTab === 'receipt' && (
+            <ReceiptTable
               customers={customers}
-              services={services}
-              serviceTypes={serviceTypes}
-              onAddDocument={(data, reset) => handleAddDocument('Receipt', data, reset)}
-              onUpdateDocument={handleSaveDocumentEdit}
-              onDeleteDocument={handleDeleteDocument}
+              documents={documents}
+              fetchData={fetchData}
             />
-          )} */}
+          )}
         </div>
       </div>
     </div>

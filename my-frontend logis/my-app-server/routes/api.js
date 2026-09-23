@@ -9,6 +9,7 @@ router.use(require('./locations'));
 router.use(require('./bookings'));
 router.use(require('./deliveryOrders'));
 router.use(require('./invoices'));
+router.use(require('./receipts'));
 router.use(require('./auth'));
 
 module.exports = router;
