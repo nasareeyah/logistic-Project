@@ -93,7 +93,8 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
       position: 'fixed',
       inset: 0,
       zIndex: 1000,
-      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+      backgroundColor: 'rgba(15, 23, 42, 0.65)',
+      backdropFilter: 'blur(4px)',
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'center',
@@ -107,7 +108,18 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
             type="button"
             className="btn-primary"
             onClick={() => window.print()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#6b21a8',
+              borderColor: '#6b21a8',
+              color: '#ffffff',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
           >
             <Printer size={16} />
             <span>Print / Export PDF</span>
@@ -116,7 +128,18 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
             type="button"
             className="btn-secondary"
             onClick={onClose}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#ffffff',
+              borderColor: '#cbd5e1',
+              color: '#334155',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
           >
             <X size={16} />
             <span>Close</span>
@@ -145,7 +168,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
                 alt="Logo"
                 style={{ height: '48px', alignSelf: 'flex-start', marginBottom: '8px', objectFit: 'contain' }}
               />
-              <div style={{ fontSize: '15px', fontWeight: '700', color: '#1b365d' }}>
+              <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
                 บริษัท เอส.ที.ทราน เอ็กซ์เพรส จำกัด
               </div>
               <div style={{ fontSize: '11px', color: '#475569' }}>
@@ -161,18 +184,18 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Right: Title & D.O. Badge */}
             <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <div style={{ fontSize: '24px', fontWeight: '800', color: '#1b365d', letterSpacing: '0.5px', lineHeight: '1.2' }}>
+              <div style={{ fontSize: '24px', fontWeight: '800', color: '#581c87', letterSpacing: '0.5px', lineHeight: '1.2' }}>
                 ใบสั่งส่งสินค้า
               </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600', letterSpacing: '1px', marginTop: '2px' }}>
+              <div style={{ fontSize: '12px', color: '#7e22ce', fontWeight: '600', letterSpacing: '1px', marginTop: '2px' }}>
                 DELIVERY ORDER (D.O.)
               </div>
               <div style={{
-                border: '1px solid #3b82f6',
+                border: '1px solid #c084fc',
                 borderRadius: '6px',
-                backgroundColor: '#eff6ff',
+                backgroundColor: '#faf5ff',
                 padding: '4px 14px',
-                color: '#1d4ed8',
+                color: '#6b21a8',
                 fontWeight: '700',
                 fontSize: '13px',
                 textAlign: 'center',
@@ -185,7 +208,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
           </div>
 
           {/* Divider Line */}
-          <div style={{ height: '1px', backgroundColor: '#cbd5e1', marginBottom: '12px' }}></div>
+          <div style={{ height: '1px', backgroundColor: '#e9d5ff', marginBottom: '12px' }} />
 
           {/* 4-Box Balanced Information Grid (2x2 Layout) */}
           <div style={{
@@ -197,10 +220,10 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
           }}>
             {/* Box 1 (Top-Left): ผู้ส่งสินค้า (CONSIGNOR) */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '10px 14px',
-              backgroundColor: '#eff6ff',
+              backgroundColor: '#faf5ff',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
               display: 'flex',
@@ -212,7 +235,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
               <div style={{
                 fontSize: '11px',
                 fontWeight: '700',
-                color: '#1b365d',
+                color: '#0f172a',
                 marginBottom: '5px'
               }}>
                 ผู้ส่งสินค้า / CONSIGNOR
@@ -227,7 +250,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Box 2 (Top-Right): รายละเอียดเอกสารและการขนส่ง (DOCUMENT & TRANSPORT DETAILS) */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '10px 14px',
               backgroundColor: '#ffffff',
@@ -240,7 +263,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
               <div style={{
                 fontSize: '11px',
                 fontWeight: '700',
-                color: '#1b365d',
+                color: '#0f172a',
                 marginBottom: '5px'
               }}>
                 รายละเอียดเอกสารและการขนส่ง / DOCUMENT DETAILS
@@ -286,10 +309,10 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Box 3 (Bottom-Left): ผู้รับสินค้า (CONSIGNEE) */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '10px 14px',
-              backgroundColor: '#eff6ff',
+              backgroundColor: '#faf5ff',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact',
               display: 'flex',
@@ -301,7 +324,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
               <div style={{
                 fontSize: '11px',
                 fontWeight: '700',
-                color: '#1b365d',
+                color: '#0f172a',
                 marginBottom: '5px'
               }}>
                 ผู้รับสินค้า / CONSIGNEE
@@ -316,7 +339,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Box 4 (Bottom-Right): ข้อมูลลูกค้า (CUSTOMER) */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '10px 14px',
               backgroundColor: '#ffffff',
@@ -329,12 +352,12 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
               <div style={{
                 fontSize: '11px',
                 fontWeight: '700',
-                color: '#1b365d',
+                color: '#0f172a',
                 marginBottom: '5px'
               }}>
                 ข้อมูลลูกค้า / CUSTOMER
               </div>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#1b365d', marginBottom: '4px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
                 {doc.customer_name || '-'}
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', color: '#475569' }}>
@@ -366,24 +389,24 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '12px', fontSize: '11px' }}>
             <thead>
               <tr style={{
-                backgroundColor: '#1b365d',
+                backgroundColor: '#581c87',
                 color: '#ffffff',
                 textAlign: 'center',
                 fontWeight: '600',
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact'
               }}>
-                <th style={{ width: '50px', padding: '7px 8px', border: '1px solid #1b365d' }}>ITEM</th>
-                <th style={{ padding: '7px 12px', textAlign: 'left', border: '1px solid #1b365d' }}>DESCRIPTION OF GOODS</th>
-                <th style={{ width: '85px', padding: '7px 8px', border: '1px solid #1b365d' }}>QUANTITY</th>
-                <th style={{ width: '180px', padding: '7px 12px', textAlign: 'left', border: '1px solid #1b365d' }}>LOAD FROM</th>
-                <th style={{ width: '180px', padding: '7px 12px', textAlign: 'left', border: '1px solid #1b365d' }}>DESTINATION</th>
+                <th style={{ width: '50px', padding: '7px 8px', border: '1px solid #581c87' }}>ITEM</th>
+                <th style={{ padding: '7px 12px', textAlign: 'left', border: '1px solid #581c87' }}>DESCRIPTION OF GOODS</th>
+                <th style={{ width: '85px', padding: '7px 8px', border: '1px solid #581c87' }}>QUANTITY</th>
+                <th style={{ width: '180px', padding: '7px 12px', textAlign: 'left', border: '1px solid #581c87' }}>LOAD FROM</th>
+                <th style={{ width: '180px', padding: '7px 12px', textAlign: 'left', border: '1px solid #581c87' }}>DESTINATION</th>
               </tr>
             </thead>
             <tbody>
               {goods.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', border: '1px solid #cbd5e1' }}>
+                  <td colSpan="5" style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', border: '1px solid #e9d5ff' }}>
                     ไม่มีรายการสินค้า
                   </td>
                 </tr>
@@ -394,20 +417,20 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
                   const destinationDisplay = item.destination || doc.destination || '-';
 
                   return (
-                    <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#f8fafc' }}>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#334155', border: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                    <tr key={idx} style={{ backgroundColor: idx % 2 === 0 ? '#ffffff' : '#faf5ff' }}>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#334155', border: '1px solid #e9d5ff', verticalAlign: 'top' }}>
                         {idx + 1}
                       </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#0f172a', fontWeight: '600', border: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#0f172a', fontWeight: '600', border: '1px solid #e9d5ff', verticalAlign: 'top' }}>
                         {item.description || item.product_name || '-'}
                       </td>
-                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#0f172a', fontWeight: '600', border: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                      <td style={{ padding: '6px 8px', textAlign: 'center', color: '#0f172a', fontWeight: '600', border: '1px solid #e9d5ff', verticalAlign: 'top' }}>
                         {qtyDisplay}
                       </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#475569', border: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#475569', border: '1px solid #e9d5ff', verticalAlign: 'top' }}>
                         {loadFromDisplay}
                       </td>
-                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#475569', border: '1px solid #cbd5e1', verticalAlign: 'top' }}>
+                      <td style={{ padding: '6px 12px', textAlign: 'left', color: '#475569', border: '1px solid #e9d5ff', verticalAlign: 'top' }}>
                         {destinationDisplay}
                       </td>
                     </tr>
@@ -427,7 +450,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
           }}>
             {/* Box 1: REMARK */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '8px 12px',
               backgroundColor: '#ffffff',
@@ -448,7 +471,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Box 2: SHIPPING */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '8px 12px',
               backgroundColor: '#ffffff',
@@ -469,7 +492,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Box 3: WAREHOUSE */}
             <div style={{
-              border: '1px solid #cbd5e1',
+              border: '1px solid #e9d5ff',
               borderRadius: '6px',
               padding: '8px 12px',
               backgroundColor: '#ffffff',
@@ -500,20 +523,20 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
           }}>
             {/* Receiver / Consignee */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ color: '#475569', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
+              <div style={{ color: '#0f172a', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
                 ผู้รับสินค้า (Received By)
               </div>
-              <div style={{ borderBottom: '1px dotted #64748b', width: '85%', height: '16px' }}></div>
+              <div style={{ borderBottom: '1px dotted #a855f7', width: '85%', height: '16px' }}></div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>(ลงลายมือชื่อผู้รับสินค้า)</div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>วันที่: ......./......./...........</div>
             </div>
 
             {/* Driver / Delivered By */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ color: '#475569', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
+              <div style={{ color: '#0f172a', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
                 พนักงานขับรถ / ผู้ส่งมอบ (Delivered By)
               </div>
-              <div style={{ borderBottom: '1px dotted #64748b', width: '85%', height: '16px' }}></div>
+              <div style={{ borderBottom: '1px dotted #a855f7', width: '85%', height: '16px' }}></div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>
                 ({doc.driver_name || 'ลงลายมือชื่อพนักงานส่งมอบ'})
               </div>
@@ -522,10 +545,10 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
 
             {/* Authorized S.T. Trans Express */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{ color: '#475569', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
+              <div style={{ color: '#0f172a', fontWeight: '600', marginBottom: '36px', textAlign: 'center' }}>
                 ในนาม บจก. เอส.ที.ทราน เอ็กซ์เพรส
               </div>
-              <div style={{ borderBottom: '1px dotted #64748b', width: '85%', height: '16px' }}></div>
+              <div style={{ borderBottom: '1px dotted #a855f7', width: '85%', height: '16px' }}></div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>(ผู้มีอำนาจลงนาม / Authorized Signature)</div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>วันที่: ......./......./...........</div>
             </div>

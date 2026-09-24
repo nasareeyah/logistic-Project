@@ -260,3 +260,34 @@ CREATE TABLE invoice_items (
   unit_price DECIMAL(12,2) DEFAULT 0,
   total_amount DECIMAL(12,2) DEFAULT 0
 );
+
+-- 22. receipts
+CREATE SEQUENCE IF NOT EXISTS seq_receipt START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_receipt_item START 1;
+
+CREATE TABLE IF NOT EXISTS receipts (
+  receipt_id VARCHAR(50) PRIMARY KEY,
+  receipt_no VARCHAR(50) UNIQUE NOT NULL,
+  invoice_id VARCHAR(50) REFERENCES invoices(invoice_id) ON DELETE SET NULL,
+  invoice_no VARCHAR(50),
+  customer_id VARCHAR(50) REFERENCES customers(customer_id) ON DELETE SET NULL,
+  payment_date DATE,
+  payment_method VARCHAR(50) DEFAULT 'Transfer',
+  account_no VARCHAR(50) REFERENCES account(account_no) ON DELETE SET NULL,
+  total_amount DECIMAL(12,2) DEFAULT 0,
+  amount_paid DECIMAL(12,2) DEFAULT 0,
+  remark TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 23. receipt_items
+CREATE TABLE IF NOT EXISTS receipt_items (
+  item_id VARCHAR(50) PRIMARY KEY,
+  receipt_id VARCHAR(50) REFERENCES receipts(receipt_id) ON DELETE CASCADE,
+  description TEXT,
+  item_date DATE,
+  quantity DECIMAL(10,2) DEFAULT 1,
+  unit VARCHAR(50) DEFAULT 'คันรถ',
+  unit_price DECIMAL(12,2) DEFAULT 0,
+  total_amount DECIMAL(12,2) DEFAULT 0
+);

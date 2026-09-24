@@ -18,6 +18,7 @@ import {
   fetchReceipts,
   fetchReceiptById,
   fetchInvoices,
+  fetchInvoiceById,
   fetchAccounts,
   createReceipt,
   updateReceipt,
@@ -26,6 +27,27 @@ import {
 import ReceiptPreview from './ReceiptPreview';
 import ActionDropdown from '../Common/ActionDropdown';
 import './ReceiptWizard.css';
+
+const generateReceiptNo = (dateStr, receiptsList = []) => {
+  let d = new Date();
+  if (dateStr) {
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const datePrefix = `RC-${year}${month}${day}-`;
+  const maxSeq = (Array.isArray(receiptsList) ? receiptsList : []).reduce((max, rc) => {
+    const no = rc && rc.receipt_no ? String(rc.receipt_no) : '';
+    if (!no.startsWith(datePrefix)) return max;
+    const m = /^RC-\d{8}-(\d{4})$/.exec(no);
+    if (!m) return max;
+    const seq = parseInt(m[1], 10);
+    return isNaN(seq) ? max : Math.max(max, seq);
+  }, 0);
+  return `${datePrefix}${String(maxSeq + 1).padStart(4, '0')}`;
+};
 
 export default function ReceiptTable({ customers = [], documents = [], fetchData }) {
   const [receipts, setReceipts] = useState([]);
@@ -55,14 +77,9 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
   // Helper date strings
   const todayStr = new Date().toISOString().slice(0, 10);
-  const generateReceiptNo = () => {
-    const dStr = todayStr.replace(/-/g, '');
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `RC-${dStr}-${rand}`;
-  };
 
   const initialFormState = {
-    receipt_no: generateReceiptNo(),
+    receipt_no: '',
     invoice_id: '',
     invoice_no: '',
     customer_id: '',
@@ -154,7 +171,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
     setFormData({
       ...initialFormState,
-      receipt_no: generateReceiptNo(),
+      receipt_no: generateReceiptNo(todayStr, receipts),
       payment_date: todayStr,
       account_no: defaultAcc?.account_no || '',
       bank_name: defaultAcc?.bank_name || 'Kasikorn Bank',
@@ -164,34 +181,63 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
     setViewMode('wizard');
   };
 
+  const handlePaymentDateChange = (newDate) => {
+    setFormData(prev => ({
+      ...prev,
+      payment_date: newDate,
+      receipt_no: (!editingReceiptId && (!prev.receipt_no || prev.receipt_no.startsWith('RC-')))
+        ? generateReceiptNo(newDate, receipts)
+        : prev.receipt_no
+    }));
+  };
+
   // Select Invoice Card in Step 1 (Matching Image 2)
-  const handleSelectInvoice = (inv) => {
+  const handleSelectInvoice = async (inv) => {
     if (!inv) return;
     setSelectedInvoice(inv);
 
     const cust = (Array.isArray(customers) ? customers : []).find(c => c.customer_id === inv.customer_id);
     const invoiceTotal = parseFloat(inv.total_amount) || 0;
 
-    // Build items from invoice or default item
-    const invoiceItems = Array.isArray(inv.items) && inv.items.length > 0
-      ? inv.items.map(it => ({
+    let invoiceItems = [];
+    try {
+      const fullInv = await fetchInvoiceById(inv.invoice_id);
+      if (Array.isArray(fullInv?.items) && fullInv.items.length > 0) {
+        invoiceItems = fullInv.items.map(it => ({
           description: it.description || 'ค่าบริการขนส่งตามใบแจ้งหนี้',
-          item_date: it.item_date ? formatDateInput(it.item_date) : (inv.invoice_date ? formatDateInput(inv.invoice_date) : todayStr),
+          item_date: it.item_date ? formatDateInput(it.item_date) : (fullInv.invoice_date ? formatDateInput(fullInv.invoice_date) : todayStr),
           quantity: parseFloat(it.quantity) || 1,
           unit: it.unit || 'คันรถ',
           unit_price: parseFloat(it.unit_price) || 0,
           total_amount: parseFloat(it.total_amount) || 0
-        }))
-      : [
-          {
-            description: inv.service_typename || 'ค่าบริการตามใบแจ้งหนี้ ' + inv.invoice_no,
-            item_date: inv.invoice_date ? formatDateInput(inv.invoice_date) : todayStr,
-            quantity: 1,
-            unit: 'งาน',
-            unit_price: invoiceTotal,
-            total_amount: invoiceTotal
-          }
-        ];
+        }));
+      }
+    } catch (err) {
+      console.warn('Could not fetch full invoice detail, using fallback:', err);
+    }
+
+    // Build items from invoice or default item if detail fetch returned none
+    if (invoiceItems.length === 0) {
+      invoiceItems = Array.isArray(inv.items) && inv.items.length > 0
+        ? inv.items.map(it => ({
+            description: it.description || 'ค่าบริการขนส่งตามใบแจ้งหนี้',
+            item_date: it.item_date ? formatDateInput(it.item_date) : (inv.invoice_date ? formatDateInput(inv.invoice_date) : todayStr),
+            quantity: parseFloat(it.quantity) || 1,
+            unit: it.unit || 'คันรถ',
+            unit_price: parseFloat(it.unit_price) || 0,
+            total_amount: parseFloat(it.total_amount) || 0
+          }))
+        : [
+            {
+              description: inv.service_typename || 'ค่าบริการตามใบแจ้งหนี้ ' + inv.invoice_no,
+              item_date: inv.invoice_date ? formatDateInput(inv.invoice_date) : todayStr,
+              quantity: 1,
+              unit: 'งาน',
+              unit_price: invoiceTotal,
+              total_amount: invoiceTotal
+            }
+          ];
+    }
 
     setFormData(prev => ({
       ...prev,
@@ -530,7 +576,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                     type="date"
                     className="receipt-field-input"
                     value={formData.payment_date}
-                    onChange={(e) => setFormData({ ...formData, payment_date: e.target.value })}
+                    onChange={(e) => handlePaymentDateChange(e.target.value)}
                   />
                 </div>
 

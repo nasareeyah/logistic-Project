@@ -535,7 +535,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                     <option value="">— เลือกลูกค้า —</option>
                     {(Array.isArray(customers) ? customers : []).map(c => (
                       <option key={c.customer_id} value={c.customer_id}>
-                        [{c.customer_id}] {c.customer_name}
+                        {c.customer_name}
                       </option>
                     ))}
                   </select>

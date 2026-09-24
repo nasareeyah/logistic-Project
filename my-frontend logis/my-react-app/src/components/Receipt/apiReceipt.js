@@ -18,6 +18,12 @@ export const fetchInvoices = async () => {
     return await res.json();
 };
 
+export const fetchInvoiceById = async (id) => {
+    const res = await fetch(`${BASE_URL}/invoices/${id}`);
+    if (!res.ok) throw new Error('ไม่สามารถดึงรายละเอียดใบแจ้งหนี้ได้');
+    return await res.json();
+};
+
 export const fetchAccounts = async () => {
     const res = await fetch(`${BASE_URL}/accounts`);
     if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลบัญชีธนาคารได้');

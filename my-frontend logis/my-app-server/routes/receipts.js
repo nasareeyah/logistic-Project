@@ -6,6 +6,8 @@ const { nextId } = require('../utils/dbHelpers');
 // Ensure tables exist
 const initReceiptsTable = async () => {
     try {
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_receipt START 1;`);
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_receipt_item START 1;`);
         await db.query(`
             CREATE TABLE IF NOT EXISTS receipts (
                 receipt_id VARCHAR(50) PRIMARY KEY,
@@ -21,7 +23,8 @@ const initReceiptsTable = async () => {
                 remark TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-
+        `);
+        await db.query(`
             CREATE TABLE IF NOT EXISTS receipt_items (
                 item_id VARCHAR(50) PRIMARY KEY,
                 receipt_id VARCHAR(50) REFERENCES receipts(receipt_id) ON DELETE CASCADE,
@@ -34,7 +37,6 @@ const initReceiptsTable = async () => {
             );
         `);
     } catch (err) {
-        // Log error but continue (e.g. if DB is unreachable in offline dev mode)
         console.warn('Note: Could not verify/create receipts tables in DB:', err.message);
     }
 };
@@ -47,6 +49,7 @@ let fallbackReceipts = [];
 // GET all receipts
 router.get('/receipts', async (req, res) => {
     try {
+        await initReceiptsTable();
         const sql = `
             SELECT 
                 r.*,
@@ -77,6 +80,7 @@ router.get('/receipts', async (req, res) => {
 // GET receipt by id with items
 router.get('/receipts/:id', async (req, res) => {
     try {
+        await initReceiptsTable();
         const { id } = req.params;
         const sql = `
             SELECT 
@@ -128,10 +132,7 @@ router.post('/receipts', async (req, res) => {
             account_no,
             items,
             remark,
-            amount_paid,
-            customer_name,
-            customer_address,
-            customer_tax_id
+            amount_paid
         } = req.body;
 
         const totalAmount = Array.isArray(items) 
@@ -140,13 +141,22 @@ router.post('/receipts', async (req, res) => {
 
         let finalReceiptNo = receipt_no;
         if (!finalReceiptNo || finalReceiptNo.trim() === '') {
-            const today = new Date();
-            const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-            const randSuffix = Math.floor(1000 + Math.random() * 9000);
-            finalReceiptNo = `RC-${dateStr}-${randSuffix}`;
+            const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }).replace(/-/g, '');
+            const prefix = `RC-${todayStr}-`;
+            const lastRes = await db.query(
+                `SELECT receipt_no FROM receipts WHERE receipt_no LIKE $1 ORDER BY receipt_no DESC LIMIT 1`,
+                [`${prefix}%`]
+            );
+            let nextSeq = 1;
+            if (lastRes.rows.length > 0) {
+                const parts = lastRes.rows[0].receipt_no.split('-');
+                const seq = parseInt(parts[parts.length - 1], 10);
+                if (!isNaN(seq)) nextSeq = seq + 1;
+            }
+            finalReceiptNo = `${prefix}${String(nextSeq).padStart(4, '0')}`;
         }
 
-        const receiptId = 'rc-' + Date.now();
+        const receiptId = await nextId('seq_receipt', 'rc-', 6);
 
         try {
             await db.query('BEGIN');
@@ -176,7 +186,7 @@ router.post('/receipts', async (req, res) => {
             if (Array.isArray(items) && items.length > 0) {
                 for (let i = 0; i < items.length; i++) {
                     const it = items[i];
-                    const itemId = `${receiptId}-it-${i + 1}`;
+                    const itemId = await nextId('seq_receipt_item', 'rci-', 6);
                     await db.query(`
                         INSERT INTO receipt_items (
                             item_id, receipt_id, description, item_date, quantity, unit, unit_price, total_amount
@@ -241,6 +251,7 @@ router.put('/receipts/:id', async (req, res) => {
         const { id } = req.params;
         const {
             receipt_no,
+            customer_id,
             payment_date,
             payment_method,
             account_no,
@@ -259,15 +270,17 @@ router.put('/receipts/:id', async (req, res) => {
             UPDATE receipts
             SET 
                 receipt_no = COALESCE($1, receipt_no),
-                payment_date = COALESCE($2, payment_date),
-                payment_method = COALESCE($3, payment_method),
-                account_no = $4,
-                total_amount = $5,
-                amount_paid = $6,
-                remark = $7
-            WHERE receipt_id = $8;
+                customer_id = COALESCE($2, customer_id),
+                payment_date = COALESCE($3, payment_date),
+                payment_method = COALESCE($4, payment_method),
+                account_no = $5,
+                total_amount = $6,
+                amount_paid = $7,
+                remark = $8
+            WHERE receipt_id = $9;
         `, [
             receipt_no,
+            customer_id || null,
             payment_date,
             payment_method,
             account_no || null,
@@ -281,7 +294,7 @@ router.put('/receipts/:id', async (req, res) => {
             await db.query(`DELETE FROM receipt_items WHERE receipt_id = $1;`, [id]);
             for (let i = 0; i < items.length; i++) {
                 const it = items[i];
-                const itemId = `${id}-it-${i + 1}`;
+                const itemId = await nextId('seq_receipt_item', 'rci-', 6);
                 await db.query(`
                     INSERT INTO receipt_items (
                         item_id, receipt_id, description, item_date, quantity, unit, unit_price, total_amount
