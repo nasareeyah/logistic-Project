@@ -3,6 +3,7 @@ import {
   Search,
   Plus,
   FileText,
+  Printer,
   Trash2,
   Edit,
   ArrowRight,
@@ -962,126 +963,122 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
   // VIEW MODE: LIST TABLE (Matching Image 1 - NO STATUS COLUMN)
   // =========================================================================
   return (
-    <div className="receipt-module-container">
-      
-      {/* Breadcrumbs matching Image 1: Main > Document Center > Receipt */}
-      <div className="receipt-breadcrumbs">
+    <div>
+      {/* Breadcrumb */}
+      <div className="dashboard-breadcrumb">
         <span>Main</span>
-        <span className="separator">&gt;</span>
-        <span>Document Center</span>
-        <span className="separator">&gt;</span>
-        <span className="active-crumb">Receipt</span>
+        <span className="dashboard-breadcrumb-separator">&gt;</span>
+        <span>Financial</span>
+        <span className="dashboard-breadcrumb-separator">&gt;</span>
+        <span style={{ color: '#64748b' }}>Receipt (ใบเสร็จรับเงิน)</span>
       </div>
 
       {/* Page Header */}
-      <div className="receipt-page-header">
-        <div>
-          <h2 className="receipt-page-title">Receipt</h2>
-          <p className="receipt-page-subtitle">
-            Generate receipts from invoices
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div style={{ textAlign: 'left' }}>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบเสร็จรับเงิน (Receipt)</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
+            ออกใบเสร็จรับเงินสำหรับงานขนส่งที่จัดส่งสินค้าและชำระเงินเรียบร้อยแล้ว โดยอิงตามใบแจ้งหนี้
           </p>
         </div>
-
-        <button className="receipt-btn-primary" onClick={handleOpenCreate}>
+        <button className="btn-primary" onClick={handleOpenCreate}>
           <Plus size={16} />
-          <span>Create Receipt</span>
+          <span>สร้างใบเสร็จรับเงินใหม่</span>
         </button>
       </div>
 
       {/* Main Table Panel */}
-      <div className="receipt-card-panel">
-        
-        {/* Search Input (Pill Shaped matching Image 1) */}
-        <div className="receipt-pill-search">
-          <Search size={16} color="#94a3b8" />
-          <input
-            type="text"
-            placeholder="Search receipts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      <div className="dashboard-card-panel" style={{ padding: '24px 0 0 0' }}>
+        <div style={{ padding: '0 24px' }}>
+          <div className="panel-search-bar">
+            <Search size={16} className="panel-search-icon" />
+            <input
+              type="text"
+              placeholder="ค้นหาตามเลขที่ใบเสร็จ, ลูกค้า, หรือเลขที่ใบแจ้งหนี้..."
+              className="panel-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* Receipt Table: WITHOUT Status Column per user instruction! */}
-        <div className="receipt-table-container">
-          <table className="receipt-table">
+        <div className="table-responsive-wrapper">
+          <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '22%' }}>Receipt #</th>
-                <th style={{ width: '28%' }}>Customer</th>
-                <th style={{ width: '18%' }}>Invoice #</th>
-                <th style={{ width: '16%' }}>Payment Date</th>
-                <th style={{ width: '16%', textAlign: 'right' }}>Amount</th>
-                <th style={{ width: '50px', textAlign: 'center' }}></th>
+                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Receipt #</th>
+                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>ลูกค้า (CUSTOMER)</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>เลขที่ใบแจ้งหนี้ (INVOICE #)</th>
+                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>วันที่ชำระเงิน</th>
+                <th style={{ width: '16%', textAlign: 'right', whiteSpace: 'nowrap' }}>ยอดเงินรวม (บาท)</th>
+                <th style={{ width: '50px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                     ⏳ กำลังโหลดข้อมูลใบเสร็จรับเงิน...
                   </td>
                 </tr>
               ) : filteredReceipts.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                    <FileText size={36} color="#cbd5e1" style={{ margin: '0 auto 10px auto' }} />
-                    <p style={{ margin: 0, fontSize: '14px' }}>
-                      {searchQuery ? 'ไม่พบข้อมูลใบเสร็จที่ตรงกับการค้นหา' : 'ยังไม่มีใบเสร็จในระบบ คลิก "+ Create Receipt" เพื่อเริ่มต้นสร้างเอกสาร'}
-                    </p>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                    {searchQuery ? 'ไม่พบข้อมูลใบเสร็จที่ตรงกับการค้นหา' : 'ยังไม่มีข้อมูลใบเสร็จรับเงิน คลิก "สร้างใบเสร็จรับเงินใหม่" เพื่อเริ่มต้น'}
                   </td>
                 </tr>
               ) : (
                 filteredReceipts.map((rc) => (
                   <tr key={rc.receipt_id}>
-                    {/* Receipt # (Clickable link to preview) */}
-                    <td>
+                    {/* Receipt # */}
+                    <td style={{ paddingLeft: '24px', fontWeight: '700', color: '#0284c7', whiteSpace: 'nowrap' }}>
                       <span
-                        className="receipt-no-link"
+                        style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         onClick={() => handleOpenPreview(rc)}
                         title="คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสร็จ"
                       >
+                        <FileText size={15} />
                         {rc.receipt_no}
                       </span>
                     </td>
 
                     {/* Customer */}
-                    <td style={{ fontWeight: '500', color: '#1e293b' }}>
-                      {rc.customer_name || '-'}
+                    <td style={{ color: '#1e293b', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                      {rc.customer_name || rc.customer_id || '-'}
                     </td>
 
                     {/* Invoice # */}
-                    <td style={{ color: '#64748b', fontSize: '13px' }}>
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                       {rc.invoice_no || '-'}
                     </td>
 
                     {/* Payment Date */}
-                    <td style={{ color: '#64748b', fontSize: '13px' }}>
-                      {rc.payment_date ? formatDateDisplay(rc.payment_date) : '-'}
+                    <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
+                      {rc.payment_date ? new Date(rc.payment_date).toLocaleDateString('th-TH') : '-'}
                     </td>
 
                     {/* Amount */}
-                    <td style={{ textAlign: 'right', fontWeight: '700', color: '#0f172a' }}>
-                      THB {formatMoney(rc.total_amount || rc.amount_paid)}
+                    <td style={{ textAlign: 'right', fontWeight: '700', color: '#0284c7', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                      {Number(rc.total_amount || rc.amount_paid || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
 
-                    {/* Actions Dropdown */}
-                    <td style={{ textAlign: 'center' }}>
+                    {/* Actions */}
+                    <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                       <ActionDropdown
                         items={[
                           {
-                            label: 'Preview',
-                            icon: <Eye size={15} className="menu-icon" />,
+                            label: 'ดูตัวอย่าง / พิมพ์',
+                            icon: <Printer size={16} className="menu-icon" />,
                             onClick: () => handleOpenPreview(rc)
                           },
                           {
-                            label: 'Edit',
-                            icon: <Edit size={15} className="menu-icon" />,
+                            label: 'แก้ไข',
+                            icon: <Edit size={16} className="menu-icon" />,
                             onClick: () => handleOpenEdit(rc)
                           },
                           {
-                            label: 'Delete',
-                            icon: <Trash2 size={15} className="menu-icon danger" />,
+                            label: 'ลบ',
+                            icon: <Trash2 size={16} className="menu-icon danger" />,
                             danger: true,
                             onClick: () => handleDelete(rc)
                           }
@@ -1094,7 +1091,6 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
             </tbody>
           </table>
         </div>
-
       </div>
 
       {/* Receipt Preview Modal */}

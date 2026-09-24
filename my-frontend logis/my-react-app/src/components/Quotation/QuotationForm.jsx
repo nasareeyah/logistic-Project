@@ -11,7 +11,9 @@ import {
   FolderOpen,
   MoreVertical,
   Edit,
-  User
+  User,
+  FileText,
+  Printer
 } from 'lucide-react';
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 import QuotationPreview from './QuotationPreview';
@@ -370,20 +372,22 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         <div className="dashboard-breadcrumb">
           <span>Main</span>
           <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span>Document Center</span>
+          <span>Financial</span>
           <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span style={{ color: '#64748b' }}>Quotation</span>
+          <span style={{ color: '#64748b' }}>Quotation (ใบเสนอราคา)</span>
         </div>
 
         {/* Page Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div style={{ textAlign: 'left' }}>
-            <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Quotation</h2>
-            <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Create and manage quotations</p>
+            <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบเสนอราคา (Quotation)</h2>
+            <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
+              สร้างและจัดการใบเสนอราคาสำหรับลูกค้า พร้อมอิงราคางานบริการขนส่ง
+            </p>
           </div>
           <button className="btn-primary" onClick={startCreateNew}>
             <Plus size={16} />
-            <span>Create New Quotation</span>
+            <span>สร้างใบเสนอราคาใหม่</span>
           </button>
         </div>
 
@@ -394,7 +398,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               <Search size={16} className="panel-search-icon" />
               <input 
                 type="text" 
-                placeholder="Search quotations..." 
+                placeholder="ค้นหาตามเลขที่ใบเสนอราคา, ลูกค้า, หรือโปรเจกต์..." 
                 className="panel-search-input"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -407,10 +411,10 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               <thead>
                 <tr>
                   <th style={{ width: '22%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Quotation #</th>
-                  <th style={{ width: '25%', whiteSpace: 'nowrap' }}>Project</th>
-                  <th style={{ width: '25%', whiteSpace: 'nowrap' }}>Customer</th>
-                  <th style={{ width: '18%', whiteSpace: 'nowrap' }}>Issue Date</th>
-                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                  <th style={{ width: '28%', whiteSpace: 'nowrap' }}>ลูกค้า (CUSTOMER)</th>
+                  <th style={{ width: '24%', whiteSpace: 'nowrap' }}>โปรเจกต์ / รายละเอียด</th>
+                  <th style={{ width: '16%', whiteSpace: 'nowrap' }}>วันที่ออกเอกสาร</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
                 </tr>
               </thead>
               <tbody>
@@ -418,27 +422,40 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   const docId = doc.document_id || doc._id;
                   return (
                     <tr key={docId}>
-                      <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0284c7', whiteSpace: 'nowrap' }}>
-                        {doc.document_no || doc.document_id}
+                      <td style={{ paddingLeft: '24px', fontWeight: '700', color: '#0284c7', whiteSpace: 'nowrap' }}>
+                        <span
+                          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                          onClick={() => handlePreview(doc)}
+                          title="คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสนอราคา"
+                        >
+                          <FileText size={15} />
+                          {doc.document_no || doc.document_id}
+                        </span>
                       </td>
-                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{doc.job_name || doc.project || '-'}</td>
-                      <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>{getCustomerName(doc.customer_id)}</td>
-                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{formatDateOnly(doc.document_date) || '-'}</td>
+                      <td style={{ color: '#1e293b', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                        {getCustomerName(doc.customer_id)}
+                      </td>
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {doc.job_name || doc.project || '-'}
+                      </td>
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {doc.document_date ? new Date(doc.document_date).toLocaleDateString('th-TH') : (formatDateOnly(doc.document_date) || '-')}
+                      </td>
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                         <ActionDropdown
                           items={[
                             {
-                              label: 'Preview',
-                              icon: <Eye size={16} className="menu-icon" />,
+                              label: 'ดูตัวอย่าง / พิมพ์',
+                              icon: <Printer size={16} className="menu-icon" />,
                               onClick: () => handlePreview(doc)
                             },
                             {
-                              label: 'Edit',
+                              label: 'แก้ไข',
                               icon: <Edit size={16} className="menu-icon" />,
                               onClick: () => handleEditQuotation(doc)
                             },
                             {
-                              label: 'Delete',
+                              label: 'ลบ',
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
                               onClick: () => handleDeleteQuotation(doc.document_id)
@@ -454,9 +471,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           </div>
 
           {filteredQuotations.length === 0 && (
-            <div className="empty-state-wrapper">
-              <FolderOpen size={48} className="empty-state-icon" />
-              <p className="empty-state-text">No quotations found. Click 'Create New Quotation' to generate one.</p>
+            <div className="empty-state-wrapper" style={{ padding: '36px', textAlign: 'center' }}>
+              <FolderOpen size={44} className="empty-state-icon" style={{ opacity: 0.4, margin: '0 auto 8px auto' }} />
+              <p className="empty-state-text" style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>
+                {searchQuery ? 'ไม่พบข้อมูลใบเสนอราคาที่ตรงกับการค้นหา' : 'ยังไม่มีใบเสนอราคาในระบบ คลิก "สร้างใบเสนอราคาใหม่" เพื่อเริ่มต้น'}
+              </p>
             </div>
           )}
         </div>

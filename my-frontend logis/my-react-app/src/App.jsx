@@ -39,6 +39,9 @@ function App() {
   const [consigners, setConsigners] = useState([]);
   const [consignees, setConsignees] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [deliveryOrders, setDeliveryOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [receipts, setReceipts] = useState([]);
 
   const handleLogin = async (email, password) => {
     if (!email || !password) {
@@ -106,10 +109,12 @@ function App() {
       fetch('http://localhost:3000/api/service_type').then(r => r.json()),
       fetch('http://localhost:3000/api/consigner').then(r => r.json()),     // [7] ผู้ส่ง
       fetch('http://localhost:3000/api/consignee').then(r => r.json()),      // [8] ผู้รับ
-      fetch('http://localhost:3000/api/bookings').then(r => r.json())   // [9]
-
+      fetch('http://localhost:3000/api/bookings').then(r => r.json()),   // [9]
+      fetch('http://localhost:3000/api/delivery-orders').then(r => r.ok ? r.json() : []).catch(() => []), // [10]
+      fetch('http://localhost:3000/api/invoices').then(r => r.ok ? r.json() : []).catch(() => []),       // [11]
+      fetch('http://localhost:3000/api/receipts').then(r => r.ok ? r.json() : []).catch(() => [])         // [12]
     ])
-      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData]) => {
+      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData, doData, invData, rcData]) => {
         setCustomers(Array.isArray(c) ? c : []);
         setCars(Array.isArray(carsData) ? carsData : []);
         setDrivers(Array.isArray(d) ? d : []);
@@ -120,6 +125,9 @@ function App() {
         setConsigners(Array.isArray(consignerData) ? consignerData : []);
         setConsignees(Array.isArray(consigneeData) ? consigneeData : []);
         setBookings(Array.isArray(bookingsData) ? bookingsData : []);
+        setDeliveryOrders(Array.isArray(doData) ? doData : []);
+        setInvoices(Array.isArray(invData) ? invData : []);
+        setReceipts(Array.isArray(rcData) ? rcData : []);
         setLoading(false);
       })
       .catch(err => {
@@ -344,7 +352,23 @@ function App() {
       <div className="dashboard-main-content">
         <Header user={currentUser} />
         <div className="dashboard-content-area">
-          {activeTab === 'dashboard' && <Dashboard customersCount={customers.length} carsCount={cars.length} driversCount={drivers.length} />}
+          {activeTab === 'dashboard' && (
+            <Dashboard 
+              customersCount={customers.length} 
+              carsCount={cars.length} 
+              driversCount={drivers.length}
+              bookings={bookings}
+              deliveryOrders={deliveryOrders}
+              invoices={invoices}
+              receipts={receipts}
+              documents={documents}
+              documentItems={documentItems}
+              customers={customers}
+              cars={cars}
+              drivers={drivers}
+              setActiveTab={setActiveTab}
+            />
+          )}
           {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} documents={documents} />}
           {activeTab === 'trucks' && (
             <CarTable

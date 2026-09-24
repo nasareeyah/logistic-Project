@@ -1608,18 +1608,22 @@ export default function DeliveryOrderTable({
       <div className="dashboard-breadcrumb">
         <span>Main</span>
         <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Delivery Order</span>
+        <span>Transport</span>
+        <span className="dashboard-breadcrumb-separator">&gt;</span>
+        <span style={{ color: '#64748b' }}>Delivery Order (ใบสั่งจัดส่งสินค้า)</span>
       </div>
 
       {/* 2. Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Delivery Order (DO)</h2>
-          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Generate delivery Orders from bookings</p>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบสั่งจัดส่งสินค้า (Delivery Order)</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
+            สร้างและจัดการใบสั่งจัดส่งสินค้า (DO) จากงานจองรถ พร้อมติดตามการขนส่ง
+          </p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreateWizard}>
           <Plus size={16} />
-          <span>Create D.O.</span>
+          <span>สร้างใบ DO ใหม่</span>
         </button>
       </div>
 
@@ -1631,7 +1635,7 @@ export default function DeliveryOrderTable({
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="Search delivery orders..."
+              placeholder="ค้นหาตามเลขที่ DO, ลูกค้า, ทะเบียนรถ, หรือสินค้า..."
               className="panel-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1644,24 +1648,19 @@ export default function DeliveryOrderTable({
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>D.O. #</th>
-                <th style={{ width: '26%', whiteSpace: 'nowrap' }}>Customer</th>
-                <th style={{ width: '22%', whiteSpace: 'nowrap' }}>Truck</th>
-                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>Date of Load</th>
-                <th style={{ width: '10%', whiteSpace: 'nowrap' }}>ETA</th>
-                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '18%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>DO #</th>
+                <th style={{ width: '26%', whiteSpace: 'nowrap' }}>ลูกค้า (Customer)</th>
+                <th style={{ width: '22%', whiteSpace: 'nowrap' }}>รถ / พนักงานขับรถ</th>
+                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>วันที่รับสินค้า</th>
+                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>กำหนดส่ง (ETA)</th>
+                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px 24px', color: '#64748b' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <Inbox size={40} style={{ opacity: 0.4 }} />
-                      <span style={{ fontSize: '0.95rem', fontWeight: '500', color: '#94a3b8' }}>
-                        ยังไม่มีรายการ Delivery Order (คลิก 'Create D.O.' เพื่อสร้างเอกสารจาก Booking)
-                      </span>
-                    </div>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                    ยังไม่มีข้อมูลใบสั่งจัดส่งสินค้า (DO) คลิก "สร้างใบ DO ใหม่" เพื่อเริ่มต้น
                   </td>
                 </tr>
               ) : (
@@ -1671,27 +1670,24 @@ export default function DeliveryOrderTable({
                   return (
                     <tr key={itemKey}>
                       {/* D.O. # Link */}
-                      <td style={{ paddingLeft: '24px' }}>
-                        <button
+                      <td style={{ paddingLeft: '24px', fontWeight: '700', color: '#0284c7', whiteSpace: 'nowrap' }}>
+                        <span
                           onClick={() => handleOpenPreview(order)}
                           style={{
-                            background: 'none',
-                            border: 'none',
-                            padding: 0,
-                            color: '#0284c7',
-                            fontWeight: '600',
                             cursor: 'pointer',
-                            textAlign: 'left'
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px'
                           }}
-                          onMouseEnter={(e) => (e.target.style.textDecoration = 'underline')}
-                          onMouseLeave={(e) => (e.target.style.textDecoration = 'none')}
+                          title="คลิกเพื่อดูตัวอย่าง / พิมพ์เอกสาร"
                         >
+                          <FileText size={15} />
                           {order.do_no}
-                        </button>
+                        </span>
                       </td>
 
                       {/* Customer */}
-                      <td style={{ color: '#1e293b', fontWeight: 500 }}>
+                      <td style={{ color: '#1e293b', fontWeight: '500', whiteSpace: 'nowrap' }}>
                         {order.customer_name || '-'}
                       </td>
 
@@ -1704,31 +1700,31 @@ export default function DeliveryOrderTable({
                       </td>
 
                       {/* Date of Load */}
-                      <td style={{ color: '#475569' }}>
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                         {formatDate(order.date_of_load)}
                       </td>
 
                       {/* ETA */}
-                      <td style={{ color: '#475569' }}>
+                      <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                         {formatDate(order.eta)}
                       </td>
 
                       {/* Actions Menu (3 dots) */}
-                      <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                      <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                         <ActionDropdown
                           items={[
                             {
-                              label: 'Preview / Print A4',
+                              label: 'ดูตัวอย่าง / พิมพ์',
                               icon: <Printer size={16} className="menu-icon" />,
                               onClick: () => handleOpenPreview(order)
                             },
                             {
-                              label: 'Edit',
+                              label: 'แก้ไข',
                               icon: <Edit size={16} className="menu-icon" />,
                               onClick: () => handleOpenEditWizard(order)
                             },
                             {
-                              label: 'Delete',
+                              label: 'ลบ',
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
                               onClick: () => handleDeleteDo(order.do_id, order.do_no)
