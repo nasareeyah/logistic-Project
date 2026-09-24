@@ -1604,14 +1604,6 @@ export default function DeliveryOrderTable({
   // =========================================================================
   return (
     <div>
-      {/* 1. Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Main</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span>Transport</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Delivery Order (ใบสั่งจัดส่งสินค้า)</span>
-      </div>
 
       {/* 2. Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>

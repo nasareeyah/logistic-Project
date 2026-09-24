@@ -9,7 +9,8 @@ import {
   Inbox,
   Package,
   MoreVertical,
-  Edit
+  Edit,
+  ArrowLeft
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 
@@ -118,36 +119,30 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
 
     return (
       <div>
-        {/* Breadcrumb */}
-        <div className="dashboard-breadcrumb">
-          <span>Master Data</span>
-          <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span
-            onClick={() => setSelectedCarId(null)}
-            style={{ cursor: 'pointer' }}
-            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-          >
-            Trucks
-          </span>
-          <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span style={{ color: '#64748b' }}>{selectedCar.car_number}</span>
-        </div>
-
         {/* Page Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ textAlign: 'left' }}>
             <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{selectedCar.car_number}</h2>
             <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Truck details &amp; job history</p>
           </div>
-          <button
-            className="btn-secondary"
-            onClick={() => openEditModal(selectedCar)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px' }}
-          >
-            <Pencil size={15} />
-            <span>Edit</span>
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setSelectedCarId(null)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px' }}
+            >
+              <ArrowLeft size={15} />
+              <span>Back</span>
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => openEditModal(selectedCar)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px' }}
+            >
+              <Pencil size={15} />
+              <span>Edit</span>
+            </button>
+          </div>
         </div>
 
         {/* Side-by-side Grid Layout */}
@@ -344,12 +339,6 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   // ============================================================
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Master Data</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Trucks</span>
-      </div>
 
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>

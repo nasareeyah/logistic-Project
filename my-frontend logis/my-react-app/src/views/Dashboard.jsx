@@ -287,12 +287,6 @@ function Dashboard({
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Main</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Dashboard</span>
-      </div>
 
       {/* Header Title */}
       <h2 className="dashboard-view-title">Dashboard</h2>

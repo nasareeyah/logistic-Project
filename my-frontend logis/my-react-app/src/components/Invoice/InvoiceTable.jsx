@@ -990,14 +990,6 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Main</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span>Financial</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Invoice (ใบแจ้งหนี้)</span>
-      </div>
 
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>

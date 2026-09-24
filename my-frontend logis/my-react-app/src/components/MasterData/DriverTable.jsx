@@ -129,12 +129,6 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Master Data</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Drivers</span>
-      </div>
 
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>

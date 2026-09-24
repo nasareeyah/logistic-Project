@@ -1625,14 +1625,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   // ----------------------------------------------------
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Main</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span>Document Center</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Booking</span>
-      </div>
 
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>

@@ -283,21 +283,6 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
 
     return (
       <div>
-        {/* Breadcrumb */}
-        <div className="dashboard-breadcrumb">
-          <span>Master Data</span>
-          <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span 
-            onClick={() => setSelectedCustomerId(null)} 
-            style={{ cursor: 'pointer' }}
-            onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-            onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-          >
-            Customers
-          </span>
-          <span className="dashboard-breadcrumb-separator">&gt;</span>
-          <span style={{ color: '#64748b' }}>{selectedCustomer.customer_name}</span>
-        </div>
 
         {/* Page Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -591,12 +576,6 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
 
   return (
     <div>
-      {/* Breadcrumb */}
-      <div className="dashboard-breadcrumb">
-        <span>Master Data</span>
-        <span className="dashboard-breadcrumb-separator">&gt;</span>
-        <span style={{ color: '#64748b' }}>Customers</span>
-      </div>
 
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
