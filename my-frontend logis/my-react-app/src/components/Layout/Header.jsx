@@ -58,7 +58,7 @@ function Header({ user }) {
 
       {/* User Actions on the Right */}
       <div className="header-actions">
-        {/* Language Dropdown (Text-only without flags) */}
+        {/* Language Dropdown */}
         <div className="header-lang-dropdown" ref={dropdownRef}>
           <button
             type="button"
@@ -97,44 +97,27 @@ function Header({ user }) {
           )}
         </div>
 
-        {/* Original User Profile */}
-        <div className="header-user-profile" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div 
-            className="header-avatar-circle" 
-            style={{ 
-              backgroundColor: roleInfo.avatarBg, 
-              color: '#ffffff', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              fontWeight: '700',
-              fontSize: '13px',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-            }}
-          >
-            <span>{roleInfo.initials}</span>
-          </div>
-          <div className="header-user-info" style={{ display: 'flex', alignItems: 'center' }}>
-            <span 
-              className="header-user-role" 
-              style={{ 
-                fontSize: '13px', 
-                fontWeight: 700, 
-                color: roleInfo.badgeColor,
-                backgroundColor: roleInfo.badgeBg,
-                border: `1px solid ${roleInfo.borderColor}`,
-                padding: '4px 12px',
-                borderRadius: '16px',
-                display: 'inline-block',
-                letterSpacing: '0.3px'
-              }}
-            >
-              {roleInfo.title}
-            </span>
-          </div>
+        {/* User Profile Avatar (Far Right) */}
+        <div 
+          className="header-avatar-circle" 
+          title={roleInfo.title}
+          style={{ 
+            backgroundColor: roleInfo.avatarBg, 
+            color: '#ffffff', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontWeight: '700',
+            fontSize: '13px',
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            cursor: 'default',
+            flexShrink: 0
+          }}
+        >
+          <span>{roleInfo.initials}</span>
         </div>
       </div>
     </div>
