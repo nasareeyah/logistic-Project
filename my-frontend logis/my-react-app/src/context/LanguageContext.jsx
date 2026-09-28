@@ -8,9 +8,9 @@ export const globalTranslations = {
     systemSubtitle: 'ระบบบริหารจัดการงานขนส่ง',
     
     // Header & Roles
-    roleEmployee: 'พนักงานทั่วไป (Employee)',
-    roleOperator: 'ฝ่ายปฏิบัติการ (Operator)',
-    roleAccounting: 'ฝ่ายการเงิน-บัญชี (Accounting)',
+    roleEmployee: 'พนักงานทั่วไป',
+    roleOperator: 'ฝ่ายปฏิบัติการ',
+    roleAccounting: 'ฝ่ายการเงิน-บัญชี',
     
     // Sidebar Groups
     menuMain: 'เมนูหลัก (MAIN)',
