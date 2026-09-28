@@ -30,12 +30,40 @@ import {
 } from './apiInvoice';
 import InvoicePreview from './InvoicePreview';
 import ActionDropdown from '../Common/ActionDropdown';
+// รันเลขที่ใบแจ้งหนี้ใหม่ทุกวัน โดยใช้วันที่เป็น prefix และเลขลำดับต่อท้าย (เช่น INV-20260928-0001)
+const generateInvoiceNo = (dateStr, invoicesList = []) => {
+  let d = new Date();
+  if (dateStr) {
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) d = parsed;
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const datePrefix = `INV-${year}${month}${day}-`;
+  const maxSeq = (Array.isArray(invoicesList) ? invoicesList : []).reduce((max, inv) => {
+    const no = inv && inv.invoice_no ? String(inv.invoice_no) : '';
+    if (!no.startsWith(datePrefix)) return max;
+    const m = /^INV-\d{8}-(\d{4})$/.exec(no);
+    if (!m) return max;
+    const seq = parseInt(m[1], 10);
+    return isNaN(seq) ? max : Math.max(max, seq);
+  }, 0);
+  return `${datePrefix}${String(maxSeq + 1).padStart(4, '0')}`;
+};
 
-export default function InvoiceTable({ customers = [], bookings = [], documents = [], fetchData }) {
+export default function InvoiceTable({
+  customers = [],
+  bookings = [],
+  documents = [],
+  accounts: propAccounts = [],
+  banks: propBanks = [],
+  fetchData
+}) {
   const [invoices, setInvoices] = useState([]);
   const [eligibleBookings, setEligibleBookings] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-  const [banks, setBanks] = useState([]);
+  const [accounts, setAccounts] = useState(propAccounts);
+  const [banks, setBanks] = useState(propBanks);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -97,6 +125,15 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
       setEligibleBookings(Array.isArray(eligList) ? eligList : []);
       setAccounts(Array.isArray(accList) ? accList : []);
       setBanks(Array.isArray(bankList) ? bankList : []);
+      setFormData(prev => {
+        if (!editingInvoiceId && (!prev.invoice_no || prev.invoice_no.startsWith('INV-'))) {
+          return {
+            ...prev,
+            invoice_no: generateInvoiceNo(prev.invoice_date || todayStr, invList)
+          };
+        }
+        return prev;
+      });
     } catch (err) {
       console.error('Error loading invoices data:', err);
       setInvoices([]);
@@ -108,6 +145,18 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (Array.isArray(propAccounts) && propAccounts.length > 0) {
+      setAccounts(propAccounts);
+    }
+  }, [propAccounts]);
+
+  useEffect(() => {
+    if (Array.isArray(propBanks) && propBanks.length > 0) {
+      setBanks(propBanks);
+    }
+  }, [propBanks]);
 
   const handleCreditTermChange = (term) => {
     const days = parseInt(term, 10);
@@ -134,6 +183,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
     }
     setFormData(prev => ({
       ...prev,
+      invoice_no: editingInvoiceId ? prev.invoice_no : generateInvoiceNo(newDate, invoices),
       invoice_date: newDate,
       due_date: newDueDate
     }));
@@ -143,8 +193,9 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
     setEditingInvoiceId(null);
     setCurrentStep(1);
     const defaultAcc = accounts.length > 0 ? accounts[0] : null;
+    const autoInvNo = generateInvoiceNo(todayStr, invoices);
     setFormData({
-      invoice_no: '',
+      invoice_no: autoInvNo,
       invoice_date: todayStr,
       due_date: defaultDueDate,
       credit_term: 30,
@@ -453,22 +504,52 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
               {!editingInvoiceId && (
                 <div style={{
                   marginBottom: '28px',
-                  padding: '18px 20px',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '10px',
-                  border: '1px solid #bae6fd'
+                  padding: '20px 22px',
+                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '4px solid #0284c7',
+                  boxShadow: '0 2px 6px -1px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: '700', color: '#0369a1', fontSize: '14px' }}>
-                    <Truck size={18} />
-                    <span>เลือกจากงานจองที่ส่งของ (DO) เรียบร้อยแล้ว</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '8px',
+                        backgroundColor: '#eff6ff',
+                        color: '#0284c7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Truck size={18} />
+                      </div>
+                      <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '14.5px' }}>
+                        เลือกจากงานจองที่ส่งของ (DO) เรียบร้อยแล้ว
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      color: '#0284c7',
+                      backgroundColor: '#eff6ff',
+                      padding: '3px 10px',
+                      borderRadius: '20px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      นำเข้าข้อมูลอัตโนมัติ
+                    </span>
                   </div>
+
                   <select
                     className="form-select"
                     style={{
                       width: '100%',
-                      padding: '10px 14px',
+                      padding: '11px 14px',
                       borderRadius: '8px',
-                      border: '1px solid #7dd3fc',
+                      border: '1px solid #cbd5e1',
                       backgroundColor: '#ffffff',
                       fontSize: '13px',
                       color: '#0f172a'
@@ -483,7 +564,7 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                       </option>
                     ))}
                   </select>
-                  <small style={{ display: 'block', marginTop: '8px', color: '#0284c7', fontSize: '12px' }}>
+                  <small style={{ display: 'block', marginTop: '8px', color: '#64748b', fontSize: '12px' }}>
                     * เมื่อเลือก ระบบจะดึงชื่อบริการ + ชื่อสินค้า (เช่น "ค่าขนส่ง เม็ดพลาสติก"), หน่วยเป็น "คันรถ", และราคาค่าบริการจากใบเสนอราคามาให้ทันที
                   </small>
                 </div>
@@ -491,16 +572,16 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
-                  <label className="form-label">เลขที่ใบแจ้งหนี้ (Invoice No.)</label>
+                  <label className="form-label">Invoice No. (auto)</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="เว้นว่างเพื่อให้ระบบสร้างอัตโนมัติ (เช่น INV-202609-0001)"
-                    value={formData.invoice_no}
-                    onChange={(e) => setFormData({ ...formData, invoice_no: e.target.value })}
+                    value={formData.invoice_no || ''}
+                    disabled
+                    style={{ backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: '600' }}
                   />
                   <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    เว้นว่างไว้หากต้องการให้ระบบสร้างเลขที่ให้อัตโนมัติ
+                    ระบบสร้างเลขที่ใบแจ้งหนี้ให้อัตโนมัติ (Auto-generated)
                   </small>
                 </div>
 
@@ -726,96 +807,146 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
           {/* STEP 4: Bank Account */}
           {currentStep === 4 && (
             <div style={{ textAlign: 'left' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Landmark size={20} color="#0284c7" />
+                  <span>เลือกบัญชีธนาคารสำหรับรับชำระเงิน (Select Bank Account)</span>
+                </h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                  เลือกบัญชีธนาคารจากระบบ Master Data เพื่อระบุข้อมูลการโอนเงินในใบแจ้งหนี้อย่างถูกต้อง
+                </p>
+              </div>
+
               {/* Fast Account Selector */}
               <div style={{
-                marginBottom: '24px',
-                padding: '16px 20px',
-                backgroundColor: '#f0fdf4',
-                borderRadius: '10px',
-                border: '1px solid #bbf7d0'
+                marginBottom: '20px',
+                padding: '18px 20px',
+                backgroundColor: '#ffffff',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', fontWeight: '700', color: '#15803d', fontSize: '14px' }}>
-                  <Landmark size={18} />
-                  <span>เลือกจากบัญชีธนาคารที่มีในระบบ (หรือกรอกข้อมูลใหม่ด้านล่าง)</span>
-                </div>
+                <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
+                  บัญชีธนาคารรับชำระเงิน <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <select
                   className="form-select"
                   value={formData.account_no || ''}
                   onChange={(e) => handleSelectAccount(e.target.value)}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #86efac', backgroundColor: '#fff', fontSize: '13px' }}
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#fff',
+                    fontSize: '13.5px',
+                    fontWeight: '500',
+                    color: '#0f172a'
+                  }}
                 >
-                  <option value="">— + กรอกข้อมูลบัญชีใหม่ —</option>
+                  <option value="">— กรุณาเลือกบัญชีธนาคาร —</option>
                   {accounts.map(acc => (
                     <option key={acc.account_no} value={acc.account_no}>
                       {acc.bank_name || 'ธนาคาร'} | เลขที่: {acc.account_no} | {acc.account_name} ({acc.bank_branch || 'สำนักงานใหญ่'})
                     </option>
                   ))}
                 </select>
-                <small style={{ display: 'block', marginTop: '6px', color: '#166534', fontSize: '12px' }}>
-                  * เมื่อเลือก ข้อมูลจะถูกเติมลงในช่องด้านล่างอัตโนมัติ และคุณสามารถแก้ไขข้อมูลเพิ่มเติมได้ทันที
-                </small>
+
+                {accounts.length === 0 && (
+                  <div style={{ marginTop: '12px', padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '13px' }}>
+                    ⚠️ ยังไม่มีข้อมูลบัญชีธนาคารในระบบ กรุณาไปเพิ่มข้อมูลบัญชีธนาคารในเมนู <strong>MASTER DATA &gt; Bank Accounts</strong> ก่อน
+                  </div>
+                )}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div className="form-group">
-                  <label className="form-label">
-                    ชื่อธนาคาร (Bank Name)
-                  </label>
-                  <input
-                    type="text"
-                    list="bank-options-list"
-                    className="form-input"
-                    placeholder="พิมพ์หรือเลือก เช่น ธนาคารกสิกรไทย, ธนาคารไทยพาณิชย์"
-                    value={formData.bank_name}
-                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                  />
-                  <datalist id="bank-options-list">
-                    {banks.map(b => (
-                      <option key={b.bank_id || b.bank_name} value={b.bank_name} />
-                    ))}
-                  </datalist>
-                  <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    หากชื่อธนาคารซ้ำกับที่มีอยู่ ระบบจะใช้รหัสธนาคารเดิมโดยอัตโนมัติ
-                  </small>
-                </div>
+              {/* Selected Account Information Card */}
+              {formData.account_no ? (
+                <div style={{
+                  padding: '20px 24px',
+                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '4px solid #0284c7',
+                  boxShadow: '0 2px 6px -1px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '8px',
+                        backgroundColor: '#eff6ff',
+                        color: '#0284c7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        <Landmark size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
+                          {formData.bank_name || 'ธนาคาร'}
+                        </div>
+                        <div style={{ fontSize: '12.5px', color: '#64748b' }}>
+                          สาขา: {formData.bank_branch || 'สำนักงานใหญ่'}
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      color: '#0284c7',
+                      backgroundColor: '#eff6ff',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      ✓ บัญชีที่เลือกสำหรับใบแจ้งหนี้นี้
+                    </span>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">สาขา (Branch)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="เช่น สาขาบางนา-ตราด, สำนักงานใหญ่"
-                    value={formData.bank_branch}
-                    onChange={(e) => setFormData({ ...formData, bank_branch: e.target.value })}
-                  />
-                </div>
-              </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '13px' }}>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>เลขที่บัญชี (Account No.):</div>
+                      <div style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formData.account_no}
+                      </div>
+                    </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                <div className="form-group">
-                  <label className="form-label">เลขที่บัญชี (Account No.)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="เช่น 123-4-56789-0"
-                    value={formData.account_no}
-                    onChange={(e) => setFormData({ ...formData, account_no: e.target.value })}
-                  />
-                  <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    เลขที่บัญชีจะถูกนำไปบันทึกและอ้างอิงในใบแจ้งหนี้
-                  </small>
-                </div>
+                    <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>ชื่อบัญชี (Account Name):</div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>
+                        {formData.account_name || '-'}
+                      </div>
+                    </div>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">ชื่อบัญชี (Account Name)</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="เช่น บริษัท เอสที แทรนสปอร์ต แอนด์ โลจิสติกส์ จำกัด"
-                    value={formData.account_name}
-                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                  />
+                  <div style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
+                    ℹ️ บัญชีนี้จะถูกพิมพ์ลงในส่วนคำแนะนำการชำระเงินของใบแจ้งหนี้ เพื่อให้ลูกค้าโอนเงินเข้าบัญชีนี้
+                  </div>
                 </div>
+              ) : (
+                <div style={{
+                  padding: '36px 20px',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  border: '1px dashed #cbd5e1',
+                  textAlign: 'center',
+                  color: '#64748b'
+                }}>
+                  <Landmark size={40} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
+                  <div style={{ fontWeight: '600', fontSize: '14px', color: '#475569' }}>
+                    ยังไม่ได้เลือกบัญชีธนาคาร
+                  </div>
+                  <div style={{ fontSize: '13px', marginTop: '4px' }}>
+                    กรุณาเลือกบัญชีธนาคารจากรายการด้านบนเพื่อใช้สำหรับใบแจ้งหนี้นี้
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: '16px', textAlign: 'right', fontSize: '12px', color: '#64748b' }}>
+                * หากต้องการเพิ่มหรือแก้ไขข้อมูลบัญชีธนาคาร สามารถไปจัดการได้ที่เมนู <strong>MASTER DATA &gt; Bank Accounts</strong>
               </div>
             </div>
           )}
@@ -953,6 +1084,10 @@ export default function InvoiceTable({ customers = [], bookings = [], documents 
                   onClick={() => {
                     if (currentStep === 2 && !formData.customer_id) {
                       alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      return;
+                    }
+                    if (currentStep === 4 && !formData.account_no) {
+                      alert('กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ');
                       return;
                     }
                     setCurrentStep(prev => Math.min(5, prev + 1));

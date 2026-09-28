@@ -6,6 +6,7 @@ import Dashboard from './views/Dashboard';
 import CustomerTable from './components/MasterData/CustomerTable';
 import CarTable from './components/MasterData/CarTable';
 import DriverTable from './components/MasterData/DriverTable';
+import BankAccountTable from './components/MasterData/BankAccountTable';
 import QuotationForm from './components/Quotation/QuotationForm';
 import BookingForm from './components/Booking/BookingForm';
 import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
@@ -42,6 +43,8 @@ function App() {
   const [deliveryOrders, setDeliveryOrders] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [receipts, setReceipts] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [banks, setBanks] = useState([]);
 
   const handleLogin = async (email, password) => {
     if (!email || !password) {
@@ -112,9 +115,11 @@ function App() {
       fetch('http://localhost:3000/api/bookings').then(r => r.json()),   // [9]
       fetch('http://localhost:3000/api/delivery-orders').then(r => r.ok ? r.json() : []).catch(() => []), // [10]
       fetch('http://localhost:3000/api/invoices').then(r => r.ok ? r.json() : []).catch(() => []),       // [11]
-      fetch('http://localhost:3000/api/receipts').then(r => r.ok ? r.json() : []).catch(() => [])         // [12]
+      fetch('http://localhost:3000/api/receipts').then(r => r.ok ? r.json() : []).catch(() => []),        // [12]
+      fetch('http://localhost:3000/api/accounts').then(r => r.ok ? r.json() : []).catch(() => []),        // [13] บัญชีธนาคาร
+      fetch('http://localhost:3000/api/banks').then(r => r.ok ? r.json() : []).catch(() => [])            // [14] ธนาคาร
     ])
-      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData, doData, invData, rcData]) => {
+      .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData, doData, invData, rcData, accData, bankData]) => {
         setCustomers(Array.isArray(c) ? c : []);
         setCars(Array.isArray(carsData) ? carsData : []);
         setDrivers(Array.isArray(d) ? d : []);
@@ -128,6 +133,8 @@ function App() {
         setDeliveryOrders(Array.isArray(doData) ? doData : []);
         setInvoices(Array.isArray(invData) ? invData : []);
         setReceipts(Array.isArray(rcData) ? rcData : []);
+        setAccounts(Array.isArray(accData) ? accData : []);
+        setBanks(Array.isArray(bankData) ? bankData : []);
         setLoading(false);
       })
       .catch(err => {
@@ -280,6 +287,60 @@ function App() {
   };
 
   // ==========================================
+  // BANK ACCOUNT ACTIONS
+  // ==========================================
+  const handleAddAccount = (newAccountData, successCallback) => {
+    fetch('http://localhost:3000/api/accounts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAccountData)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
+        else {
+          alert(data.message || 'เพิ่มบัญชีธนาคารสำเร็จ');
+          if (successCallback) successCallback();
+          fetchData();
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
+
+  const handleSaveAccountEdit = (accountNo, editAccountData, successCallback) => {
+    fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(accountNo)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editAccountData)
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) alert('แก้ไขไม่สำเร็จ: ' + data.error);
+        else {
+          alert(data.message || 'แก้ไขข้อมูลสำเร็จ');
+          if (successCallback) successCallback();
+          fetchData();
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
+
+  const handleDeleteAccount = (accountNo) => {
+    fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(accountNo)}`, {
+      method: 'DELETE'
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) alert(data.error);
+        else {
+          alert(data.message || 'ลบบัญชีสำเร็จ');
+          fetchData();
+        }
+      })
+      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+  };
+
+  // ==========================================
   // DOCUMENT ACTIONS
   // ==========================================
   //เพิ่มเอกสารใหม่
@@ -388,6 +449,16 @@ function App() {
               onDelete={handleDeleteDriver}
             />
           )}
+          {activeTab === 'bank-accounts' && (
+            <BankAccountTable
+              accounts={accounts}
+              banks={banks}
+              onAdd={handleAddAccount}
+              onUpdate={handleSaveAccountEdit}
+              onDelete={handleDeleteAccount}
+              fetchData={fetchData}
+            />
+          )}
 
           {activeTab === 'quotation' && (
             (currentUser?.role === 'operator' || currentUser?.role === 'accounting' || currentUser?.role === 'operator_accounting') ? (
@@ -432,6 +503,8 @@ function App() {
               customers={customers}
               bookings={bookings}
               documents={documents}
+              accounts={accounts}
+              banks={banks}
               fetchData={fetchData}
             />
           )}
@@ -439,6 +512,8 @@ function App() {
             <ReceiptTable
               customers={customers}
               documents={documents}
+              accounts={accounts}
+              banks={banks}
               fetchData={fetchData}
             />
           )}

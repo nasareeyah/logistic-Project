@@ -9,6 +9,7 @@ import {
   Users, 
   Truck, 
   User, 
+  Landmark,
   LogOut 
 } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
@@ -190,6 +191,17 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
                 <User size={18} />
               </span>
               <span>{t('menuDrivers', 'Drivers')}</span>
+            </li>
+
+            {/* Bank Accounts */}
+            <li 
+              className={`sidebar-menu-item ${activeTab === 'bank-accounts' ? 'active' : ''}`}
+              onClick={() => setActiveTab('bank-accounts')}
+            >
+              <span className="sidebar-menu-item-icon">
+                <Landmark size={18} />
+              </span>
+              <span>{t('menuBankAccounts', 'Bank Accounts')}</span>
             </li>
 
           </ul>

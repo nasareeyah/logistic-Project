@@ -86,6 +86,11 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
     customer_id: '',
     customer_name: '',
     customer_address: '',
+    customer_address_line: '',
+    customer_city: '',
+    customer_province: '',
+    customer_postal_code: '',
+    customer_country: 'ไทย',
     customer_tax_id: '',
     payment_date: todayStr,
     payment_method: 'Transfer',
@@ -107,6 +112,24 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
   };
 
   const [formData, setFormData] = useState(initialFormState);
+
+  // Combine address fields into full string
+  const buildCombinedAddress = (line, city, prov, postal, country) => {
+    return [line, city, prov, postal, country].filter(Boolean).join(' ');
+  };
+
+  const handleAddressChange = (field, value) => {
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      const line = field === 'customer_address_line' ? value : updated.customer_address_line;
+      const city = field === 'customer_city' ? value : updated.customer_city;
+      const prov = field === 'customer_province' ? value : updated.customer_province;
+      const postal = field === 'customer_postal_code' ? value : updated.customer_postal_code;
+      const country = field === 'customer_country' ? value : updated.customer_country;
+      updated.customer_address = buildCombinedAddress(line, city, prov, postal, country);
+      return updated;
+    });
+  };
 
   // Load Data
   const loadData = async () => {
@@ -240,13 +263,25 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
           ];
     }
 
+    const addrLine = cust?.address || cust?.street_address || inv.customer_address || '';
+    const addrCity = cust?.city || '';
+    const addrProv = cust?.province || '';
+    const addrPostal = cust?.postal_code || cust?.postalCode || '';
+    const addrCountry = cust?.country || 'ไทย';
+    const combinedAddr = buildCombinedAddress(addrLine, addrCity, addrProv, addrPostal, addrCountry) || addrLine;
+
     setFormData(prev => ({
       ...prev,
       invoice_id: inv.invoice_id,
       invoice_no: inv.invoice_no,
       customer_id: inv.customer_id || '',
       customer_name: inv.customer_name || cust?.customer_name || '',
-      customer_address: inv.customer_address || cust?.address || '',
+      customer_address: combinedAddr,
+      customer_address_line: addrLine,
+      customer_city: addrCity,
+      customer_province: addrProv,
+      customer_postal_code: addrPostal,
+      customer_country: addrCountry,
       customer_tax_id: cust?.tax_id || inv.customer_tax_id || '',
       account_no: inv.account_no || prev.account_no,
       bank_name: inv.bank_name || prev.bank_name,
@@ -308,11 +343,22 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
     try {
       setIsSubmitting(true);
+      const payload = {
+        ...formData,
+        customer_address: formData.customer_address || buildCombinedAddress(
+          formData.customer_address_line,
+          formData.customer_city,
+          formData.customer_province,
+          formData.customer_postal_code,
+          formData.customer_country
+        )
+      };
+
       if (editingReceiptId) {
-        await updateReceipt(editingReceiptId, formData);
+        await updateReceipt(editingReceiptId, payload);
         alert('แก้ไขใบเสร็จรับเงินสำเร็จ');
       } else {
-        await createReceipt(formData);
+        await createReceipt(payload);
         alert('สร้างใบเสร็จรับเงินสำเร็จ');
       }
       setViewMode('list');
@@ -332,13 +378,26 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
       setEditingReceiptId(detail.receipt_id);
       setCurrentStep(2);
 
+      const cust = (Array.isArray(customers) ? customers : []).find(c => c.customer_id === (detail.customer_id || rc.customer_id));
+      const addrLine = detail.customer_address_line || cust?.address || cust?.street_address || detail.customer_address || rc.customer_address || '';
+      const addrCity = detail.customer_city || cust?.city || '';
+      const addrProv = detail.customer_province || cust?.province || '';
+      const addrPostal = detail.customer_postal_code || cust?.postal_code || cust?.postalCode || '';
+      const addrCountry = detail.customer_country || cust?.country || 'ไทย';
+      const combinedAddr = detail.customer_address || buildCombinedAddress(addrLine, addrCity, addrProv, addrPostal, addrCountry) || addrLine;
+
       setFormData({
         receipt_no: detail.receipt_no,
         invoice_id: detail.invoice_id || '',
         invoice_no: detail.invoice_no || '',
         customer_id: detail.customer_id || '',
         customer_name: detail.customer_name || '',
-        customer_address: detail.customer_address || '',
+        customer_address: combinedAddr,
+        customer_address_line: addrLine,
+        customer_city: addrCity,
+        customer_province: addrProv,
+        customer_postal_code: addrPostal,
+        customer_country: addrCountry,
         customer_tax_id: detail.customer_tax_id || '',
         payment_date: detail.payment_date ? formatDateInput(detail.payment_date) : todayStr,
         payment_method: detail.payment_method || 'Transfer',
@@ -634,15 +693,64 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   />
                 </div>
 
+                {/* Address Line */}
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Address</label>
-                  <textarea
-                    rows="3"
+                  <label className="receipt-field-label">Address Line</label>
+                  <input
+                    type="text"
                     className="receipt-field-input"
-                    placeholder="123 Sukhumvit Rd, Bangkok 10110"
-                    value={formData.customer_address}
-                    onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
+                    placeholder="Address Line"
+                    value={formData.customer_address_line}
+                    onChange={(e) => handleAddressChange('customer_address_line', e.target.value)}
                   />
+                </div>
+
+                {/* City & State / Province */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="receipt-form-field">
+                    <label className="receipt-field-label">City</label>
+                    <input
+                      type="text"
+                      className="receipt-field-input"
+                      placeholder="City"
+                      value={formData.customer_city}
+                      onChange={(e) => handleAddressChange('customer_city', e.target.value)}
+                    />
+                  </div>
+                  <div className="receipt-form-field">
+                    <label className="receipt-field-label">State / Province</label>
+                    <input
+                      type="text"
+                      className="receipt-field-input"
+                      placeholder="State / Province"
+                      value={formData.customer_province}
+                      onChange={(e) => handleAddressChange('customer_province', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Postal Code & Country */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div className="receipt-form-field">
+                    <label className="receipt-field-label">Postal Code</label>
+                    <input
+                      type="text"
+                      className="receipt-field-input"
+                      placeholder="Postal Code"
+                      value={formData.customer_postal_code}
+                      onChange={(e) => handleAddressChange('customer_postal_code', e.target.value)}
+                    />
+                  </div>
+                  <div className="receipt-form-field">
+                    <label className="receipt-field-label">Country</label>
+                    <input
+                      type="text"
+                      className="receipt-field-input"
+                      placeholder="Country"
+                      value={formData.customer_country}
+                      onChange={(e) => handleAddressChange('customer_country', e.target.value)}
+                    />
+                  </div>
                 </div>
 
                 <div className="receipt-form-field">

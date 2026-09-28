@@ -27,6 +27,7 @@ export const globalTranslations = {
     menuCustomers: 'ข้อมูลลูกค้า (Customers)',
     menuDrivers: 'ข้อมูลคนขับรถ (Drivers)',
     menuTrucks: 'ข้อมูลรถบรรทุก (Trucks)',
+    menuBankAccounts: 'ข้อมูลบัญชีธนาคาร (Bank Accounts)',
     menuLogout: 'ออกจากระบบ',
     
     // Common Actions
@@ -71,6 +72,7 @@ export const globalTranslations = {
     menuCustomers: 'Customers',
     menuDrivers: 'Drivers',
     menuTrucks: 'Trucks',
+    menuBankAccounts: 'Bank Accounts',
     menuLogout: 'Log out',
     
     // Common Actions

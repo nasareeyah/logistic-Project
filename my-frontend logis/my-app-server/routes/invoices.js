@@ -36,40 +36,6 @@ router.get('/invoices', async (req, res) => {
     }
 });
 
-// GET all bank accounts
-router.get('/accounts', async (req, res) => {
-    try {
-        const sql = `
-            SELECT 
-                a.account_no,
-                a.account_name,
-                a.bank_branch,
-                a.bank_id,
-                b.bank_name
-            FROM account a
-            LEFT JOIN bank b ON a.bank_id = b.bank_id
-            ORDER BY a.account_no ASC;
-        `;
-        const result = await db.query(sql);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Error fetching accounts:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// GET all banks
-router.get('/banks', async (req, res) => {
-    try {
-        const sql = `SELECT * FROM bank ORDER BY bank_name ASC;`;
-        const result = await db.query(sql);
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Error fetching banks:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
 // GET bookings eligible for invoice (have DO attached or DO created)
 router.get('/invoices-eligible-bookings', async (req, res) => {
     try {
