@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import DeliveryOrderPreview from './DeliveryOrderPreview';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function DeliveryOrderTable({
   customers = [],
@@ -28,6 +29,8 @@ export default function DeliveryOrderTable({
   drivers = [],
   bookings = []
 }) {
+  const { lang, t, tText, formatDateLocale } = useLanguage();
+
   // viewMode: 'table' | 'wizard' | 'summary'
   const [viewMode, setViewMode] = useState('table');
   const [currentStep, setCurrentStep] = useState(1);
@@ -203,30 +206,19 @@ export default function DeliveryOrderTable({
     fetchBookingsList();
   }, []);
 
-  // Format date helper: "22 Jul 2026"
+  // Format date helper based on language
   const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
+    return formatDateLocale ? formatDateLocale(dateStr) : dateStr;
   };
 
   // 6 Steps List
   const stepsList = [
-    { num: 1, label: 'Select Booking' },
-    { num: 2, label: 'Parties' },
-    { num: 3, label: 'Transport' },
-    { num: 4, label: 'Goods' },
-    { num: 5, label: 'Shipping & Remark' },
-    { num: 6, label: 'Review' }
+    { num: 1, label: t('doStep1', 'เลือกรอบการจอง') },
+    { num: 2, label: t('doStep2', 'คู่ค้าและสถานที่') },
+    { num: 3, label: t('doStep3', 'ข้อมูลขนส่ง') },
+    { num: 4, label: t('doStep4', 'รายการสินค้า') },
+    { num: 5, label: t('doStep5', 'การจัดส่งและหมายเหตุ') },
+    { num: 6, label: t('doStep6', 'ตรวจสอบและยืนยัน') }
   ];
 
   // Open Create Wizard
@@ -837,15 +829,15 @@ export default function DeliveryOrderTable({
                   }}
                 >
                   <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Consignor / ผู้ส่งสินค้า
+                    {tText('ผู้ส่งสินค้า (Consignor)', 'Consignor')}
                   </h4>
 
                   <div className="form-group">
-                    <label className="form-label">Company Name</label>
+                    <label className="form-label">{tText('ชื่อบริษัท / ผู้ส่ง', 'Company Name')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Company name..."
+                      placeholder={tText('ระบุชื่อบริษัทหรือผู้ส่ง...', 'Company name...')}
                       value={formData.consignor_name}
                       onChange={(e) => setFormData({ ...formData, consignor_name: e.target.value })}
                     />
@@ -853,11 +845,11 @@ export default function DeliveryOrderTable({
 
                   {/* Split Address matching Booking UI */}
                   <div className="form-group">
-                    <label className="form-label">Address Line</label>
+                    <label className="form-label">{tText('ที่อยู่', 'Address Line')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Street address / Location"
+                      placeholder={tText('เลขที่ อาคาร ถนน หรือจุดนัดหมาย...', 'Street address / Location')}
                       value={formData.consignor_address}
                       onChange={(e) => setFormData({ ...formData, consignor_address: e.target.value })}
                     />
@@ -865,21 +857,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">City</label>
+                      <label className="form-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="City"
+                        placeholder={tText('อำเภอ / เขต', 'City / District')}
                         value={formData.consignor_city}
                         onChange={(e) => setFormData({ ...formData, consignor_city: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">State / Province</label>
+                      <label className="form-label">{tText('จังหวัด', 'State / Province')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="State / Province"
+                        placeholder={tText('จังหวัด', 'State / Province')}
                         value={formData.consignor_state}
                         onChange={(e) => setFormData({ ...formData, consignor_state: e.target.value })}
                       />
@@ -888,21 +880,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Postal Code</label>
+                      <label className="form-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Postal code"
+                        placeholder={tText('รหัสไปรษณีย์', 'Postal code')}
                         value={formData.consignor_postal_code}
                         onChange={(e) => setFormData({ ...formData, consignor_postal_code: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Country</label>
+                      <label className="form-label">{tText('ประเทศ', 'Country')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Country"
+                        placeholder={tText('ประเทศ', 'Country')}
                         value={formData.consignor_country}
                         onChange={(e) => setFormData({ ...formData, consignor_country: e.target.value })}
                       />
@@ -923,15 +915,15 @@ export default function DeliveryOrderTable({
                   }}
                 >
                   <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Consignee / ผู้รับสินค้า
+                    {tText('ผู้รับสินค้า (Consignee)', 'Consignee')}
                   </h4>
 
                   <div className="form-group">
-                    <label className="form-label">Company Name</label>
+                    <label className="form-label">{tText('ชื่อบริษัท / ผู้รับ', 'Company Name')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Company name..."
+                      placeholder={tText('ระบุชื่อบริษัทหรือผู้รับ...', 'Company name...')}
                       value={formData.consignee_name}
                       onChange={(e) => setFormData({ ...formData, consignee_name: e.target.value })}
                     />
@@ -939,11 +931,11 @@ export default function DeliveryOrderTable({
 
                   {/* Split Address matching Booking UI */}
                   <div className="form-group">
-                    <label className="form-label">Address Line</label>
+                    <label className="form-label">{tText('ที่อยู่', 'Address Line')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Street address / Location"
+                      placeholder={tText('เลขที่ อาคาร ถนน หรือจุดส่งมอบ...', 'Street address / Location')}
                       value={formData.consignee_address}
                       onChange={(e) => setFormData({ ...formData, consignee_address: e.target.value })}
                     />
@@ -951,21 +943,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">City</label>
+                      <label className="form-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="City"
+                        placeholder={tText('อำเภอ / เขต', 'City / District')}
                         value={formData.consignee_city}
                         onChange={(e) => setFormData({ ...formData, consignee_city: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">State / Province</label>
+                      <label className="form-label">{tText('จังหวัด', 'State / Province')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="State / Province"
+                        placeholder={tText('จังหวัด', 'State / Province')}
                         value={formData.consignee_state}
                         onChange={(e) => setFormData({ ...formData, consignee_state: e.target.value })}
                       />
@@ -974,21 +966,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Postal Code</label>
+                      <label className="form-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Postal code"
+                        placeholder={tText('รหัสไปรษณีย์', 'Postal code')}
                         value={formData.consignee_postal_code}
                         onChange={(e) => setFormData({ ...formData, consignee_postal_code: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Country</label>
+                      <label className="form-label">{tText('ประเทศ', 'Country')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Country"
+                        placeholder={tText('ประเทศ', 'Country')}
                         value={formData.consignee_country}
                         onChange={(e) => setFormData({ ...formData, consignee_country: e.target.value })}
                       />
@@ -1027,7 +1019,7 @@ export default function DeliveryOrderTable({
                     }}
                   >
                     <Plus size={16} />
-                    <span>เพิ่มสถานที่จัดส่ง (ตัวเลือกเพิ่มเติม)</span>
+                    <span>{tText('เพิ่มสถานที่จัดส่ง (ตัวเลือกเพิ่มเติม)', '+ Add Delivery Location (Optional)')}</span>
                   </button>
                 </div>
               ) : (
@@ -1047,7 +1039,7 @@ export default function DeliveryOrderTable({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                        สถานที่จัดส่ง
+                        {tText('สถานที่จัดส่ง (Customer)', 'Delivery Location (Customer)')}
                       </h4>
                       <span
                         style={{
@@ -1059,7 +1051,7 @@ export default function DeliveryOrderTable({
                           borderRadius: '6px'
                         }}
                       >
-                        ตัวเลือกเพิ่มเติม
+                        {tText('ตัวเลือกเพิ่มเติม', 'Optional')}
                       </span>
                     </div>
 
@@ -1097,30 +1089,30 @@ export default function DeliveryOrderTable({
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = '#fee2e2';
                       }}
-                      title="ลบข้อมูลสถานที่จัดส่ง"
+                      title={tText('ลบข้อมูลสถานที่จัดส่ง', 'Remove delivery location')}
                     >
                       <Trash2 size={14} />
-                      <span>ลบข้อมูลสถานที่จัดส่ง</span>
+                      <span>{tText('ลบข้อมูลสถานที่จัดส่ง', 'Remove location')}</span>
                     </button>
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Customer / Company Name</label>
+                    <label className="form-label">{tText('ชื่อลูกค้า / สถานที่จัดส่ง', 'Customer / Location Name')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Customer name or company..."
+                      placeholder={tText('ระบุชื่อลูกค้า หรือสถานที่จัดส่ง...', 'Customer name or company...')}
                       value={formData.customer_name}
                       onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Address Line</label>
+                    <label className="form-label">{tText('ที่อยู่', 'Address Line')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Street address / Location"
+                      placeholder={tText('เลขที่ อาคาร ถนน หรือจุดจัดส่ง...', 'Street address / Location')}
                       value={formData.customer_address}
                       onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
                     />
@@ -1128,21 +1120,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">City</label>
+                      <label className="form-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="City"
+                        placeholder={tText('อำเภอ / เขต', 'City / District')}
                         value={formData.customer_city}
                         onChange={(e) => setFormData({ ...formData, customer_city: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">State / Province</label>
+                      <label className="form-label">{tText('จังหวัด', 'State / Province')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="State / Province"
+                        placeholder={tText('จังหวัด', 'State / Province')}
                         value={formData.customer_state}
                         onChange={(e) => setFormData({ ...formData, customer_state: e.target.value })}
                       />
@@ -1151,21 +1143,21 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Postal Code</label>
+                      <label className="form-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Postal code"
+                        placeholder={tText('รหัสไปรษณีย์', 'Postal code')}
                         value={formData.customer_postal_code}
                         onChange={(e) => setFormData({ ...formData, customer_postal_code: e.target.value })}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Country</label>
+                      <label className="form-label">{tText('ประเทศ', 'Country')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Country"
+                        placeholder={tText('ประเทศ', 'Country')}
                         value={formData.customer_country}
                         onChange={(e) => setFormData({ ...formData, customer_country: e.target.value })}
                       />
@@ -1195,12 +1187,12 @@ export default function DeliveryOrderTable({
                   }}
                 >
                   <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Document Info
+                    {tText('ข้อมูลเอกสาร', 'Document Info')}
                   </h4>
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">D.O. No.</label>
+                      <label className="form-label">{tText('เลขที่ใบสั่งจัดส่ง (D.O. No.)', 'D.O. No.')}</label>
                       <input
                         type="text"
                         className="form-input"
@@ -1209,11 +1201,11 @@ export default function DeliveryOrderTable({
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Invoice No. / เลขที่</label>
+                      <label className="form-label">{tText('เลขที่ใบแจ้งหนี้ (Invoice No.)', 'Invoice No.')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="45484466"
+                        placeholder={tText('ระบุเลขที่ใบแจ้งหนี้ (ถ้ามี)', 'Invoice number...')}
                         value={formData.invoice_no}
                         onChange={(e) => setFormData({ ...formData, invoice_no: e.target.value })}
                       />
@@ -1222,22 +1214,22 @@ export default function DeliveryOrderTable({
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Date of Load</label>
+                      <label className="form-label">{tText('วันที่รับสินค้า / วันขึ้นของ', 'Date of Load')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="Date of Load (ดึงตาม Booking)"
+                        placeholder={tText('วันที่รับสินค้า (ดึงตาม Booking)', 'Date of Load (from Booking)')}
                         value={formatDate(formData.date_of_load)}
                         readOnly
                         style={{ backgroundColor: '#f8fafc', color: '#1e293b', cursor: 'default' }}
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">ETA</label>
+                      <label className="form-label">{tText('กำหนดส่งถึงปลายทาง (ETA)', 'Estimated Arrival (ETA)')}</label>
                       <input
                         type="text"
                         className="form-input"
-                        placeholder="ETA (ดึงตาม Booking)"
+                        placeholder={tText('กำหนดส่งถึง (ดึงตาม Booking)', 'ETA (from Booking)')}
                         value={formatDate(formData.eta)}
                         readOnly
                         style={{ backgroundColor: '#f8fafc', color: '#1e293b', cursor: 'default' }}
@@ -1259,15 +1251,15 @@ export default function DeliveryOrderTable({
                   }}
                 >
                   <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Transport Assignment
+                    {tText('การมอบหมายรถและคนขับ', 'Transport Assignment')}
                   </h4>
 
                   <div className="form-group">
-                    <label className="form-label">Truck No. / ทะเบียนรถ</label>
+                    <label className="form-label">{tText('ทะเบียนรถ', 'Truck No.')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ทะเบียนรถ (ดึงตาม Booking)"
+                      placeholder={tText('ทะเบียนรถ (ดึงตาม Booking)', 'Truck No. (from Booking)')}
                       value={formData.truck_number || ''}
                       readOnly
                       style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
@@ -1275,11 +1267,11 @@ export default function DeliveryOrderTable({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Driver Name / พนักงานขับรถ</label>
+                    <label className="form-label">{tText('พนักงานขับรถ', 'Driver Name')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="ชื่อคนขับ (ดึงตาม Booking)"
+                      placeholder={tText('ชื่อคนขับ (ดึงตาม Booking)', 'Driver Name (from Booking)')}
                       value={formData.driver_name || ''}
                       readOnly
                       style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
@@ -1287,11 +1279,11 @@ export default function DeliveryOrderTable({
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Driver Phone / เบอร์โทรคนขับ</label>
+                    <label className="form-label">{tText('เบอร์โทรคนขับ', 'Driver Phone')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="เบอร์โทรคนขับ (ดึงตาม Booking)"
+                      placeholder={tText('เบอร์โทรคนขับ (ดึงตาม Booking)', 'Driver Phone (from Booking)')}
                       value={formData.driver_phone || ''}
                       readOnly
                       style={{ backgroundColor: '#f8fafc', color: '#1e293b' }}
@@ -1317,7 +1309,7 @@ export default function DeliveryOrderTable({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                    Goods / Description of Goods
+                    {tText('รายการสินค้าที่จัดส่ง', 'Goods & Cargo Items')}
                   </h4>
                   <button
                     type="button"
@@ -1326,7 +1318,7 @@ export default function DeliveryOrderTable({
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '13px' }}
                   >
                     <Plus size={14} />
-                    <span>Add Item</span>
+                    <span>{tText('เพิ่มรายการสินค้า', 'Add Item')}</span>
                   </button>
                 </div>
 
@@ -1346,44 +1338,44 @@ export default function DeliveryOrderTable({
                       }}
                     >
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '12px' }}>Description of Goods</label>
+                        <label className="form-label" style={{ fontSize: '12px' }}>{tText('ชื่อสินค้า / รายละเอียด', 'Description of Goods')}</label>
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Steel Pipes"
+                          placeholder={tText('เช่น ท่อเหล็ก, พาเลท, สินค้าอุปโภค...', 'e.g. Steel Pipes...')}
                           value={item.description || ''}
                           onChange={(e) => handleGoodsChange(idx, 'description', e.target.value)}
                         />
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '12px' }}>Quantity</label>
+                        <label className="form-label" style={{ fontSize: '12px' }}>{tText('จำนวน', 'Quantity')}</label>
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="10"
+                          placeholder="1"
                           value={item.quantity || ''}
                           onChange={(e) => handleGoodsChange(idx, 'quantity', e.target.value)}
                         />
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '12px' }}>Load From</label>
+                        <label className="form-label" style={{ fontSize: '12px' }}>{tText('จุดขึ้นของ (ต้นทาง)', 'Load From (Origin)')}</label>
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Load From / ต้นทาง"
+                          placeholder={tText('สถานที่รับสินค้าต้นทาง', 'Origin loading point')}
                           value={item.load_from || ''}
                           onChange={(e) => handleGoodsChange(idx, 'load_from', e.target.value)}
                         />
                       </div>
 
                       <div className="form-group" style={{ margin: 0 }}>
-                        <label className="form-label" style={{ fontSize: '12px' }}>Destination</label>
+                        <label className="form-label" style={{ fontSize: '12px' }}>{tText('สถานที่ส่ง (ปลายทาง)', 'Destination')}</label>
                         <input
                           type="text"
                           className="form-input"
-                          placeholder="Destination / ปลายทาง"
+                          placeholder={tText('สถานที่ส่งมอบปลายทาง', 'Destination delivery point')}
                           value={item.destination || ''}
                           onChange={(e) => handleGoodsChange(idx, 'destination', e.target.value)}
                         />
@@ -1401,7 +1393,7 @@ export default function DeliveryOrderTable({
                             padding: '9px 10px',
                             cursor: 'pointer'
                           }}
-                          title="Remove item"
+                          title={tText('ลบรายการสินค้า', 'Remove item')}
                         >
                           <Trash2 size={16} />
                         </button>
@@ -1431,28 +1423,28 @@ export default function DeliveryOrderTable({
                 }}
               >
                 <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                  Shipping & Warehouse Details
+                  {tText('ข้อมูลการจัดส่งและคลังสินค้า', 'Shipping & Warehouse Details')}
                 </h4>
 
                 {/* Shipping & Warehouse in the same row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className="form-group">
-                    <label className="form-label">Shipping</label>
+                    <label className="form-label">{tText('สายการเดินเรือ / บริษัทขนส่ง', 'Shipping Line / Carrier')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="เช่น KLM, สายเรือ / ขนส่ง"
+                      placeholder={tText('เช่น KLM, สายเรือ, บริษัทขนส่ง...', 'e.g. KLM, Carrier...')}
                       value={formData.shipping}
                       onChange={(e) => setFormData({ ...formData, shipping: e.target.value })}
                     />
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Warehouse</label>
+                    <label className="form-label">{tText('คลังสินค้า', 'Warehouse')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="เช่น BKK, คลังสินค้า"
+                      placeholder={tText('เช่น คลังสินค้าลาดกระบัง, ท่าเรือ...', 'e.g. BKK Warehouse...')}
                       value={formData.warehouse}
                       onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
                     />
@@ -1461,11 +1453,11 @@ export default function DeliveryOrderTable({
 
                 {/* Remark below on full width formatted nicely */}
                 <div className="form-group" style={{ marginTop: '4px' }}>
-                  <label className="form-label">Remark / หมายเหตุ</label>
+                  <label className="form-label">{tText('หมายเหตุเพิ่มเติม', 'Remarks / Notes')}</label>
                   <textarea
                     className="form-textarea"
                     rows={4}
-                    placeholder="ข้อความหมายเหตุ เช่น be careful, ระวังแตก..."
+                    placeholder={tText('ข้อความหมายเหตุ เช่น ระวังแตก, ขับช้าๆ, ส่งมอบตรงเวลา...', 'Special remarks e.g. handle with care...')}
                     value={formData.remark}
                     onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
                   />
@@ -1480,16 +1472,16 @@ export default function DeliveryOrderTable({
           {currentStep === 6 && (
             <div style={{ textAlign: 'left' }}>
               <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a', marginBottom: '20px' }}>
-                Review & Confirm
+                {tText('ตรวจสอบและยืนยันข้อมูล', 'Review & Confirm')}
               </h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {/* 1. Header Info Card */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>BOOKING & CUSTOMER</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>{tText('ข้อมูลการจองและลูกค้า', 'BOOKING & CUSTOMER')}</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: '#0284c7', marginTop: '4px' }}>
-                      {formData.booking_no || 'Manual Entry'}
+                      {formData.booking_no || tText('กรอกข้อมูลเอง (Manual)', 'Manual Entry')}
                     </div>
                     <div style={{ fontSize: '14px', color: '#1e293b', marginTop: '2px' }}>
                       {includeCustomer && formData.customer_name ? formData.customer_name : '—'}
@@ -1497,12 +1489,12 @@ export default function DeliveryOrderTable({
                   </div>
 
                   <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>DOCUMENT INFO</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>{tText('ข้อมูลเอกสาร', 'DOCUMENT INFO')}</div>
                     <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', marginTop: '4px' }}>
-                      D.O. No: {formData.do_no}
+                      {tText('เลขที่ DO:', 'D.O. No:')} {formData.do_no}
                     </div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-                      Invoice No: {formData.invoice_no || '-'}
+                      {tText('เลขที่ใบแจ้งหนี้:', 'Invoice No:')} {formData.invoice_no || '-'}
                     </div>
                   </div>
                 </div>
@@ -1511,7 +1503,7 @@ export default function DeliveryOrderTable({
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
-                      CONSIGNOR (ผู้ส่ง)
+                      {tText('ผู้ส่งสินค้า (CONSIGNOR)', 'CONSIGNOR')}
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.consignor_name || '-'}</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
@@ -1521,7 +1513,7 @@ export default function DeliveryOrderTable({
 
                   <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
-                      CONSIGNEE (ผู้รับ)
+                      {tText('ผู้รับสินค้า (CONSIGNEE)', 'CONSIGNEE')}
                     </div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.consignee_name || '-'}</div>
                     <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
@@ -1532,7 +1524,7 @@ export default function DeliveryOrderTable({
                   {includeCustomer && formData.customer_name && (
                     <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', gridColumn: '1 / -1' }}>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
-                        CUSTOMER (ลูกค้า)
+                        {tText('สถานที่จัดส่ง (DELIVERY LOCATION)', 'DELIVERY LOCATION')}
                       </div>
                       <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.customer_name}</div>
                       <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
@@ -1545,33 +1537,33 @@ export default function DeliveryOrderTable({
                 {/* 3. Transport & Dates */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div style={{ backgroundColor: '#f0fdf4', padding: '16px', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>SCHEDULE</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#15803d' }}>{tText('กำหนดการขนส่ง', 'SCHEDULE')}</div>
                     <div style={{ fontSize: '14px', color: '#166534', marginTop: '4px' }}>
-                      <strong>Date of Load:</strong> {formatDate(formData.date_of_load)}
+                      <strong>{tText('วันที่รับสินค้า:', 'Date of Load:')}</strong> {formatDate(formData.date_of_load)}
                     </div>
                     <div style={{ fontSize: '14px', color: '#166534', marginTop: '2px' }}>
-                      <strong>ETA:</strong> {formatDate(formData.eta)}
+                      <strong>{tText('กำหนดส่งถึง:', 'ETA:')}</strong> {formatDate(formData.eta)}
                     </div>
                   </div>
 
                   <div style={{ backgroundColor: '#f0f9ff', padding: '16px', borderRadius: '10px', border: '1px solid #bae6fd' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>TRANSPORT ASSIGNMENT</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#0369a1' }}>{tText('การมอบหมายรถและคนขับ', 'TRANSPORT ASSIGNMENT')}</div>
                     <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a', marginTop: '4px' }}>
-                      Truck: {formData.truck_number || '-'}
+                      {tText('รถบรรทุก:', 'Truck:')} {formData.truck_number || '-'}
                     </div>
                     <div style={{ fontSize: '13px', color: '#0369a1', marginTop: '2px' }}>
-                      Driver: {formData.driver_name || '-'} {formData.driver_phone ? `(${formData.driver_phone})` : ''}
+                      {tText('คนขับ:', 'Driver:')} {formData.driver_name || '-'} {formData.driver_phone ? `(${formData.driver_phone})` : ''}
                     </div>
                   </div>
                 </div>
 
                 {/* 4. Goods items */}
                 <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>GOODS DESCRIPTION</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '8px' }}>{tText('รายการสินค้า', 'GOODS DESCRIPTION')}</div>
                   {formData.goods_items.map((item, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < formData.goods_items.length - 1 ? '1px solid #f1f5f9' : 'none', fontSize: '13px' }}>
                       <div>
-                        <strong>#{i + 1} {item.description || 'Goods'}</strong> ({item.quantity || 1} units)
+                        <strong>#{i + 1} {item.description || tText('สินค้า', 'Goods')}</strong> ({item.quantity || 1} {tText('หน่วย', 'units')})
                       </div>
                       <div style={{ color: '#64748b' }}>
                         {item.load_from || '-'} → {item.destination || '-'}
@@ -1584,17 +1576,17 @@ export default function DeliveryOrderTable({
                 <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
                     <div>
-                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Shipping: </span>
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{tText('สายเรือ/ขนส่ง: ', 'Shipping: ')}</span>
                       <span style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600 }}>{formData.shipping || '-'}</span>
                     </div>
                     <div>
-                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Warehouse: </span>
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{tText('คลังสินค้า: ', 'Warehouse: ')}</span>
                       <span style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600 }}>{formData.warehouse || '-'}</span>
                     </div>
                   </div>
                   {formData.remark && (
                     <div style={{ fontSize: '13px', color: '#475569', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
-                      <strong>Remark:</strong> {formData.remark}
+                      <strong>{tText('หมายเหตุ: ', 'Remark: ')}</strong> {formData.remark}
                     </div>
                   )}
                 </div>
@@ -1633,7 +1625,7 @@ export default function DeliveryOrderTable({
                 }}
               >
                 <ArrowLeft size={16} />
-                <span>Back</span>
+                <span>{t('actionBack', 'ย้อนกลับ')}</span>
               </button>
             </div>
 
@@ -1645,7 +1637,7 @@ export default function DeliveryOrderTable({
                   onClick={() => setCurrentStep((prev) => Math.min(6, prev + 1))}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <span>Next</span>
+                  <span>{t('actionNext', 'ถัดไป')}</span>
                   <ArrowRight size={16} />
                 </button>
               ) : (
@@ -1657,7 +1649,7 @@ export default function DeliveryOrderTable({
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Check size={16} />
-                  <span>{saving ? 'Saving...' : editingDoId ? 'Save Changes' : 'Create D.O.'}</span>
+                  <span>{saving ? t('actionSaving', 'กำลังบันทึก...') : editingDoId ? t('actionSave', 'บันทึกการแก้ไข') : tText('ยืนยันสร้างใบ DO', 'Create D.O.')}</span>
                 </button>
               )}
             </div>
@@ -1690,13 +1682,13 @@ export default function DeliveryOrderTable({
             }}
           >
             <ArrowLeft size={16} />
-            <span>Back to delivery orders</span>
+            <span>{tText('กลับไปหน้ารายการ DO', 'Back to delivery orders')}</span>
           </button>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>
-            Delivery Order: {selectedDoForView.do_no}
+            {tText('ใบสั่งจัดส่งสินค้า', 'Delivery Order')}: {selectedDoForView.do_no}
           </h2>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
@@ -1706,7 +1698,7 @@ export default function DeliveryOrderTable({
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Printer size={16} />
-              <span>Preview / Print A4</span>
+              <span>{tText('ดูตัวอย่าง / พิมพ์เอกสาร A4', 'Preview / Print A4')}</span>
             </button>
             <button
               type="button"
@@ -1715,7 +1707,7 @@ export default function DeliveryOrderTable({
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Pencil size={16} />
-              <span>Edit Delivery Order</span>
+              <span>{tText('แก้ไขใบสั่งจัดส่งสินค้า', 'Edit Delivery Order')}</span>
             </button>
           </div>
         </div>
@@ -1724,14 +1716,14 @@ export default function DeliveryOrderTable({
         <div className="dashboard-card-panel" style={{ padding: '32px', textAlign: 'left' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
             <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>CUSTOMER</div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>{tText('ลูกค้า', 'CUSTOMER')}</div>
               <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
                 {selectedDoForView.customer_name || '-'}
               </div>
             </div>
 
             <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>TRUCK & DRIVER</div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>{tText('รถและพนักงานขับรถ', 'TRUCK & DRIVER')}</div>
               <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
                 {selectedDoForView.truck_number || '-'}
               </div>
@@ -1741,28 +1733,28 @@ export default function DeliveryOrderTable({
             </div>
 
             <div style={{ backgroundColor: '#f8fafc', padding: '18px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>DATES</div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>{tText('กำหนดการขนส่ง', 'SCHEDULE DATES')}</div>
               <div style={{ fontSize: '14px', color: '#334155', marginTop: '4px' }}>
-                <strong>Load:</strong> {formatDate(selectedDoForView.date_of_load)}
+                <strong>{tText('วันขึ้นของ:', 'Load:')}</strong> {formatDate(selectedDoForView.date_of_load)}
               </div>
               <div style={{ fontSize: '14px', color: '#334155', marginTop: '2px' }}>
-                <strong>ETA:</strong> {formatDate(selectedDoForView.eta)}
+                <strong>{tText('กำหนดส่งถึง:', 'ETA:')}</strong> {formatDate(selectedDoForView.eta)}
               </div>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
             <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>CONSIGNOR</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>{selectedDoForView.consignor_name || '-'}</div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>{tText('ผู้ส่งสินค้า (CONSIGNOR)', 'CONSIGNOR')}</div>
+              <div style={{ fontSize: '14px', fontWeight: '600' }}>{selectedDoForView.consignor_name || '-'}</div>
               <div style={{ fontSize: '13px', color: '#64748b' }}>
                 {[selectedDoForView.consignor_address, selectedDoForView.consignor_city, selectedDoForView.consignor_state, selectedDoForView.consignor_postal_code, selectedDoForView.consignor_country].filter(Boolean).join(', ') || '-'}
               </div>
             </div>
 
             <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>CONSIGNEE</div>
-              <div style={{ fontSize: '14px', fontWeight: 600 }}>{selectedDoForView.consignee_name || '-'}</div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>{tText('ผู้รับสินค้า (CONSIGNEE)', 'CONSIGNEE')}</div>
+              <div style={{ fontSize: '14px', fontWeight: '600' }}>{selectedDoForView.consignee_name || '-'}</div>
               <div style={{ fontSize: '13px', color: '#64748b' }}>
                 {[selectedDoForView.consignee_address, selectedDoForView.consignee_city, selectedDoForView.consignee_state, selectedDoForView.consignee_postal_code, selectedDoForView.consignee_country].filter(Boolean).join(', ') || '-'}
               </div>
@@ -1771,7 +1763,7 @@ export default function DeliveryOrderTable({
 
           {selectedDoForView.remark && (
             <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>REMARK</div>
+              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>{tText('หมายเหตุ', 'REMARK')}</div>
               <div style={{ fontSize: '14px', color: '#1e293b', marginTop: '4px' }}>
                 {selectedDoForView.remark}
               </div>
@@ -1791,14 +1783,14 @@ export default function DeliveryOrderTable({
       {/* 2. Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบสั่งจัดส่งสินค้า (Delivery Order)</h2>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('doPageTitle', 'ใบสั่งจัดส่งสินค้า (Delivery Order)')}</h2>
           <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
-            สร้างและจัดการใบสั่งจัดส่งสินค้า (DO) จากงานจองรถ พร้อมติดตามการขนส่ง
+            {t('doPageSubtitle', 'สร้างและจัดการใบสั่งจัดส่งสินค้า (DO) จากงานจองรถ พร้อมติดตามการขนส่ง')}
           </p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreateWizard}>
           <Plus size={16} />
-          <span>สร้างใบ DO ใหม่</span>
+          <span>{t('doCreateNewBtn', 'สร้างใบ DO ใหม่')}</span>
         </button>
       </div>
 
@@ -1810,7 +1802,7 @@ export default function DeliveryOrderTable({
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="ค้นหาตามเลขที่ DO, ลูกค้า, ทะเบียนรถ, หรือสินค้า..."
+              placeholder={t('doSearchPlaceholder', 'ค้นหาตามเลขที่ DO, ลูกค้า, ทะเบียนรถ, หรือสินค้า...')}
               className="panel-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1823,19 +1815,19 @@ export default function DeliveryOrderTable({
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '18%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>DO #</th>
-                <th style={{ width: '26%', whiteSpace: 'nowrap' }}>ลูกค้า (Customer)</th>
-                <th style={{ width: '22%', whiteSpace: 'nowrap' }}>รถ / พนักงานขับรถ</th>
-                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>วันที่รับสินค้า</th>
-                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>กำหนดส่ง (ETA)</th>
-                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
+                <th style={{ width: '18%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('doColNo', 'DO #')}</th>
+                <th style={{ width: '26%', whiteSpace: 'nowrap' }}>{t('doColCustomer', 'ลูกค้า (Customer)')}</th>
+                <th style={{ width: '22%', whiteSpace: 'nowrap' }}>{t('doColTruckDriver', 'รถ / พนักงานขับรถ')}</th>
+                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>{t('doColLoadDate', 'วันที่รับสินค้า')}</th>
+                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>{t('doColEta', 'กำหนดส่ง (ETA)')}</th>
+                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('doColAction', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-                    ยังไม่มีข้อมูลใบสั่งจัดส่งสินค้า (DO) คลิก "สร้างใบ DO ใหม่" เพื่อเริ่มต้น
+                    {t('doEmptyList', 'ยังไม่มีข้อมูลใบสั่งจัดส่งสินค้า (DO) คลิก "สร้างใบ DO ใหม่" เพื่อเริ่มต้น')}
                   </td>
                 </tr>
               ) : (
@@ -1854,7 +1846,7 @@ export default function DeliveryOrderTable({
                             alignItems: 'center',
                             gap: '6px'
                           }}
-                          title="คลิกเพื่อดูตัวอย่าง / พิมพ์เอกสาร"
+                          title={tText('คลิกเพื่อดูตัวอย่าง / พิมพ์เอกสาร', 'Click to preview / print')}
                         >
                           <FileText size={15} />
                           {order.do_no}
@@ -1889,17 +1881,17 @@ export default function DeliveryOrderTable({
                         <ActionDropdown
                           items={[
                             {
-                              label: 'ดูตัวอย่าง / พิมพ์',
+                              label: t('actionPrint', 'ดูตัวอย่าง / พิมพ์'),
                               icon: <Printer size={16} className="menu-icon" />,
                               onClick: () => handleOpenPreview(order)
                             },
                             {
-                              label: 'แก้ไข',
+                              label: t('actionEdit', 'แก้ไข'),
                               icon: <Edit size={16} className="menu-icon" />,
                               onClick: () => handleOpenEditWizard(order)
                             },
                             {
-                              label: 'ลบ',
+                              label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
                               onClick: () => handleDeleteDo(order.do_id, order.do_no)

@@ -30,6 +30,8 @@ import {
 } from './apiInvoice';
 import InvoicePreview from './InvoicePreview';
 import ActionDropdown from '../Common/ActionDropdown';
+import { useLanguage } from '../../context/LanguageContext';
+
 // รันเลขที่ใบแจ้งหนี้ใหม่ทุกวัน โดยใช้วันที่เป็น prefix และเลขลำดับต่อท้าย (เช่น INV-20260928-0001)
 const generateInvoiceNo = (dateStr, invoicesList = []) => {
   let d = new Date();
@@ -60,6 +62,7 @@ export default function InvoiceTable({
   banks: propBanks = [],
   fetchData
 }) {
+  const { lang, t, tText, formatDateLocale } = useLanguage();
   const [invoices, setInvoices] = useState([]);
   const [eligibleBookings, setEligibleBookings] = useState([]);
   const [accounts, setAccounts] = useState(propAccounts);
@@ -75,11 +78,11 @@ export default function InvoiceTable({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const steps = [
-    { number: 1, title: 'Document Info' },
-    { number: 2, title: 'Customer & Terms' },
-    { number: 3, title: 'Service Items' },
-    { number: 4, title: 'Bank Account' },
-    { number: 5, title: 'Review & Summary' }
+    { number: 1, title: tText('ข้อมูลเอกสาร', 'Document Info') },
+    { number: 2, title: tText('ลูกค้าและเครดิต', 'Customer & Terms') },
+    { number: 3, title: tText('รายการบริการ', 'Service Items') },
+    { number: 4, title: tText('บัญชีธนาคาร', 'Bank Account') },
+    { number: 5, title: tText('ตรวจสอบและสรุป', 'Review & Summary') }
   ];
 
   // Form State
@@ -431,12 +434,12 @@ export default function InvoiceTable({
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
           >
             <ArrowLeft size={16} />
-            <span>Back to invoices</span>
+            <span>{tText('ย้อนกลับไปหน้ารายการใบแจ้งหนี้', 'Back to invoices')}</span>
           </button>
         </div>
 
         <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
-          {editingInvoiceId ? 'Edit Invoice' : 'Create New Invoice'}
+          {editingInvoiceId ? tText('แก้ไขใบแจ้งหนี้ (Edit Invoice)', 'Edit Invoice') : tText('สร้างใบแจ้งหนี้ใหม่ (New Invoice)', 'Create New Invoice')}
         </h2>
 
         {/* Main Card Panel */}
@@ -527,7 +530,7 @@ export default function InvoiceTable({
                         <Truck size={18} />
                       </div>
                       <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '14.5px' }}>
-                        เลือกจากงานจองที่ส่งของ (DO) เรียบร้อยแล้ว
+                        {tText('เลือกจากงานจองที่ส่งของ (DO) เรียบร้อยแล้ว', 'Import from completed Delivery Order (DO)')}
                       </span>
                     </div>
                     <span style={{
@@ -539,7 +542,7 @@ export default function InvoiceTable({
                       borderRadius: '20px',
                       border: '1px solid #bfdbfe'
                     }}>
-                      นำเข้าข้อมูลอัตโนมัติ
+                      {tText('นำเข้าข้อมูลอัตโนมัติ', 'Auto-fill Data')}
                     </span>
                   </div>
 
@@ -557,22 +560,22 @@ export default function InvoiceTable({
                     value={formData.booking_id}
                     onChange={(e) => handleSelectBookingToInvoice(e.target.value)}
                   >
-                    <option value="">— เลือกรอบการส่งสินค้า เพื่อดึงข้อมูลบริการ ราคา และ DO อัตโนมัติ —</option>
+                    <option value="">{tText('— เลือกรอบการส่งสินค้า เพื่อดึงข้อมูลบริการ ราคา และ DO อัตโนมัติ —', '— Select a completed booking to auto-import service, price, and DO —')}</option>
                     {eligibleBookings.map((bk) => (
                       <option key={bk.booking_id} value={bk.booking_id}>
-                        {bk.booking_no} — {bk.customer_name} | DO: {bk.do_no || 'มีไฟล์แนบ'} | สินค้า: {bk.cargo_product_names || 'สินค้าทั่วไป'} | ราคา: {Number(bk.default_price || 0).toLocaleString()} บ.
+                        {bk.booking_no} — {bk.customer_name} | DO: {bk.do_no || (lang === 'th' ? 'มีไฟล์แนบ' : 'Attached')} | {lang === 'th' ? 'สินค้า:' : 'Goods:'} {bk.cargo_product_names || (lang === 'th' ? 'สินค้าทั่วไป' : 'General Cargo')} | {lang === 'th' ? 'ราคา:' : 'Price:'} {Number(bk.default_price || 0).toLocaleString()} {lang === 'th' ? 'บ.' : 'THB'}
                       </option>
                     ))}
                   </select>
                   <small style={{ display: 'block', marginTop: '8px', color: '#64748b', fontSize: '12px' }}>
-                    * เมื่อเลือก ระบบจะดึงชื่อบริการ + ชื่อสินค้า (เช่น "ค่าขนส่ง เม็ดพลาสติก"), หน่วยเป็น "คันรถ", และราคาค่าบริการจากใบเสนอราคามาให้ทันที
+                    {tText('* เมื่อเลือก ระบบจะดึงชื่อบริการ + ชื่อสินค้า (เช่น "ค่าขนส่ง เม็ดพลาสติก"), หน่วยเป็น "คันรถ", และราคาค่าบริการจากใบเสนอราคามาให้ทันที', '* When selected, service description, goods, unit, and pricing from quotation will be auto-filled.')}
                   </small>
                 </div>
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
-                  <label className="form-label">Invoice No. (auto)</label>
+                  <label className="form-label">{tText('เลขที่ใบแจ้งหนี้ (สร้างอัตโนมัติ)', 'Invoice No. (Auto)')}</label>
                   <input
                     type="text"
                     className="form-input"
@@ -581,12 +584,12 @@ export default function InvoiceTable({
                     style={{ backgroundColor: '#f8fafc', color: '#64748b', cursor: 'not-allowed', fontWeight: '600' }}
                   />
                   <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    ระบบสร้างเลขที่ใบแจ้งหนี้ให้อัตโนมัติ (Auto-generated)
+                    {tText('ระบบสร้างเลขที่ใบแจ้งหนี้ให้อัตโนมัติ', 'Auto-generated invoice number')}
                   </small>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">วันที่ออกใบแจ้งหนี้ (Invoice Date)</label>
+                  <label className="form-label">{tText('วันที่ออกใบแจ้งหนี้', 'Invoice Date')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -605,7 +608,7 @@ export default function InvoiceTable({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    เลือกลูกค้า (Customer) <span className="form-label-required">*</span>
+                    {tText('เลือกลูกค้า', 'Customer')} <span className="form-label-required">*</span>
                   </label>
                   <select
                     className="form-select"
@@ -613,7 +616,7 @@ export default function InvoiceTable({
                     onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
                     required
                   >
-                    <option value="">— เลือกลูกค้า —</option>
+                    <option value="">{tText('— เลือกลูกค้า —', '— Select Customer —')}</option>
                     {(Array.isArray(customers) ? customers : []).map(c => (
                       <option key={c.customer_id} value={c.customer_id}>
                         {c.customer_name}
@@ -623,12 +626,12 @@ export default function InvoiceTable({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">เครดิตเทอม (Credit Term - วัน)</label>
+                  <label className="form-label">{tText('เครดิตเทอม (วัน)', 'Credit Term (Days)')}</label>
                   <input
                     type="number"
                     min="0"
                     className="form-input"
-                    placeholder="เช่น 30 หรือ 49"
+                    placeholder={tText('เช่น 30 หรือ 45', 'e.g. 30 or 45')}
                     value={formData.credit_term}
                     onChange={(e) => handleCreditTermChange(e.target.value)}
                   />
@@ -637,7 +640,7 @@ export default function InvoiceTable({
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
-                  <label className="form-label">วันครบกำหนดชำระ (Due Date)</label>
+                  <label className="form-label">{tText('วันครบกำหนดชำระ', 'Due Date')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -645,7 +648,7 @@ export default function InvoiceTable({
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
                   <small style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    คำนวณอัตโนมัติตามวันที่ออกเอกสารและเครดิตเทอม
+                    {tText('คำนวณอัตโนมัติตามวันที่ออกเอกสารและเครดิตเทอม', 'Calculated automatically from invoice date and credit terms')}
                   </small>
                 </div>
               </div>
@@ -661,13 +664,13 @@ export default function InvoiceTable({
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#0f172a', fontWeight: 600 }}>
                     <Building2 size={16} color="#0284c7" />
-                    <span>ข้อมูลลูกค้า: {selectedCustomer.customer_name}</span>
+                    <span>{tText('ข้อมูลลูกค้า:', 'Customer Info:')} {selectedCustomer.customer_name}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px', color: '#475569' }}>
-                    <div><strong>เลขประจำตัวผู้เสียภาษี:</strong> {selectedCustomer.tax_id || '-'}</div>
-                    <div><strong>ผู้ติดต่อ:</strong> {selectedCustomer.contact_person || '-'}</div>
-                    <div><strong>เบอร์โทรศัพท์:</strong> {selectedCustomer.phone || '-'}</div>
-                    <div><strong>ที่อยู่:</strong> {selectedCustomer.address || '-'}</div>
+                    <div><strong>{tText('เลขประจำตัวผู้เสียภาษี:', 'Tax ID:')}</strong> {selectedCustomer.tax_id || '-'}</div>
+                    <div><strong>{tText('ผู้ติดต่อ:', 'Contact:')}</strong> {selectedCustomer.contact_person || '-'}</div>
+                    <div><strong>{tText('เบอร์โทรศัพท์:', 'Phone:')}</strong> {selectedCustomer.phone || '-'}</div>
+                    <div><strong>{tText('ที่อยู่:', 'Address:')}</strong> {selectedCustomer.address || '-'}</div>
                   </div>
                 </div>
               )}
@@ -680,10 +683,10 @@ export default function InvoiceTable({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
                   <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                    รายการค่าบริการ (Service Items)
+                    {tText('รายการค่าบริการ (Service Items)', 'Service Items')}
                   </h4>
                   <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-                    กำหนดรายละเอียดบริการ จำนวน หน่วย และราคาต่อหน่วย
+                    {tText('กำหนดรายละเอียดบริการ จำนวน หน่วย และราคาต่อหน่วย', 'Specify service description, quantity, unit, and unit price')}
                   </p>
                 </div>
                 <button
@@ -700,7 +703,7 @@ export default function InvoiceTable({
                   }}
                 >
                   <Plus size={16} />
-                  <span>เพิ่มรายการ</span>
+                  <span>{tText('เพิ่มรายการ', 'Add Item')}</span>
                 </button>
               </div>
 
@@ -708,11 +711,11 @@ export default function InvoiceTable({
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f8fafc', color: '#475569', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>
-                      <th style={{ padding: '12px 14px', width: '38%' }}>รายการ (Description)</th>
-                      <th style={{ padding: '12px 14px', width: '12%', textAlign: 'center' }}>จำนวน</th>
-                      <th style={{ padding: '12px 14px', width: '14%', textAlign: 'center' }}>หน่วย</th>
-                      <th style={{ padding: '12px 14px', width: '16%', textAlign: 'right' }}>ราคา/หน่วย (บาท)</th>
-                      <th style={{ padding: '12px 14px', width: '14%', textAlign: 'right' }}>รวม (บาท)</th>
+                      <th style={{ padding: '12px 14px', width: '38%' }}>{tText('รายการสินค้า / บริการ', 'Description')}</th>
+                      <th style={{ padding: '12px 14px', width: '12%', textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</th>
+                      <th style={{ padding: '12px 14px', width: '14%', textAlign: 'center' }}>{tText('หน่วย', 'Unit')}</th>
+                      <th style={{ padding: '12px 14px', width: '16%', textAlign: 'right' }}>{tText('ราคา/หน่วย (บาท)', 'Unit Price (THB)')}</th>
+                      <th style={{ padding: '12px 14px', width: '14%', textAlign: 'right' }}>{tText('รวม (บาท)', 'Total (THB)')}</th>
                       <th style={{ padding: '12px 14px', width: '6%', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -723,7 +726,7 @@ export default function InvoiceTable({
                           <input
                             type="text"
                             value={item.description}
-                            placeholder="เช่น ค่าขนส่ง เม็ดพลาสติก"
+                            placeholder={tText('เช่น ค่าขนส่ง เม็ดพลาสติก', 'e.g. Freight Transport Service')}
                             onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
                             required
                             className="form-input"
@@ -775,7 +778,7 @@ export default function InvoiceTable({
                               cursor: formData.items.length <= 1 ? 'not-allowed' : 'pointer',
                               opacity: formData.items.length <= 1 ? 0.3 : 1
                             }}
-                            title="ลบรายการ"
+                            title={t('actionDelete', 'ลบ')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -796,9 +799,9 @@ export default function InvoiceTable({
                 borderRadius: '10px',
                 border: '1px solid #e2e8f0'
               }}>
-                <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', marginRight: '20px' }}>ยอดรวมสุทธิทั้งสิ้น:</span>
+                <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', marginRight: '20px' }}>{tText('ยอดรวมสุทธิทั้งสิ้น:', 'Grand Total:')}</span>
                 <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#0284c7' }}>
-                  {totalCalculatedAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                  {totalCalculatedAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tText('บาท', 'THB')}
                 </span>
               </div>
             </div>
@@ -810,10 +813,10 @@ export default function InvoiceTable({
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Landmark size={20} color="#0284c7" />
-                  <span>เลือกบัญชีธนาคารสำหรับรับชำระเงิน (Select Bank Account)</span>
+                  <span>{tText('เลือกบัญชีธนาคารสำหรับรับชำระเงิน', 'Select Bank Account')}</span>
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                  เลือกบัญชีธนาคารจากระบบ Master Data เพื่อระบุข้อมูลการโอนเงินในใบแจ้งหนี้อย่างถูกต้อง
+                  {tText('เลือกบัญชีธนาคารจากระบบ Master Data เพื่อระบุข้อมูลการโอนเงินในใบแจ้งหนี้อย่างถูกต้อง', 'Select company bank account for payment remittance instructions')}
                 </p>
               </div>
 
@@ -827,7 +830,7 @@ export default function InvoiceTable({
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
               }}>
                 <label className="form-label" style={{ fontWeight: '600', marginBottom: '8px', display: 'block' }}>
-                  บัญชีธนาคารรับชำระเงิน <span style={{ color: '#ef4444' }}>*</span>
+                  {tText('บัญชีธนาคารรับชำระเงิน', 'Bank Account for Payment')} <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <select
                   className="form-select"
@@ -844,17 +847,17 @@ export default function InvoiceTable({
                     color: '#0f172a'
                   }}
                 >
-                  <option value="">— กรุณาเลือกบัญชีธนาคาร —</option>
+                  <option value="">{tText('— กรุณาเลือกบัญชีธนาคาร —', '— Please select bank account —')}</option>
                   {accounts.map(acc => (
                     <option key={acc.account_no} value={acc.account_no}>
-                      {acc.bank_name || 'ธนาคาร'} | เลขที่: {acc.account_no} | {acc.account_name} ({acc.bank_branch || 'สำนักงานใหญ่'})
+                      {acc.bank_name || tText('ธนาคาร', 'Bank')} | {tText('เลขที่:', 'Acc No:')} {acc.account_no} | {acc.account_name} ({acc.bank_branch || tText('สำนักงานใหญ่', 'Head Office')})
                     </option>
                   ))}
                 </select>
 
                 {accounts.length === 0 && (
                   <div style={{ marginTop: '12px', padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', color: '#991b1b', fontSize: '13px' }}>
-                    ⚠️ ยังไม่มีข้อมูลบัญชีธนาคารในระบบ กรุณาไปเพิ่มข้อมูลบัญชีธนาคารในเมนู <strong>MASTER DATA &gt; Bank Accounts</strong> ก่อน
+                    ⚠️ {tText('ยังไม่มีข้อมูลบัญชีธนาคารในระบบ กรุณาไปเพิ่มข้อมูลบัญชีธนาคารในเมนู MASTER DATA > Bank Accounts ก่อน', 'No bank accounts available. Please add a bank account in MASTER DATA > Bank Accounts first.')}
                   </div>
                 )}
               </div>
@@ -886,10 +889,10 @@ export default function InvoiceTable({
                       </div>
                       <div>
                         <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
-                          {formData.bank_name || 'ธนาคาร'}
+                          {formData.bank_name || tText('ธนาคาร', 'Bank')}
                         </div>
                         <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-                          สาขา: {formData.bank_branch || 'สำนักงานใหญ่'}
+                          {tText('สาขา:', 'Branch:')} {formData.bank_branch || tText('สำนักงานใหญ่', 'Head Office')}
                         </div>
                       </div>
                     </div>
@@ -902,20 +905,20 @@ export default function InvoiceTable({
                       borderRadius: '20px',
                       border: '1px solid #bfdbfe'
                     }}>
-                      ✓ บัญชีที่เลือกสำหรับใบแจ้งหนี้นี้
+                      {tText('✓ บัญชีที่เลือกสำหรับใบแจ้งหนี้นี้', '✓ Selected for this invoice')}
                     </span>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', paddingTop: '16px', borderTop: '1px solid #e2e8f0', fontSize: '13px' }}>
                     <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>เลขที่บัญชี (Account No.):</div>
+                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>{tText('เลขที่บัญชี:', 'Account No.:')}</div>
                       <div style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'monospace', color: '#0f172a' }}>
                         {formData.account_no}
                       </div>
                     </div>
 
                     <div style={{ backgroundColor: '#ffffff', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>ชื่อบัญชี (Account Name):</div>
+                      <div style={{ color: '#64748b', fontSize: '12px', marginBottom: '3px' }}>{tText('ชื่อบัญชี:', 'Account Name:')}</div>
                       <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>
                         {formData.account_name || '-'}
                       </div>
@@ -923,7 +926,7 @@ export default function InvoiceTable({
                   </div>
 
                   <div style={{ marginTop: '12px', fontSize: '12px', color: '#64748b' }}>
-                    ℹ️ บัญชีนี้จะถูกพิมพ์ลงในส่วนคำแนะนำการชำระเงินของใบแจ้งหนี้ เพื่อให้ลูกค้าโอนเงินเข้าบัญชีนี้
+                    ℹ️ {tText('บัญชีนี้จะถูกพิมพ์ลงในส่วนคำแนะนำการชำระเงินของใบแจ้งหนี้ เพื่อให้ลูกค้าโอนเงินเข้าบัญชีนี้', 'This account will be printed on the invoice payment instructions for customer remittance.')}
                   </div>
                 </div>
               ) : (
@@ -937,17 +940,13 @@ export default function InvoiceTable({
                 }}>
                   <Landmark size={40} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
                   <div style={{ fontWeight: '600', fontSize: '14px', color: '#475569' }}>
-                    ยังไม่ได้เลือกบัญชีธนาคาร
+                    {tText('ยังไม่ได้เลือกบัญชีธนาคาร', 'No bank account selected')}
                   </div>
                   <div style={{ fontSize: '13px', marginTop: '4px' }}>
-                    กรุณาเลือกบัญชีธนาคารจากรายการด้านบนเพื่อใช้สำหรับใบแจ้งหนี้นี้
+                    {tText('กรุณาเลือกบัญชีธนาคารจากรายการด้านบนเพื่อใช้สำหรับใบแจ้งหนี้นี้', 'Please select a bank account from above for this invoice')}
                   </div>
                 </div>
               )}
-
-              <div style={{ marginTop: '16px', textAlign: 'right', fontSize: '12px', color: '#64748b' }}>
-                * หากต้องการเพิ่มหรือแก้ไขข้อมูลบัญชีธนาคาร สามารถไปจัดการได้ที่เมนู <strong>MASTER DATA &gt; Bank Accounts</strong>
-              </div>
             </div>
           )}
 
@@ -955,13 +954,13 @@ export default function InvoiceTable({
           {currentStep === 5 && (
             <div style={{ textAlign: 'left' }}>
               <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label className="form-label">หมายเหตุ (Remark / เงื่อนไขเพิ่มเติม)</label>
+                <label className="form-label">{tText('หมายเหตุ / เงื่อนไขเพิ่มเติม', 'Remarks & Additional Terms')}</label>
                 <textarea
                   className="form-textarea"
                   rows="3"
                   value={formData.remark}
                   onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
-                  placeholder="ระบุข้อความ เงื่อนไขการชำระเงิน หรือหมายเหตุเพิ่มเติม..."
+                  placeholder={tText('ระบุข้อความ เงื่อนไขการชำระเงิน หรือหมายเหตุเพิ่มเติม...', 'Additional payment terms or remarks...')}
                 />
               </div>
 
@@ -975,25 +974,25 @@ export default function InvoiceTable({
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#0f172a', fontWeight: '700', fontSize: '16px' }}>
                   <FileCheck size={20} color="#0284c7" />
-                  <span>สรุปรายละเอียดใบแจ้งหนี้ (Invoice Summary)</span>
+                  <span>{tText('สรุปรายละเอียดใบแจ้งหนี้', 'Invoice Summary')}</span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px', fontSize: '13px' }}>
                   <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>เลขที่ใบแจ้งหนี้:</div>
-                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.invoice_no || '(สร้างอัตโนมัติ)'}</div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{tText('เลขที่ใบแจ้งหนี้:', 'Invoice No.:')}</div>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.invoice_no || tText('(สร้างอัตโนมัติ)', '(Auto)')}</div>
                   </div>
                   <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>ลูกค้า:</div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{tText('ลูกค้า:', 'Customer:')}</div>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>{selectedCustomer?.customer_name || '-'}</div>
                   </div>
                   <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>วันที่ออก / ครบกำหนด:</div>
-                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.invoice_date} ถึง {formData.due_date}</div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{tText('วันที่ออก / ครบกำหนด:', 'Issue / Due Date:')}</div>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.invoice_date} {tText('ถึง', 'to')} {formData.due_date}</div>
                   </div>
                   <div style={{ padding: '12px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ color: '#64748b', marginBottom: '4px' }}>DO No. / เครดิตเทอม:</div>
-                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.do_no || '-'} ({formData.credit_term} วัน)</div>
+                    <div style={{ color: '#64748b', marginBottom: '4px' }}>{tText('DO No. / เครดิตเทอม:', 'DO No. / Credit Term:')}</div>
+                    <div style={{ fontWeight: 600, color: '#0f172a' }}>{formData.do_no || '-'} ({formData.credit_term} {tText('วัน', 'Days')})</div>
                   </div>
                 </div>
 
@@ -1002,10 +1001,10 @@ export default function InvoiceTable({
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#f1f5f9', color: '#475569', textAlign: 'left' }}>
-                        <th style={{ padding: '10px 12px' }}>รายการ</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>จำนวน</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>ราคา/หน่วย</th>
-                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>รวม (บาท)</th>
+                        <th style={{ padding: '10px 12px' }}>{tText('รายการสินค้า / บริการ', 'Description')}</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>{tText('ราคา/หน่วย', 'Unit Price')}</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>{tText('รวม (บาท)', 'Total (THB)')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1031,24 +1030,24 @@ export default function InvoiceTable({
                 }}>
                   <div style={{ fontWeight: 700, color: '#0284c7', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
                     <Landmark size={16} />
-                    <span>ข้อมูลบัญชีรับชำระเงิน (Bank Account)</span>
+                    <span>{tText('ข้อมูลบัญชีรับชำระเงิน', 'Bank Account Details')}</span>
                   </div>
                   {formData.account_no ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '13px' }}>
-                      <div><span style={{ color: '#64748b' }}>ธนาคาร: </span><strong>{formData.bank_name || '-'}</strong></div>
-                      <div><span style={{ color: '#64748b' }}>เลขที่บัญชี: </span><strong style={{ color: '#0284c7', fontWeight: 700 }}>{formData.account_no}</strong></div>
-                      <div><span style={{ color: '#64748b' }}>ชื่อบัญชี: </span><strong>{formData.account_name || '-'}</strong></div>
-                      <div><span style={{ color: '#64748b' }}>สาขา: </span><strong>{formData.bank_branch || '-'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>{tText('ธนาคาร: ', 'Bank: ')}</span><strong>{formData.bank_name || '-'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>{tText('เลขที่บัญชี: ', 'Account No: ')}</span><strong style={{ color: '#0284c7', fontWeight: 700 }}>{formData.account_no}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>{tText('ชื่อบัญชี: ', 'Account Name: ')}</span><strong>{formData.account_name || '-'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>{tText('สาขา: ', 'Branch: ')}</span><strong>{formData.bank_branch || '-'}</strong></div>
                     </div>
                   ) : (
-                    <div style={{ color: '#94a3b8', fontSize: '13px' }}>ไม่ได้ระบุบัญชีธนาคาร (เว้นว่างไว้)</div>
+                    <div style={{ color: '#94a3b8', fontSize: '13px' }}>{tText('ไม่ได้ระบุบัญชีธนาคาร (เว้นว่างไว้)', 'No bank account specified')}</div>
                   )}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', marginRight: '16px' }}>ยอดรวมสุทธิทั้งสิ้น:</span>
+                  <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#475569', marginRight: '16px' }}>{tText('ยอดรวมสุทธิทั้งสิ้น:', 'Grand Total:')}</span>
                   <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#0284c7' }}>
-                    {totalCalculatedAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท
+                    {totalCalculatedAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {tText('บาท', 'THB')}
                   </span>
                 </div>
               </div>
@@ -1072,7 +1071,7 @@ export default function InvoiceTable({
                 }}
               >
                 <ArrowLeft size={16} />
-                <span>Back</span>
+                <span>{t('actionBack', 'ย้อนกลับ')}</span>
               </button>
             </div>
 
@@ -1083,18 +1082,18 @@ export default function InvoiceTable({
                   className="btn-primary"
                   onClick={() => {
                     if (currentStep === 2 && !formData.customer_id) {
-                      alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     if (currentStep === 4 && !formData.account_no) {
-                      alert('กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ');
+                      alert(lang === 'th' ? 'กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ' : 'Please select a bank account before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(5, prev + 1));
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <span>Next</span>
+                  <span>{t('actionNext', 'ถัดไป')}</span>
                   <ArrowRight size={16} />
                 </button>
               ) : (
@@ -1112,7 +1111,7 @@ export default function InvoiceTable({
                   }}
                 >
                   <Check size={16} />
-                  <span>{isSubmitting ? 'กำลังบันทึก...' : (editingInvoiceId ? 'บันทึกการแก้ไข' : 'ยืนยันและสร้างใบแจ้งหนี้')}</span>
+                  <span>{isSubmitting ? t('actionSaving', 'กำลังบันทึก...') : (editingInvoiceId ? tText('บันทึกการแก้ไข', 'Save Changes') : tText('ยืนยันและสร้างใบแจ้งหนี้', 'Create Invoice'))}</span>
                 </button>
               )}
             </div>
@@ -1129,14 +1128,14 @@ export default function InvoiceTable({
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบแจ้งหนี้ (Invoice)</h2>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('invPageTitle', 'ใบแจ้งหนี้ (Invoice)')}</h2>
           <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
-            ออกใบแจ้งหนี้สำหรับงานขนส่งที่จัดส่งสินค้า (DO) เรียบร้อยแล้ว โดยอิงราคาค่าบริการตามใบเสนอราคา
+            {t('invPageSubtitle', 'ออกใบแจ้งหนี้สำหรับงานขนส่งที่จัดส่งสินค้า (DO) เรียบร้อยแล้ว โดยอิงราคาค่าบริการตามใบเสนอราคา')}
           </p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreate}>
           <Plus size={16} />
-          <span>สร้างใบแจ้งหนี้ใหม่</span>
+          <span>{t('invCreateBtn', 'สร้างใบแจ้งหนี้ใหม่')}</span>
         </button>
       </div>
 
@@ -1147,7 +1146,7 @@ export default function InvoiceTable({
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="ค้นหาตามเลขที่ใบแจ้งหนี้, ลูกค้า, เลขที่ DO, หรือ Booking #..."
+              placeholder={t('invSearchPlaceholder', 'ค้นหาตามเลขที่ใบแจ้งหนี้, ลูกค้า, เลขที่ DO, หรือ Booking #...')}
               className="panel-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1159,24 +1158,24 @@ export default function InvoiceTable({
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Invoice #</th>
-                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>ลูกค้า (Customer)</th>
-                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>วันที่ออกเอกสาร</th>
-                <th style={{ width: '18%', textAlign: 'right', whiteSpace: 'nowrap' }}>ยอดเงินรวม (บาท)</th>
-                <th style={{ width: '14%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
+                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('invColNo', 'Invoice #')}</th>
+                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>{t('invColCustomer', 'ลูกค้า (Customer)')}</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>{t('invColDate', 'วันที่ออกเอกสาร')}</th>
+                <th style={{ width: '18%', textAlign: 'right', whiteSpace: 'nowrap' }}>{t('invColTotal', 'ยอดเงินรวม (บาท)')}</th>
+                <th style={{ width: '14%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('actionActions', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    ⏳ กำลังโหลดข้อมูลใบแจ้งหนี้...
+                    ⏳ {tText('กำลังโหลดข้อมูลใบแจ้งหนี้...', 'Loading invoices...')}
                   </td>
                 </tr>
               ) : filteredInvoices.length === 0 ? (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-                    ยังไม่มีข้อมูลใบแจ้งหนี้ คลิก "สร้างใบแจ้งหนี้ใหม่" เพื่อเริ่มต้น
+                    {searchQuery ? tText('ไม่พบข้อมูลใบแจ้งหนี้ที่ตรงกับการค้นหา', 'No invoices found matching your search.') : t('invEmptyList', 'ยังไม่มีข้อมูลใบแจ้งหนี้ คลิก "สร้างใบแจ้งหนี้ใหม่" เพื่อเริ่มต้น')}
                   </td>
                 </tr>
               ) : (
@@ -1187,7 +1186,7 @@ export default function InvoiceTable({
                       <span
                         style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         onClick={() => handleOpenPreview(inv)}
-                        title="คลิกเพื่อดูตัวอย่าง/พิมพ์ใบแจ้งหนี้"
+                        title={tText('คลิกเพื่อดูตัวอย่าง/พิมพ์ใบแจ้งหนี้', 'Click to preview / print')}
                       >
                         <FileText size={15} />
                         {inv.invoice_no}
@@ -1201,7 +1200,7 @@ export default function InvoiceTable({
 
                     {/* Invoice Date */}
                     <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('th-TH') : '-'}
+                      {inv.invoice_date ? formatDateLocale(inv.invoice_date) : '-'}
                     </td>
 
                     {/* Total Amount */}
@@ -1214,17 +1213,17 @@ export default function InvoiceTable({
                       <ActionDropdown
                         items={[
                           {
-                            label: 'ดูตัวอย่าง / พิมพ์',
+                            label: t('actionPrint', 'ดูตัวอย่าง / พิมพ์'),
                             icon: <Printer size={16} className="menu-icon" />,
                             onClick: () => handleOpenPreview(inv)
                           },
                           {
-                            label: 'แก้ไข',
+                            label: t('actionEdit', 'แก้ไข'),
                             icon: <Edit size={16} className="menu-icon" />,
                             onClick: () => handleOpenEdit(inv)
                           },
                           {
-                            label: 'ลบ',
+                            label: t('actionDelete', 'ลบ'),
                             icon: <Trash2 size={16} className="menu-icon danger" />,
                             danger: true,
                             onClick: () => handleDelete(inv)

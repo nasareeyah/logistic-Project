@@ -35,8 +35,10 @@ import {
 import './BookingTable.css';
 import './BookingWizard.css';
 import ActionDropdown from '../Common/ActionDropdown';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], documentItems = [], fetchData }) {
+  const { lang, t, tText, formatDateLocale } = useLanguage();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableSearch, setTableSearch] = useState('');
@@ -216,17 +218,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   const formatDateDisplay = (dateString) => {
     if (!dateString) return '-';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString;
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch {
-      return dateString;
-    }
+    return formatDateLocale(dateString);
   };
 
   const getEffectivePickupDate = (booking) => {
@@ -387,14 +379,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
   // Delete Booking
   const handleDeleteBooking = async (bookingId) => {
-    if (!window.confirm('คุณต้องการลบ Booking นี้ใช่หรือไม่?')) return;
+    if (!window.confirm(lang === 'th' ? 'คุณต้องการลบ Booking นี้ใช่หรือไม่?' : 'Are you sure you want to delete this booking?')) return;
     try {
       await deleteBooking(bookingId);
-      alert('ลบสำเร็จ');
+      alert(lang === 'th' ? 'ลบสำเร็จ' : 'Deleted successfully');
       await loadBookingsData();
       if (fetchData) fetchData();
     } catch (err) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
+      alert((lang === 'th' ? 'เกิดข้อผิดพลาดในการลบ: ' : 'Error deleting booking: ') + err.message);
     }
   };
 
@@ -413,7 +405,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploading(true);
         const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
-        alert(resData.message || 'แนบไฟล์สำเร็จ');
+        alert(resData.message || (lang === 'th' ? 'แนบไฟล์สำเร็จ' : 'Files attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
@@ -423,7 +415,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert('เกิดข้อผิดพลาด: ' + err.message);
+        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
       } finally {
         setUploading(false);
       }
@@ -443,7 +435,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploading(true);
         const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
-        alert(resData.message || 'แนบไฟล์สำเร็จ');
+        alert(resData.message || (lang === 'th' ? 'แนบไฟล์สำเร็จ' : 'Files attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
@@ -453,7 +445,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert('เกิดข้อผิดพลาด: ' + err.message);
+        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
       } finally {
         setUploading(false);
       }
@@ -461,17 +453,17 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   };
 
   const handleDeleteAttachmentFile = async (attachmentId) => {
-    if (!window.confirm('ยืนยันลบไฟล์แนบนี้?')) return;
+    if (!window.confirm(lang === 'th' ? 'ยืนยันลบไฟล์แนบนี้?' : 'Are you sure you want to delete this attachment?')) return;
     try {
       const resData = await deleteAttachment(attachmentId);
-      alert(resData.message || 'ลบไฟล์สำเร็จ');
+      alert(resData.message || (lang === 'th' ? 'ลบไฟล์สำเร็จ' : 'Attachment deleted successfully'));
       setSelectedBookingForAttach(prev => ({
         ...prev,
         attachments: (prev.attachments || []).filter(a => a.attachment_id !== attachmentId)
       }));
       await loadBookingsData();
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
     }
   };
 
@@ -511,12 +503,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         await uploadAttachments(bookingId, wizardNewFiles);
       }
 
-      alert(editingBooking ? 'แก้ไข Booking สำเร็จ' : 'สร้าง Booking สำเร็จ');
+      alert(editingBooking ? (lang === 'th' ? 'แก้ไข Booking สำเร็จ' : 'Booking updated successfully') : (lang === 'th' ? 'สร้าง Booking สำเร็จ' : 'Booking created successfully'));
       setViewMode('table');
       await loadBookingsData();
       if (fetchData) fetchData();
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
     } finally {
       setSaving(false);
     }
@@ -534,12 +526,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   });
 
   const stepsList = [
-    { num: 1, label: 'Customer' },
-    { num: 2, label: 'Quotation' },
-    { num: 3, label: 'Cargo' },
-    { num: 4, label: 'Route' },
-    { num: 5, label: 'Attachments' },
-    { num: 6, label: 'Review' }
+    { num: 1, label: tText('ข้อมูลลูกค้า', 'Customer') },
+    { num: 2, label: tText('ใบเสนอราคา/ราคา', 'Quotation') },
+    { num: 3, label: tText('ข้อมูลสินค้า', 'Cargo') },
+    { num: 4, label: tText('เส้นทาง/สถานที่', 'Route') },
+    { num: 5, label: tText('เอกสารแนบ', 'Attachments') },
+    { num: 6, label: tText('ตรวจสอบและยืนยัน', 'Review') }
   ];
 
   // ----------------------------------------------------
@@ -556,12 +548,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
           >
             <ArrowLeft size={16} />
-            <span>Back to bookings</span>
+            <span>{tText('ย้อนกลับไปหน้ารายการจอง', 'Back to bookings')}</span>
           </button>
         </div>
 
         <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
-          {editingBooking ? 'Edit Booking' : 'Create New Booking'}
+          {editingBooking ? tText('แก้ไขรายการจอง (Edit Booking)', 'Edit Booking') : tText('สร้างรายการจองรถใหม่ (New Booking)', 'Create New Booking')}
         </h2>
 
         {/* Main Card Panel */}
@@ -578,7 +570,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   key={step.num}
                   onClick={() => {
                     if (step.num > 1 && !selectedCustomer) {
-                      alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     setCurrentStep(step.num);
@@ -633,14 +625,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             <div className="wizard-step-body">
               <div className="step-header-title-row">
                 <User size={18} color="#0284c7" />
-                <span>Select Customer</span>
+                <span>{tText('เลือกลูกค้า', 'Select Customer')}</span>
               </div>
 
               <div className="customer-search-field-container">
                 <Search size={16} className="search-icon-inside" />
                 <input
                   type="text"
-                  placeholder="Search by company, contact, phone..."
+                  placeholder={tText('ค้นหาตามชื่อบริษัท, ผู้ติดต่อ, เบอร์โทร...', 'Search by company, contact, phone...')}
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
                 />
@@ -677,8 +669,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         }}
                       >
                         <div className="cust-name">{cust.customer_name}</div>
-                        <div className="cust-contact">{cust.contact_person || 'Contact Person'}</div>
-                        <div className="cust-phone">{cust.phone || 'Phone number'}</div>
+                        <div className="cust-contact">{cust.contact_person || tText('ผู้ติดต่อ', 'Contact Person')}</div>
+                        <div className="cust-phone">{cust.phone || tText('เบอร์โทรศัพท์', 'Phone number')}</div>
                       </div>
                     );
                   })}
@@ -691,7 +683,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             <div className="wizard-step-body">
               <div className="step-header-title-row">
                 <FileText size={18} color="#0284c7" />
-                <span>Pricing Mode</span>
+                <span>{tText('รูปแบบราคา', 'Pricing Mode')}</span>
               </div>
 
               {/* Pricing Mode Dual Toggle Cards */}
@@ -720,10 +712,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         </div>
                         <div className="pricing-mode-text-wrap">
                           <div className="pricing-mode-title-row">
-                            <span>เลือกจากใบเสนอราคา</span>
+                            <span>{tText('เลือกจากใบเสนอราคา', 'Select from Quotation')}</span>
                             {pricingMode === 'quotation' && <Check size={16} color="#0284c7" />}
                           </div>
-                          <span className="pricing-mode-subtitle">เลือกใบเสนอราคาที่เคยทำไว้</span>
+                          <span className="pricing-mode-subtitle">{tText('เลือกใบเสนอราคาที่เคยทำไว้', 'Select an existing quotation')}</span>
                         </div>
                       </div>
 
@@ -740,10 +732,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         </div>
                         <div className="pricing-mode-text-wrap">
                           <div className="pricing-mode-title-row">
-                            <span>กำหนดราคาเอง</span>
+                            <span>{tText('กำหนดราคาเอง', 'Custom Pricing')}</span>
                             {pricingMode === 'custom' && <Check size={16} color="#0284c7" />}
                           </div>
-                          <span className="pricing-mode-subtitle">งานด่วน ยังไม่มีใบเสนอ</span>
+                          <span className="pricing-mode-subtitle">{tText('งานด่วน ยังไม่มีใบเสนอ', 'Urgent job, no quotation yet')}</span>
                         </div>
                       </div>
                     </div>
@@ -778,10 +770,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                                     </span>
                                   </div>
                                   <div className="qt-remark">
-                                    {qt.remarks || qt.remark || qt.subject || 'ใบเสนอราคาบริการขนส่ง'}
+                                    {qt.remarks || qt.remark || qt.subject || tText('ใบเสนอราคาบริการขนส่ง', 'Freight Quotation')}
                                   </div>
                                   <div className="qt-summary">
-                                    {itemCount} items · THB {Number(totalAmount).toLocaleString()}
+                                    {itemCount} {tText('รายการ', 'items')} · THB {Number(totalAmount).toLocaleString()}
                                   </div>
                                 </div>
                               );
@@ -800,7 +792,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           }}>
                             <AlertCircle size={20} color="#0284c7" />
                             <div style={{ fontSize: '13px', color: '#64748b' }}>
-                              ลูกค้ารายนี้ยังไม่มีประวัติใบเสนอราคาในระบบ ท่านสามารถเลือกโหมด <strong>"กำหนดราคาเอง"</strong> เพื่อระบุรายการบริการได้ทันที
+                              {tText(
+                                'ลูกค้ารายนี้ยังไม่มีประวัติใบเสนอราคาในระบบ ท่านสามารถเลือกโหมด "กำหนดราคาเอง" เพื่อระบุรายการบริการได้ทันที',
+                                'This customer does not have any quotations in the system yet. You can choose "Custom Pricing" mode to enter services immediately.'
+                              )}
                             </div>
                           </div>
                         )}
@@ -810,25 +805,25 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     {/* Service Items Table (Rendered in BOTH Modes) */}
                     <div className="service-items-container">
                       <div className="service-items-header-bar">
-                        <span className="service-items-header-title">Service Items</span>
+                        <span className="service-items-header-title">{tText('รายการบริการ', 'Service Items')}</span>
                         <button
                           type="button"
                           className="btn-add-service-item"
                           onClick={handleAddServiceItem}
                         >
                           <Plus size={15} />
-                          <span>Add</span>
+                          <span>{tText('เพิ่มรายการ', 'Add Item')}</span>
                         </button>
                       </div>
 
                       <div className="service-items-table-wrap">
                         <div className="service-items-table-grid">
                           <div className="service-items-cols-header">
-                            <div>Description</div>
-                            <div style={{ textAlign: 'center' }}>Qty</div>
-                            <div style={{ textAlign: 'center' }}>Unit</div>
-                            <div style={{ textAlign: 'right' }}>Unit Price</div>
-                            <div style={{ textAlign: 'right' }}>Total</div>
+                            <div>{tText('รายละเอียดบริการ', 'Description')}</div>
+                            <div style={{ textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</div>
+                            <div style={{ textAlign: 'center' }}>{tText('หน่วย', 'Unit')}</div>
+                            <div style={{ textAlign: 'right' }}>{tText('ราคา/หน่วย', 'Unit Price')}</div>
+                            <div style={{ textAlign: 'right' }}>{tText('รวมเงิน', 'Total')}</div>
                             <div></div>
                           </div>
 
@@ -837,7 +832,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                               <div className="col-desc">
                                 <input
                                   type="text"
-                                  placeholder="Description"
+                                  placeholder={tText('รายละเอียดบริการ', 'Description')}
                                   value={item.description}
                                   onChange={(e) => handleServiceItemChange(idx, 'description', e.target.value)}
                                 />
@@ -853,7 +848,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                               <div className="col-unit">
                                 <input
                                   type="text"
-                                  placeholder="trip"
+                                  placeholder={tText('เที่ยว', 'trip')}
                                   value={item.unit}
                                   onChange={(e) => handleServiceItemChange(idx, 'unit', e.target.value)}
                                 />
@@ -876,7 +871,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                                     type="button"
                                     className="btn-remove-item"
                                     onClick={() => handleRemoveServiceItem(idx)}
-                                    title="Remove item"
+                                    title={tText('ลบรายการ', 'Remove item')}
                                   >
                                     <Trash2 size={15} />
                                   </button>
@@ -888,7 +883,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                         {/* Subtotal Row */}
                         <div className="service-subtotal-row">
-                          <span className="service-subtotal-label">Subtotal</span>
+                          <span className="service-subtotal-label">{tText('ยอดรวม', 'Subtotal')}</span>
                           <span className="service-subtotal-amount">
                             THB {serviceItemsSubtotal.toLocaleString()}
                           </span>
@@ -905,10 +900,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {currentStep === 3 && (
             <div className="wizard-step-body">
               <div className="step-header-with-action">
-                <h2 className="step-section-heading">Cargo Information</h2>
+                <h2 className="step-section-heading">{tText('ข้อมูลสินค้า / สินค้าบรรทุก', 'Cargo Information')}</h2>
                 <button type="button" className="btn-outline-action" onClick={() => setCargoItems(prev => [...prev, { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }])}>
                   <Plus size={16} />
-                  <span>Add Item</span>
+                  <span>{tText('เพิ่มรายการสินค้า', 'Add Item')}</span>
                 </button>
               </div>
 
@@ -931,10 +926,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-product">
-                      <label>Product Name</label>
+                      <label>{tText('ชื่อสินค้า', 'Product Name')}</label>
                       <input
                         type="text"
-                        placeholder="e.g. plastics"
+                        placeholder={tText('เช่น ชิ้นส่วนพลาสติก', 'e.g. plastics')}
                         value={item.product_name}
                         onChange={(e) => {
                           const updated = [...cargoItems];
@@ -945,7 +940,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-qty">
-                      <label>Quantity</label>
+                      <label>{tText('จำนวน', 'Quantity')}</label>
                       <input
                         type="number"
                         placeholder="500"
@@ -959,7 +954,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-unit">
-                      <label>Unit</label>
+                      <label>{tText('หน่วย', 'Unit')}</label>
                       <input
                         type="text"
                         placeholder="tun"
@@ -973,7 +968,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-weight">
-                      <label>Weight</label>
+                      <label>{tText('น้ำหนัก', 'Weight')}</label>
                       <input
                         type="number"
                         placeholder="3000"
@@ -987,7 +982,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-wtunit">
-                      <label>Wt Unit</label>
+                      <label>{tText('หน่วย น.น.', 'Wt Unit')}</label>
                       <select
                         value={item.wt_unit || 'kg'}
                         onChange={(e) => {
@@ -1004,7 +999,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     </div>
 
                     <div className="cargo-field col-remark">
-                      <label>Remark</label>
+                      <label>{tText('หมายเหตุ', 'Remark')}</label>
                       <input
                         type="text"
                         placeholder="123"
@@ -1022,7 +1017,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         type="button"
                         className="remove-cargo-btn"
                         onClick={() => setCargoItems(prev => prev.filter((_, i) => i !== idx))}
-                        title="Remove Cargo"
+                        title={tText('ลบรายการสินค้านี้', 'Remove Cargo')}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -1040,34 +1035,34 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 {/* PICKUP (SENDER) COLUMN */}
                 <div className="transport-box-card">
                   <div className="box-header-row">
-                    <h3>Pickup (Sender)</h3>
+                    <h3>{tText('สถานที่รับสินค้า (ต้นทาง)', 'Pickup (Sender)')}</h3>
                     <button type="button" className="btn-small-add" onClick={handleAddSender}>
                       <Plus size={14} />
-                      <span>Add</span>
+                      <span>{tText('เพิ่มจุดรับ', 'Add')}</span>
                     </button>
                   </div>
 
                   {sendersList.map((sender, idx) => (
                     <div key={idx} className="location-block-card">
                       <div className="location-block-header">
-                        <span className="location-block-index">Pickup Location #{idx + 1}</span>
+                        <span className="location-block-index">{tText('จุดรับสินค้าที่', 'Pickup Location #')} {idx + 1}</span>
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Sender Company Name</label>
+                        <label>{tText('ชื่อบริษัท / ผู้ส่งสินค้า', 'Sender Company Name')}</label>
                         <input
                           type="text"
-                          placeholder="Company name"
+                          placeholder={tText('ชื่อบริษัท / โรงงาน / คลัง', 'Company name')}
                           value={sender.company_name}
                           onChange={(e) => handleSenderChange(idx, 'company_name', e.target.value)}
                         />
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Address Line</label>
+                        <label>{tText('ที่อยู่', 'Address Line')}</label>
                         <input
                           type="text"
-                          placeholder="Street address / Location"
+                          placeholder={tText('ที่อยู่ / ถนน / ซอย / ตำบล', 'Street address / Location')}
                           value={sender.address_line}
                           onChange={(e) => handleSenderChange(idx, 'address_line', e.target.value)}
                         />
@@ -1075,19 +1070,19 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       <div className="form-row-two-cols">
                         <div className="form-group-vertical">
-                          <label>City</label>
+                          <label>{tText('อำเภอ/เขต', 'City / District')}</label>
                           <input
                             type="text"
-                            placeholder="City"
+                            placeholder={tText('อำเภอ/เขต', 'City')}
                             value={sender.city}
                             onChange={(e) => handleSenderChange(idx, 'city', e.target.value)}
                           />
                         </div>
                         <div className="form-group-vertical">
-                          <label>State / Province</label>
+                          <label>{tText('จังหวัด', 'State / Province')}</label>
                           <input
                             type="text"
-                            placeholder="State / Province"
+                            placeholder={tText('จังหวัด', 'State / Province')}
                             value={sender.state}
                             onChange={(e) => handleSenderChange(idx, 'state', e.target.value)}
                           />
@@ -1096,19 +1091,19 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       <div className="form-row-two-cols">
                         <div className="form-group-vertical">
-                          <label>Postal Code</label>
+                          <label>{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                           <input
                             type="text"
-                            placeholder="Postal code"
+                            placeholder={tText('รหัสไปรษณีย์', 'Postal code')}
                             value={sender.postal_code}
                             onChange={(e) => handleSenderChange(idx, 'postal_code', e.target.value)}
                           />
                         </div>
                         <div className="form-group-vertical">
-                          <label>Country</label>
+                          <label>{tText('ประเทศ', 'Country')}</label>
                           <input
                             type="text"
-                            placeholder="Country"
+                            placeholder={tText('ประเทศ', 'Country')}
                             value={sender.country}
                             onChange={(e) => handleSenderChange(idx, 'country', e.target.value)}
                           />
@@ -1116,7 +1111,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Pickup Date</label>
+                        <label>{tText('วันที่รับสินค้า', 'Pickup Date')}</label>
                         <input
                           type="date"
                           value={sender.pickup_date || todayStr}
@@ -1132,7 +1127,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             onClick={() => handleRemoveSender(idx)}
                           >
                             <Trash2 size={13} />
-                            <span>Remove</span>
+                            <span>{tText('ลบจุดรับนี้', 'Remove')}</span>
                           </button>
                         </div>
                       )}
@@ -1143,34 +1138,34 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 {/* DELIVERY (RECEIVER) COLUMN */}
                 <div className="transport-box-card">
                   <div className="box-header-row">
-                    <h3>Delivery (Receiver)</h3>
+                    <h3>{tText('สถานที่ส่งสินค้า (ปลายทาง)', 'Delivery (Receiver)')}</h3>
                     <button type="button" className="btn-small-add" onClick={handleAddReceiver}>
                       <Plus size={14} />
-                      <span>Add</span>
+                      <span>{tText('เพิ่มจุดส่ง', 'Add')}</span>
                     </button>
                   </div>
 
                   {receiversList.map((receiver, idx) => (
                     <div key={idx} className="location-block-card">
                       <div className="location-block-header">
-                        <span className="location-block-index">Delivery Location #{idx + 1}</span>
+                        <span className="location-block-index">{tText('จุดส่งสินค้าที่', 'Delivery Location #')} {idx + 1}</span>
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Receiver Company Name</label>
+                        <label>{tText('ชื่อบริษัท / ผู้รับสินค้า', 'Receiver Company Name')}</label>
                         <input
                           type="text"
-                          placeholder="Company name"
+                          placeholder={tText('ชื่อบริษัท / โรงงาน / คลัง', 'Company name')}
                           value={receiver.company_name}
                           onChange={(e) => handleReceiverChange(idx, 'company_name', e.target.value)}
                         />
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Address Line</label>
+                        <label>{tText('ที่อยู่', 'Address Line')}</label>
                         <input
                           type="text"
-                          placeholder="Street address / Location"
+                          placeholder={tText('ที่อยู่ / ถนน / ซอย / ตำบล', 'Street address / Location')}
                           value={receiver.address_line}
                           onChange={(e) => handleReceiverChange(idx, 'address_line', e.target.value)}
                         />
@@ -1178,19 +1173,19 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       <div className="form-row-two-cols">
                         <div className="form-group-vertical">
-                          <label>City</label>
+                          <label>{tText('อำเภอ/เขต', 'City / District')}</label>
                           <input
                             type="text"
-                            placeholder="City"
+                            placeholder={tText('อำเภอ/เขต', 'City')}
                             value={receiver.city}
                             onChange={(e) => handleReceiverChange(idx, 'city', e.target.value)}
                           />
                         </div>
                         <div className="form-group-vertical">
-                          <label>State / Province</label>
+                          <label>{tText('จังหวัด', 'State / Province')}</label>
                           <input
                             type="text"
-                            placeholder="State / Province"
+                            placeholder={tText('จังหวัด', 'State / Province')}
                             value={receiver.state}
                             onChange={(e) => handleReceiverChange(idx, 'state', e.target.value)}
                           />
@@ -1199,19 +1194,19 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       <div className="form-row-two-cols">
                         <div className="form-group-vertical">
-                          <label>Postal Code</label>
+                          <label>{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                           <input
                             type="text"
-                            placeholder="Postal code"
+                            placeholder={tText('รหัสไปรษณีย์', 'Postal code')}
                             value={receiver.postal_code}
                             onChange={(e) => handleReceiverChange(idx, 'postal_code', e.target.value)}
                           />
                         </div>
                         <div className="form-group-vertical">
-                          <label>Country</label>
+                          <label>{tText('ประเทศ', 'Country')}</label>
                           <input
                             type="text"
-                            placeholder="Country"
+                            placeholder={tText('ประเทศ', 'Country')}
                             value={receiver.country}
                             onChange={(e) => handleReceiverChange(idx, 'country', e.target.value)}
                           />
@@ -1219,7 +1214,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       </div>
 
                       <div className="form-group-vertical">
-                        <label>Delivery Date</label>
+                        <label>{tText('วันที่ส่งสินค้า', 'Delivery Date')}</label>
                         <input
                           type="date"
                           value={receiver.delivery_date || todayStr}
@@ -1235,7 +1230,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             onClick={() => handleRemoveReceiver(idx)}
                           >
                             <Trash2 size={13} />
-                            <span>Remove</span>
+                            <span>{tText('ลบจุดส่งนี้', 'Remove')}</span>
                           </button>
                         </div>
                       )}
@@ -1249,7 +1244,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {/* STEP 5: ATTACHMENTS */}
           {currentStep === 5 && (
             <div className="wizard-step-body">
-              <h2 className="step-section-heading">Attachments</h2>
+              <h2 className="step-section-heading">{tText('เอกสารแนบ', 'Attachments')}</h2>
 
               <div className="attachments-large-dropzone">
                 <input
@@ -1265,20 +1260,20 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   onClick={() => wizardFileInputRef.current?.click()}
                 >
                   <Upload size={38} className="upload-tray-icon" />
-                  <span className="upload-click-title">Click to upload files</span>
-                  <span className="upload-click-sub">PDF, images, Excel, documents</span>
+                  <span className="upload-click-title">{tText('คลิกเพื่อเลือกไฟล์อัปโหลด', 'Click to upload files')}</span>
+                  <span className="upload-click-sub">{tText('รองรับ PDF, รูปภาพ, Excel, เอกสารต่างๆ', 'PDF, images, Excel, documents')}</span>
                 </div>
               </div>
 
               {(wizardAttachedFiles.length > 0 || wizardNewFiles.length > 0) && (
                 <div className="attached-files-list-box">
-                  <h4>Attached Files:</h4>
+                  <h4>{tText('ไฟล์ที่แนบแล้ว:', 'Attached Files:')}</h4>
                   <ul>
                     {wizardAttachedFiles.map((att, i) => (
                       <li key={`existing-${i}`}>
                         <Paperclip size={14} color="#0284c7" />
                         <span>{att.original_name || att.file_name}</span>
-                        <small>(Existing)</small>
+                        <small>({tText('มีอยู่ในระบบ', 'Existing')})</small>
                       </li>
                     ))}
                     {wizardNewFiles.map((file, i) => (
@@ -1303,81 +1298,83 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           {/* STEP 6: REVIEW */}
           {currentStep === 6 && (
             <div className="wizard-step-body">
-              <h2 className="step-section-heading">Review & Confirm</h2>
+              <h2 className="step-section-heading">{tText('ตรวจสอบและยืนยันข้อมูล', 'Review & Confirm')}</h2>
 
               <div className="review-summary-grid">
                 <div className="review-card-item">
-                  <span className="review-label">CUSTOMER</span>
+                  <span className="review-label">{tText('ลูกค้า', 'CUSTOMER')}</span>
                   <span className="review-value-bold">{selectedCustomer?.customer_name || '-'}</span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">PRICING MODE & QUOTATION</span>
+                  <span className="review-label">{tText('รูปแบบราคาและใบเสนอราคา', 'PRICING MODE & QUOTATION')}</span>
                   <span className="review-value-bold">
                     {pricingMode === 'quotation'
-                      ? `เลือกจากใบเสนอราคา (${quotationList.find(q => q.document_id === selectedQuotationId)?.document_no || selectedQuotationId || 'ไม่ได้ระบุ'})`
-                      : 'กำหนดราคาเอง (Custom Pricing)'}
+                      ? (lang === 'th'
+                          ? `เลือกจากใบเสนอราคา (${quotationList.find(q => q.document_id === selectedQuotationId)?.document_no || selectedQuotationId || 'ไม่ได้ระบุ'})`
+                          : `Quotation Ref (${quotationList.find(q => q.document_id === selectedQuotationId)?.document_no || selectedQuotationId || 'Not specified'})`)
+                      : tText('กำหนดราคาเอง (Custom Pricing)', 'Custom Pricing')}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">SERVICE ITEMS</span>
+                  <span className="review-label">{tText('รายการบริการ', 'SERVICE ITEMS')}</span>
                   <span className="review-value">
                     {serviceItems.map((it, idx) => (
                       <div key={idx} style={{ marginBottom: '2px' }}>
-                        • {it.description || 'Service'} ({it.quantity} {it.unit}) — THB {Number(it.total || 0).toLocaleString()}
+                        • {it.description || tText('บริการขนส่ง', 'Freight Service')} ({it.quantity} {it.unit}) — THB {Number(it.total || 0).toLocaleString()}
                       </div>
                     ))}
                     <div style={{ marginTop: '4px', fontWeight: 700, color: '#0284c7' }}>
-                      Subtotal: THB {serviceItemsSubtotal.toLocaleString()}
+                      {tText('ยอดรวม:', 'Subtotal:')} THB {serviceItemsSubtotal.toLocaleString()}
                     </div>
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">BOOKING DATE</span>
+                  <span className="review-label">{tText('วันที่จอง/รับสินค้า', 'BOOKING DATE')}</span>
                   <span className="review-value-bold">
-                    {new Date(sendersList[0]?.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    {formatDateLocale(sendersList[0]?.pickup_date || todayStr)}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">CARGO</span>
+                  <span className="review-label">{tText('สินค้าบรรทุก', 'CARGO')}</span>
                   <span className="review-value">
                     {cargoItems.map(c => `${c.inv_no ? `[INV: ${c.inv_no}] ` : ''}${c.product_name || 'cargo'} — ${c.quantity} ${c.unit} (${c.weight} ${c.wt_unit})`).join(', ')}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">PICKUP (SENDER - {sendersList.length} Location(s))</span>
+                  <span className="review-label">{tText('สถานที่รับสินค้า (ต้นทาง)', 'PICKUP (SENDER)')} ({sendersList.length} {tText('จุด', 'Location(s)')})</span>
                   <span className="review-value">
                     {sendersList.map((s, i) => (
                       <div key={i} style={{ marginBottom: '6px' }}>
-                        <strong>#{i + 1} {s.company_name || 'Sender'}</strong><br />
+                        <strong>#{i + 1} {s.company_name || tText('ผู้ส่งสินค้า', 'Sender')}</strong><br />
                         {s.address_line || '-'}<br />
-                        Date: {s.pickup_date ? new Date(s.pickup_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {tText('วันที่รับสินค้า', 'Date')}: {s.pickup_date ? formatDateLocale(s.pickup_date) : '-'}
                       </div>
                     ))}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">DELIVERY (RECEIVER - {receiversList.length} Location(s))</span>
+                  <span className="review-label">{tText('สถานที่ส่งสินค้า (ปลายทาง)', 'DELIVERY (RECEIVER)')} ({receiversList.length} {tText('จุด', 'Location(s)')})</span>
                   <span className="review-value">
                     {receiversList.map((r, i) => (
                       <div key={i} style={{ marginBottom: '6px' }}>
-                        <strong>#{i + 1} {r.company_name || 'Receiver'}</strong><br />
+                        <strong>#{i + 1} {r.company_name || tText('ผู้รับสินค้า', 'Receiver')}</strong><br />
                         {r.address_line || '-'}<br />
-                        Date: {r.delivery_date ? new Date(r.delivery_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {tText('วันที่ส่งสินค้า', 'Date')}: {r.delivery_date ? formatDateLocale(r.delivery_date) : '-'}
                       </div>
                     ))}
                   </span>
                 </div>
 
                 <div className="review-card-item">
-                  <span className="review-label">ATTACHMENTS</span>
+                  <span className="review-label">{tText('เอกสารแนบ', 'ATTACHMENTS')}</span>
                   <span className="review-value">
-                    {wizardAttachedFiles.length + wizardNewFiles.length} file(s)
+                    {wizardAttachedFiles.length + wizardNewFiles.length} {tText('ไฟล์', 'file(s)')}
                   </span>
                 </div>
               </div>
@@ -1404,7 +1401,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 }}
               >
                 <ArrowLeft size={16} />
-                <span>Back</span>
+                <span>{t('actionBack', 'ย้อนกลับ')}</span>
               </button>
             </div>
 
@@ -1415,14 +1412,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   className="btn-primary"
                   onClick={() => {
                     if (currentStep === 1 && !selectedCustomer) {
-                      alert('กรุณาเลือกลูกค้าก่อนดำเนินการต่อ');
+                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(6, prev + 1));
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <span>Next</span>
+                  <span>{t('actionNext', 'ถัดไป')}</span>
                   <ArrowRight size={16} />
                 </button>
               ) : (
@@ -1434,7 +1431,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Check size={16} />
-                  <span>{saving ? 'Saving...' : editingBooking ? 'Save Changes' : 'Create Booking'}</span>
+                  <span>{saving ? t('actionSaving', 'กำลังบันทึก...') : editingBooking ? tText('บันทึกการแก้ไข', 'Save Changes') : tText('ยืนยันสร้าง Booking', 'Create Booking')}</span>
                 </button>
               )}
             </div>
@@ -1458,13 +1455,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
           >
             <ArrowLeft size={16} />
-            <span>Back to bookings</span>
+            <span>{tText('ย้อนกลับไปหน้ารายการจอง', 'Back to bookings')}</span>
           </button>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>
-            Booking Summary: {editingBooking?.booking_no}
+            {tText('สรุปข้อมูลการจอง: ', 'Booking Summary: ')}{editingBooking?.booking_no}
           </h2>
           <button
             type="button"
@@ -1475,28 +1472,28 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             }}
           >
             <Pencil size={16} />
-            <span>Edit Booking</span>
+            <span>{tText('แก้ไข Booking', 'Edit Booking')}</span>
           </button>
         </div>
 
         {/* SUMMARY DETAILS CARD */}
         <div className="dashboard-card-panel" style={{ padding: '32px' }}>
           <div className="wizard-step-body">
-            <h2 className="step-section-heading">Transport Booking Details</h2>
+            <h2 className="step-section-heading">{tText('รายละเอียดข้อมูลการจองรถขนส่ง', 'Transport Booking Details')}</h2>
 
             <div className="review-summary-grid">
               <div className="review-card-item">
-                <span className="review-label">BOOKING NUMBER</span>
+                <span className="review-label">{tText('เลขที่ Booking', 'BOOKING NUMBER')}</span>
                 <span className="review-value-bold">{editingBooking?.booking_no || '-'}</span>
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">CUSTOMER</span>
+                <span className="review-label">{tText('ลูกค้า', 'CUSTOMER')}</span>
                 <span className="review-value-bold">{selectedCustomer?.customer_name || editingBooking?.customer_name || '-'}</span>
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">QUOTATION REF</span>
+                <span className="review-label">{tText('ใบเสนอราคาอ้างอิง', 'QUOTATION REF')}</span>
                 <span className="review-value-bold">
                   {quotationList.find(q => q.document_id === (selectedQuotationId || editingBooking?.quotation_id))?.document_no ||
                    editingBooking?.quotation_no || '-'}
@@ -1504,7 +1501,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">SERVICE</span>
+                <span className="review-label">{tText('บริการ', 'SERVICE')}</span>
                 <span className="review-value-bold">
                   {(Array.isArray(services) ? services : []).find(s => s.service_id === (selectedServiceId || editingBooking?.service_id))?.description ||
                    editingBooking?.service_name ||
@@ -1513,61 +1510,61 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">ASSIGNED TRUCK</span>
-                <span className="review-value-bold">{editingBooking?.truck_name || '— Select truck —'}</span>
+                <span className="review-label">{tText('รถบรรทุกที่ได้รับมอบหมาย', 'ASSIGNED TRUCK')}</span>
+                <span className="review-value-bold">{editingBooking?.truck_name || tText('— เลือกรถบรรทุก —', '— Select truck —')}</span>
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">BOOKING DATE</span>
+                <span className="review-label">{tText('วันที่จอง', 'BOOKING DATE')}</span>
                 <span className="review-value-bold">
-                  {new Date(sendersList[0]?.pickup_date || todayStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {formatDateLocale(sendersList[0]?.pickup_date || todayStr)}
                 </span>
               </div>
 
               <div className="review-card-item" style={{ gridColumn: 'span 2' }}>
-                <span className="review-label">CARGO DETAILS</span>
+                <span className="review-label">{tText('รายละเอียดสินค้า', 'CARGO DETAILS')}</span>
                 <span className="review-value">
                   {cargoItems.map((c, i) => (
                     <div key={i} style={{ marginBottom: '4px' }}>
-                      📦 {c.inv_no ? <span style={{ color: '#2563eb', fontWeight: 600, marginRight: '6px' }}>[INV: {c.inv_no}]</span> : ''}<strong>{c.product_name || 'Cargo'}</strong> — Quantity: {c.quantity} {c.unit} | Weight: {c.weight} {c.wt_unit} {c.remark ? `(Remark: ${c.remark})` : ''}
+                      📦 {c.inv_no ? <span style={{ color: '#2563eb', fontWeight: 600, marginRight: '6px' }}>[INV: {c.inv_no}]</span> : ''}<strong>{c.product_name || 'Cargo'}</strong> — {tText('จำนวน', 'Quantity')}: {c.quantity} {c.unit} | {tText('น้ำหนัก', 'Weight')}: {c.weight} {c.wt_unit} {c.remark ? `(${tText('หมายเหตุ', 'Remark')}: ${c.remark})` : ''}
                     </div>
                   ))}
                 </span>
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">PICKUP LOCATIONS (SENDER - {sendersList.length})</span>
+                <span className="review-label">{tText('สถานที่รับสินค้า (ต้นทาง)', 'PICKUP LOCATIONS (SENDER)')} ({sendersList.length})</span>
                 <span className="review-value">
                   {sendersList.map((s, i) => (
                     <div key={i} style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: i < sendersList.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
-                      <strong>#{i + 1} {s.company_name || 'Sender Company'}</strong><br />
+                      <strong>#{i + 1} {s.company_name || tText('ผู้ส่งสินค้า', 'Sender Company')}</strong><br />
                       {s.address_line || '-'}<br />
                       {s.city ? `${s.city}, ` : ''}{s.state ? `${s.state} ` : ''}{s.postal_code || ''} {s.country || ''}<br />
-                      Pickup Date: {s.pickup_date ? new Date(s.pickup_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {tText('วันที่รับสินค้า', 'Pickup Date')}: {s.pickup_date ? formatDateLocale(s.pickup_date) : '-'}
                     </div>
                   ))}
                 </span>
               </div>
 
               <div className="review-card-item">
-                <span className="review-label">DELIVERY LOCATIONS (RECEIVER - {receiversList.length})</span>
+                <span className="review-label">{tText('สถานที่ส่งสินค้า (ปลายทาง)', 'DELIVERY LOCATIONS (RECEIVER)')} ({receiversList.length})</span>
                 <span className="review-value">
                   {receiversList.map((r, i) => (
                     <div key={i} style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: i < receiversList.length - 1 ? '1px dashed #e2e8f0' : 'none' }}>
-                      <strong>#{i + 1} {r.company_name || 'Receiver Company'}</strong><br />
+                      <strong>#{i + 1} {r.company_name || tText('ผู้รับสินค้า', 'Receiver Company')}</strong><br />
                       {r.address_line || '-'}<br />
                       {r.city ? `${r.city}, ` : ''}{r.state ? `${r.state} ` : ''}{r.postal_code || ''} {r.country || ''}<br />
-                      Delivery Date: {r.delivery_date ? new Date(r.delivery_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                      {tText('วันที่ส่งสินค้า', 'Delivery Date')}: {r.delivery_date ? formatDateLocale(r.delivery_date) : '-'}
                     </div>
                   ))}
                 </span>
               </div>
 
               <div className="review-card-item" style={{ gridColumn: 'span 2' }}>
-                <span className="review-label">ATTACHED DO FILES & DOCUMENTS ({wizardAttachedFiles.length})</span>
+                <span className="review-label">{tText('ไฟล์ DO และเอกสารแนบ', 'ATTACHED DO FILES & DOCUMENTS')} ({wizardAttachedFiles.length})</span>
                 <span className="review-value">
                   {wizardAttachedFiles.length === 0 ? (
-                    <span style={{ color: '#94a3b8' }}>No attached files for this booking.</span>
+                    <span style={{ color: '#94a3b8' }}>{tText('ไม่มีเอกสารแนบสำหรับการจองนี้', 'No attached files for this booking.')}</span>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                       {wizardAttachedFiles.map((att, i) => (
@@ -1599,7 +1596,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <ArrowLeft size={16} />
-              <span>Back to bookings</span>
+              <span>{tText('ย้อนกลับไปหน้ารายการจอง', 'Back to bookings')}</span>
             </button>
 
             <button
@@ -1612,7 +1609,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               <Pencil size={16} />
-              <span>Edit Booking</span>
+              <span>{tText('แก้ไข Booking', 'Edit Booking')}</span>
             </button>
           </div>
         </div>
@@ -1629,12 +1626,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Booking</h2>
-          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Create and manage transport bookings</p>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('bookingPageTitle', 'การจองรถขนส่ง (Booking)')}</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>{t('bookingPageSubtitle', 'จัดการรายการจองรถขนส่ง ตารางงาน และสถานะการจัดส่ง')}</p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreateWizard}>
           <Plus size={16} />
-          <span>Create New Booking</span>
+          <span>{t('bookingCreateBtn', 'สร้าง Booking ใหม่')}</span>
         </button>
       </div>
 
@@ -1645,7 +1642,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="Search bookings..."
+              placeholder={t('bookingSearchPlaceholder', 'ค้นหาตามเลขที่ Booking, ลูกค้า, พนักงานขับรถ...')}
               className="panel-search-input"
               value={tableSearch}
               onChange={(e) => setTableSearch(e.target.value)}
@@ -1657,21 +1654,21 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '13%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Booking #</th>
-                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>Customer</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Service</th>
-                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>Pickup Date</th>
-                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>Delivery Date</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>Truck</th>
-                <th style={{ width: '17%', whiteSpace: 'nowrap' }}>DO File / Attachment</th>
-                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '13%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('bookingColNo', 'Booking #')}</th>
+                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>{t('bookingColCustomer', 'ลูกค้า')}</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{t('bookingColService', 'บริการขนส่ง')}</th>
+                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>{t('bookingColPickupDate', 'วันที่ขึ้นของ (Pickup)')}</th>
+                <th style={{ width: '11%', whiteSpace: 'nowrap' }}>{t('bookingColDeliveryDate', 'วันที่ส่งมอบ (Delivery)')}</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{t('bookingColTruck', 'รถบรรทุก')}</th>
+                <th style={{ width: '17%', whiteSpace: 'nowrap' }}>{t('bookingColDoFile', 'ไฟล์ DO / เอกสารแนบ')}</th>
+                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('bookingColActions', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    ⏳ Loading bookings...
+                    ⏳ {tText('กำลังโหลดข้อมูลการจอง...', 'Loading bookings...')}
                   </td>
                 </tr>
               ) : (
@@ -1686,7 +1683,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         <span
                           style={{ cursor: 'pointer' }}
                           onClick={() => handleOpenSummaryView(booking)}
-                          title="Click to view booking summary"
+                          title={tText('คลิกเพื่อดูสรุปรายละเอียดการจอง', 'Click to view booking summary')}
                         >
                           {booking.booking_no}
                         </span>
@@ -1720,7 +1717,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             value={booking.car_id || ''}
                             onChange={(e) => handleTruckChange(booking.booking_id, e.target.value)}
                           >
-                            <option value="">— Select truck —</option>
+                            <option value="">{tText('— เลือกรถบรรทุก —', '— Select truck —')}</option>
                             {(Array.isArray(cars) ? cars : []).map((car) => (
                               <option key={car.car_id} value={car.car_id}>
                                 {car.car_number}
@@ -1737,7 +1734,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           <div
                             className="attached-preview-chip"
                             onClick={() => handleOpenAttachModal(booking)}
-                            title="Click to preview/view attached files"
+                            title={tText('คลิกเพื่อดูเอกสารแนบ', 'Click to preview/view attached files')}
                           >
                             <Paperclip size={13} className="chip-paperclip-icon" />
                             <span className="chip-filename-text">
@@ -1753,10 +1750,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             type="button"
                             className="attach-do-ghost-btn"
                             onClick={() => handleOpenAttachModal(booking)}
-                            title="Attach DO File"
+                            title={tText('แนบเอกสาร DO', 'Attach DO File')}
                           >
                             <Paperclip size={13} />
-                            <span>+ Attach</span>
+                            <span>{tText('+ แนบไฟล์', '+ Attach')}</span>
                           </button>
                         )}
                       </td>
@@ -1766,12 +1763,12 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         <ActionDropdown
                           items={[
                             {
-                              label: 'Edit',
+                              label: t('actionEdit', 'แก้ไข'),
                               icon: <Edit size={16} className="menu-icon" />,
                               onClick: () => handleOpenEditWizard(booking)
                             },
                             {
-                              label: 'Delete',
+                              label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
                               onClick: () => handleDeleteBooking(booking.booking_id)
@@ -1790,7 +1787,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         {filteredBookings.length === 0 && !loading && (
           <div className="empty-state-wrapper">
             <FolderOpen size={48} className="empty-state-icon" />
-            <p className="empty-state-text">No bookings found. Click 'Create New Booking' to generate one.</p>
+            <p className="empty-state-text">{t('bookingEmptyList', 'ยังไม่มีรายการจองรถ คลิก "สร้าง Booking ใหม่" เพื่อเริ่มต้น')}</p>
           </div>
         )}
       </div>
@@ -1805,9 +1802,9 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               <div className="modal-header-title">
                 <Paperclip size={20} color="#0284c7" />
                 <div>
-                  <h2>DO Files & Attachments</h2>
+                  <h2>{tText('ไฟล์ DO และเอกสารแนบ', 'DO Files & Attachments')}</h2>
                   <p className="modal-subtitle">
-                    Booking: <strong>{selectedBookingForAttach.booking_no}</strong> ({selectedBookingForAttach.customer_name})
+                    {tText('การจอง:', 'Booking:')} <strong>{selectedBookingForAttach.booking_no}</strong> ({selectedBookingForAttach.customer_name})
                   </p>
                 </div>
               </div>
@@ -1836,15 +1833,15 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 {uploading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '10px 0' }}>
                     <span style={{ fontSize: '24px' }}>⏳</span>
-                    <p style={{ margin: 0, fontWeight: 600, color: '#0284c7' }}>Uploading files, please wait...</p>
+                    <p style={{ margin: 0, fontWeight: 600, color: '#0284c7' }}>{tText('กำลังอัปโหลดไฟล์ กรุณารอสักครู่...', 'Uploading files, please wait...')}</p>
                   </div>
                 ) : (
                   <>
                     <Upload size={36} className="dropzone-upload-icon" />
                     <p className="dropzone-text">
-                      Drag and drop files here, or <span className="browse-link">browse</span>
+                      {tText('ลากและวางไฟล์ที่นี่ หรือ', 'Drag and drop files here, or')} <span className="browse-link">{tText('เลือกไฟล์', 'browse')}</span>
                     </p>
-                    <p className="dropzone-hint">Supports DO files, PDFs, images, documents</p>
+                    <p className="dropzone-hint">{tText('รองรับไฟล์ DO, PDF, รูปภาพ, เอกสารต่างๆ', 'Supports DO files, PDFs, images, documents')}</p>
                   </>
                 )}
               </div>
@@ -1852,13 +1849,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               {/* List of Attached Files */}
               <div className="attached-files-section">
                 <h3>
-                  Attached Files for this Booking ({selectedBookingForAttach.attachments?.length || 0})
+                  {tText('ไฟล์แนบของรายการจองนี้', 'Attached Files for this Booking')} ({selectedBookingForAttach.attachments?.length || 0})
                 </h3>
 
                 {(!selectedBookingForAttach.attachments || selectedBookingForAttach.attachments.length === 0) ? (
                   <div className="no-attachments-placeholder">
                     <AlertCircle size={24} color="#9ca3af" />
-                    <span>No files attached to this booking yet. Use the area above to attach DO files.</span>
+                    <span>{tText('ยังไม่มีไฟล์แนบในรายการนี้ ใช้พื้นที่ด้านบนเพื่ออัปโหลดไฟล์ DO', 'No files attached to this booking yet. Use the area above to attach DO files.')}</span>
                   </div>
                 ) : (
                   <div className="attachments-grid">
@@ -1872,7 +1869,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             {att.original_name || att.file_name}
                           </span>
                           <span className="att-file-meta">
-                            {att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : 'Attached'}
+                            {att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : tText('แนบแล้ว', 'Attached')}
                           </span>
                         </div>
                         <div className="att-file-actions">
@@ -1881,7 +1878,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             target="_blank"
                             rel="noopener noreferrer"
                             className="att-action-btn view"
-                            title="Preview / View File"
+                            title={tText('เปิดดูไฟล์', 'Preview / View File')}
                           >
                             <Eye size={16} />
                           </a>
@@ -1889,7 +1886,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             href={`http://localhost:3000${att.file_path}`}
                             download
                             className="att-action-btn download"
-                            title="Download File"
+                            title={tText('ดาวน์โหลดไฟล์', 'Download File')}
                           >
                             <Download size={16} />
                           </a>
@@ -1897,7 +1894,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             type="button"
                             className="att-action-btn delete"
                             onClick={() => handleDeleteAttachmentFile(att.attachment_id)}
-                            title="Delete Attachment"
+                            title={tText('ลบไฟล์แนบ', 'Delete Attachment')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -1911,7 +1908,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
             <div className="modal-footer-bar">
               <button className="btn-secondary" onClick={() => setIsAttachModalOpen(false)}>
-                Done
+                {tText('เสร็จสิ้น', 'Done')}
               </button>
             </div>
           </div>

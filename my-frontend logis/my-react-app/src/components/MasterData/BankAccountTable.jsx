@@ -9,6 +9,7 @@ import {
   Trash2
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
+import { useLanguage } from '../../context/LanguageContext';
 
 const COMMON_BANKS = [
   'ธนาคารกสิกรไทย (Kasikornbank)',
@@ -23,6 +24,7 @@ const COMMON_BANKS = [
 ];
 
 function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete, fetchData }) {
+  const { lang, t, tText } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -169,12 +171,12 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Bank Accounts</h2>
-          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Manage your bank accounts</p>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('bankPageTitle', 'ข้อมูลบัญชีธนาคาร (Bank Accounts)')}</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>{t('bankPageSubtitle', 'จัดการบัญชีธนาคารของบริษัท สำหรับรับชำระเงินค่าบริการขนส่ง')}</p>
         </div>
         <button className="btn-primary" onClick={openAddModal}>
           <Plus size={16} />
-          <span>Add Bank Account</span>
+          <span>{t('bankAddBtn', 'เพิ่มบัญชีธนาคารใหม่')}</span>
         </button>
       </div>
 
@@ -186,7 +188,7 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="Search bank accounts..."
+              placeholder={t('bankSearchPlaceholder', 'ค้นหาตามเลขที่บัญชี, ชื่อบัญชี, หรือธนาคาร...')}
               className="panel-search-input"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -200,18 +202,18 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
             <div style={{ textAlign: 'center', padding: '64px 24px', color: '#64748b' }}>
               <Inbox size={48} style={{ margin: '0 auto 16px auto', opacity: 0.5 }} />
               <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '500' }}>
-                No bank accounts yet. Click 'Add Bank Account' to create one.
+                {tText('ยังไม่มีบัญชีธนาคาร คลิก "เพิ่มบัญชีธนาคารใหม่" เพื่อเริ่มต้น', 'No bank accounts yet. Click \'Add Bank Account\' to create one.')}
               </p>
             </div>
           ) : (
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ width: '28%', paddingLeft: '24px' }}>Bank Name</th>
-                  <th style={{ width: '22%' }}>Account Number</th>
-                  <th style={{ width: '28%' }}>Account Name</th>
-                  <th style={{ width: '12%' }}>Branch</th>
-                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
+                  <th style={{ width: '28%', paddingLeft: '24px' }}>{t('bankColBank', 'ธนาคาร')}</th>
+                  <th style={{ width: '22%' }}>{t('bankColAccNo', 'เลขที่บัญชี')}</th>
+                  <th style={{ width: '28%' }}>{t('bankColAccName', 'ชื่อบัญชี')}</th>
+                  <th style={{ width: '12%' }}>{t('bankColBranch', 'สาขา')}</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>{t('actionActions', 'จัดการ')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -220,22 +222,22 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
                     <td style={{ paddingLeft: '24px', fontWeight: '600', color: '#0f172a' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Landmark size={16} color="#64748b" />
-                        <span>{acc.bank_name || 'ธนาคารทั่วไป'}</span>
+                        <span>{acc.bank_name || tText('ธนาคารทั่วไป', 'General Bank')}</span>
                       </div>
                     </td>
                     <td>{acc.account_no}</td>
                     <td>{acc.account_name || '-'}</td>
-                    <td>{acc.bank_branch || 'สำนักงานใหญ่'}</td>
+                    <td>{acc.bank_branch || tText('สำนักงานใหญ่', 'Head Office')}</td>
                     <td style={{ textAlign: 'right', paddingRight: '24px' }}>
                       <ActionDropdown
                         items={[
                           {
-                            label: 'Edit',
+                            label: t('actionEdit', 'แก้ไข'),
                             icon: <Edit size={16} className="menu-icon" />,
                             onClick: () => openEditModal(acc)
                           },
                           {
-                            label: 'Delete',
+                            label: t('actionDelete', 'ลบ'),
                             icon: <Trash2 size={16} className="menu-icon" />,
                             danger: true,
                             onClick: () => handleDelete(acc)
@@ -256,7 +258,7 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
         <div className="modal-overlay">
           <div className="modal-box" style={{ maxWidth: '550px' }}>
             <div className="modal-header">
-              <h3>{modalMode === 'add' ? 'Add Bank Account' : 'Edit Bank Account'}</h3>
+              <h3>{modalMode === 'add' ? tText('เพิ่มบัญชีธนาคาร', 'Add Bank Account') : tText('แก้ไขบัญชีธนาคาร', 'Edit Bank Account')}</h3>
               <button className="modal-close-btn" onClick={closeModal}>
                 <X size={18} />
               </button>
@@ -268,14 +270,14 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
                 {/* Bank Name */}
                 <div className="form-group">
                   <label className="form-label">
-                    Bank Name
+                    {t('bankColBank', 'ธนาคาร')}
                     <span className="form-label-required">*</span>
                   </label>
                   <input
                     type="text"
                     required
                     list="bank-suggestions-list"
-                    placeholder="ชื่อธนาคาร..."
+                    placeholder={tText('ชื่อธนาคาร...', 'Bank name...')}
                     className="form-input"
                     value={formData.bank_name}
                     onChange={e => setFormData({ ...formData, bank_name: e.target.value })}
@@ -292,13 +294,13 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">
-                      Account Number
+                      {t('bankColAccNo', 'เลขที่บัญชี')}
                       <span className="form-label-required">*</span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="เลขที่บัญชี..."
+                      placeholder={tText('เลขที่บัญชี...', 'Account number...')}
                       className="form-input"
                       value={formData.account_no}
                       onChange={e => setFormData({ ...formData, account_no: e.target.value })}
@@ -307,10 +309,10 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
                   </div>
 
                   <div className="form-group">
-                    <label className="form-label">Branch</label>
+                    <label className="form-label">{t('bankColBranch', 'สาขา')}</label>
                     <input
                       type="text"
-                      placeholder="สาขา..."
+                      placeholder={tText('สาขา...', 'Branch...')}
                       className="form-input"
                       value={formData.bank_branch}
                       onChange={e => setFormData({ ...formData, bank_branch: e.target.value })}
@@ -322,13 +324,13 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
                 {/* Account Name */}
                 <div className="form-group">
                   <label className="form-label">
-                    Account Name
+                    {t('bankColAccName', 'ชื่อบัญชี')}
                     <span className="form-label-required">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="ชื่อบัญชี..."
+                    placeholder={tText('ชื่อบัญชี...', 'Account name...')}
                     className="form-input"
                     value={formData.account_name}
                     onChange={e => setFormData({ ...formData, account_name: e.target.value })}
@@ -340,10 +342,10 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={isSubmitting}>
-                  Cancel
+                  {t('actionCancel', 'ยกเลิก')}
                 </button>
                 <button type="submit" className="btn-primary" disabled={isSubmitting}>
-                  {modalMode === 'add' ? 'Create' : 'Save'}
+                  {modalMode === 'add' ? tText('บันทึก', 'Create') : tText('บันทึก', 'Save')}
                 </button>
               </div>
             </form>

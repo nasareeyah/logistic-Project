@@ -12,8 +12,10 @@ import BookingForm from './components/Booking/BookingForm';
 import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
 import InvoiceTable from './components/Invoice/InvoiceTable';
 import ReceiptTable from './components/Receipt/ReceiptTable';
+import { useLanguage } from './context/LanguageContext';
 
 function App() {
+  const { tText } = useLanguage();
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -398,7 +400,7 @@ function App() {
     return <Login onLogin={handleLogin} loginError={loginError} />;
   }
 
-  if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}> กำลังโหลดข้อมูล...</div>;
+  if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}>{tText('กำลังโหลดข้อมูล...', 'Loading data...')}</div>;
   if (error) return <div style={{ padding: '30px', textAlign: 'center', color: 'red', fontSize: '18px' }}>{error}</div>;
 
   return (
@@ -472,8 +474,8 @@ function App() {
               />
             ) : (
               <div style={{ padding: '30px', textAlign: 'center', backgroundColor: '#fff', borderRadius: '12px', marginTop: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                <h3 style={{ color: '#ef4444', fontSize: '18px', marginBottom: '8px' }}>⛔ ปฏิเสธการเข้าถึง (Access Denied)</h3>
-                <p style={{ color: '#6b7280', fontSize: '14px' }}>เอกสารทางการเงิน (Quotation / ใบเสนอราคา) สงวนสิทธิ์การเข้าถึงสำหรับฝ่าย Operator / Accounting เท่านั้น</p>
+                <h3 style={{ color: '#ef4444', fontSize: '18px', marginBottom: '8px' }}>⛔ {tText('ปฏิเสธการเข้าถึง (Access Denied)', 'Access Denied')}</h3>
+                <p style={{ color: '#6b7280', fontSize: '14px' }}>{tText('เอกสารทางการเงิน (Quotation / ใบเสนอราคา) สงวนสิทธิ์การเข้าถึงสำหรับฝ่าย Operator / Accounting เท่านั้น', 'Financial documents (Quotation) are restricted to Operator / Accounting roles only.')}</p>
               </div>
             )
           )}

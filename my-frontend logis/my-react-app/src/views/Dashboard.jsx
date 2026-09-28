@@ -18,6 +18,7 @@ import {
   Plus
 } from 'lucide-react';
 import './Dashboard.css';
+import { useLanguage } from '../context/LanguageContext';
 
 function Dashboard({
   bookings = [],
@@ -31,6 +32,8 @@ function Dashboard({
   drivers = [],
   setActiveTab
 }) {
+  const { lang, t, tText, isTh } = useLanguage();
+
   // Local states with fallback API fetch if props were empty initially
   const [localDOs, setLocalDOs] = useState(deliveryOrders);
   const [localInvoices, setLocalInvoices] = useState(invoices);
@@ -190,11 +193,15 @@ function Dashboard({
   const viewYear = calendarDate.getFullYear();
   const viewMonth = calendarDate.getMonth();
 
-  const monthNames = [
+  const monthNamesEn = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  const monthTitle = `${monthNames[viewMonth]} ${viewYear}`;
+  const monthNamesTh = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+  ];
+  const monthTitle = isTh ? `${monthNamesTh[viewMonth]} ${viewYear + 543}` : `${monthNamesEn[viewMonth]} ${viewYear}`;
 
   const handlePrevMonth = () => {
     setCalendarDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -289,8 +296,8 @@ function Dashboard({
     <div>
 
       {/* Header Title */}
-      <h2 className="dashboard-view-title">Dashboard</h2>
-      <p className="dashboard-view-subtitle">ภาพรวมการดำเนินงานขนส่งและการจองรถ (Logistics Overview)</p>
+      <h2 className="dashboard-view-title">{t('menuDashboard', 'Dashboard')}</h2>
+      <p className="dashboard-view-subtitle">{t('dashSubtitle', 'ภาพรวมการดำเนินงานขนส่งและการจองรถ (Logistics Overview)')}</p>
 
       {/* Stat Cards Grid (4 Cards from user requirement) */}
       <div className="dashboard-stats-grid">
@@ -302,13 +309,13 @@ function Dashboard({
             </div>
             <div>
               <span className="dashboard-stat-value">{totalBookingsThisMonth}</span>
-              <div className="dashboard-stat-label">Booking ในเดือนนี้</div>
+              <div className="dashboard-stat-label">{tText('Booking ในเดือนนี้', 'Bookings This Month')}</div>
             </div>
           </div>
           <div className="dashboard-stat-right">
             <span className="dashboard-stat-trend up">
               <TrendingUp size={14} />
-              <span>{bookings.length} รวม</span>
+              <span>{bookings.length} {tText('รวม', 'Total')}</span>
             </span>
           </div>
         </div>
@@ -321,7 +328,7 @@ function Dashboard({
             </div>
             <div>
               <span className="dashboard-stat-value">{inProgressJobs.length}</span>
-              <div className="dashboard-stat-label">งานที่กำลังทำ</div>
+              <div className="dashboard-stat-label">{tText('งานที่กำลังทำ', 'In Progress Jobs')}</div>
             </div>
           </div>
           <div className="dashboard-stat-right">
@@ -339,7 +346,7 @@ function Dashboard({
             </div>
             <div>
               <span className="dashboard-stat-value">{completedJobs.length}</span>
-              <div className="dashboard-stat-label">งานที่เสร็จแล้ว</div>
+              <div className="dashboard-stat-label">{tText('งานที่เสร็จแล้ว', 'Completed Jobs')}</div>
             </div>
           </div>
           <div className="dashboard-stat-right">
@@ -358,7 +365,7 @@ function Dashboard({
             </div>
             <div>
               <span className="dashboard-stat-value">฿{Number(monthlyRevenue).toLocaleString()}</span>
-              <div className="dashboard-stat-label">ยอดรวมในเดือนนี้</div>
+              <div className="dashboard-stat-label">{tText('ยอดรวมในเดือนนี้', 'Revenue This Month')}</div>
             </div>
           </div>
           <div className="dashboard-stat-right">
@@ -376,7 +383,7 @@ function Dashboard({
           <div className="dashboard-card-header" style={{ marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Calendar size={18} color="#0284c7" />
-              <h3 className="dashboard-card-title">ปฏิทินงาน (Schedule)</h3>
+              <h3 className="dashboard-card-title">{tText('ปฏิทินงาน (Schedule)', 'Transport Schedule')}</h3>
             </div>
           </div>
           
@@ -388,21 +395,21 @@ function Dashboard({
                 <button 
                   className="calendar-nav-btn" 
                   onClick={handlePrevMonth}
-                  title="เดือนก่อนหน้า"
+                  title={tText('เดือนก่อนหน้า', 'Previous Month')}
                 >
                   <ChevronLeft size={16} />
                 </button>
                 <button 
                   className="calendar-nav-btn calendar-today-btn" 
                   onClick={handleToday}
-                  title="กลับไปวันนี้"
+                  title={tText('กลับไปวันนี้', 'Back to Today')}
                 >
-                  Today
+                  {tText('วันนี้', 'Today')}
                 </button>
                 <button 
                   className="calendar-nav-btn" 
                   onClick={handleNextMonth}
-                  title="เดือนถัดไป"
+                  title={tText('เดือนถัดไป', 'Next Month')}
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -411,7 +418,7 @@ function Dashboard({
 
             {/* Days of Week */}
             <div className="calendar-grid">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, idx) => (
+              {(isTh ? ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((label, idx) => (
                 <div key={idx} className="calendar-day-label">{label}</div>
               ))}
               
@@ -446,17 +453,17 @@ function Dashboard({
           {/* Selected Date Summary & Filter Clear */}
           <div className="calendar-selected-summary">
             <div className="calendar-selected-info">
-              <span className="calendar-selected-label">วันที่กำลังเลือกดู:</span>
+              <span className="calendar-selected-label">{tText('วันที่กำลังเลือกดู:', 'Selected Date:')}</span>
               <span className="calendar-selected-value">
                 {selectedDate ? (
                   <>
                     📅 {selectedDate} 
                     <span style={{ fontSize: '0.8rem', color: '#0284c7', marginLeft: '6px' }}>
-                      ({bookingsByDate[selectedDate]?.length || 0} งาน)
+                      ({bookingsByDate[selectedDate]?.length || 0} {tText('งาน', 'jobs')})
                     </span>
                   </>
                 ) : (
-                  `ทั้งเดือน ${monthTitle}`
+                  `${tText('ทั้งเดือน', 'Entire month')} ${monthTitle}`
                 )}
               </span>
             </div>
@@ -466,7 +473,7 @@ function Dashboard({
                 className="calendar-clear-btn"
                 onClick={() => setSelectedDate(null)}
               >
-                ดูทั้งเดือน
+                {tText('ดูทั้งเดือน', 'View Entire Month')}
               </button>
             )}
           </div>
@@ -477,11 +484,11 @@ function Dashboard({
           <div className="dashboard-table-header">
             <div className="table-header-left">
               <ClipboardList size={20} color="#0284c7" />
-              <h3 className="dashboard-card-title">รายการ Booking</h3>
+              <h3 className="dashboard-card-title">{tText('รายการ Booking', 'Booking List')}</h3>
               <span className="table-header-badge">
-                {selectedDate ? `วันที่ ${selectedDate}` : `เดือน ${monthTitle}`}
+                {selectedDate ? `${tText('วันที่', 'Date')} ${selectedDate}` : `${tText('เดือน', 'Month')} ${monthTitle}`}
                 {' · '}
-                {displayedBookings.length} รายการ
+                {displayedBookings.length} {tText('รายการ', 'items')}
               </span>
             </div>
 
@@ -490,9 +497,9 @@ function Dashboard({
                 <button 
                   className="btn-view-all-link"
                   onClick={() => setActiveTab('booking')}
-                  title="ไปที่ระบบจัดการ Booking เต็ม"
+                  title={tText('ไปที่ระบบจัดการ Booking เต็ม', 'Go to full booking management')}
                 >
-                  <span>จัดการ Booking ทั้งหมด</span>
+                  <span>{tText('จัดการ Booking ทั้งหมด', 'Manage All Bookings')}</span>
                   <ArrowRight size={15} />
                 </button>
               )}
@@ -505,12 +512,12 @@ function Dashboard({
               <table className="dash-schedule-table">
                 <thead>
                   <tr>
-                    <th>เลข Booking</th>
-                    <th>ลูกค้า</th>
-                    <th>เส้นทาง (ต้นทาง ➔ ปลายทาง)</th>
-                    <th>รถ / ทะเบียน</th>
-                    <th>วันที่</th>
-                    <th style={{ textAlign: 'center' }}>จัดการ</th>
+                    <th>{tText('เลข Booking', 'Booking #')}</th>
+                    <th>{tText('ลูกค้า', 'Customer')}</th>
+                    <th>{tText('เส้นทาง (ต้นทาง ➔ ปลายทาง)', 'Route (Origin ➔ Destination)')}</th>
+                    <th>{tText('รถ / ทะเบียน', 'Truck / Plate')}</th>
+                    <th>{tText('วันที่', 'Date')}</th>
+                    <th style={{ textAlign: 'center' }}>{tText('จัดการ', 'Action')}</th>
                   </tr>
                 </thead>
                 <tbody>

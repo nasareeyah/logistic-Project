@@ -16,11 +16,14 @@ import {
   ArrowLeft,
   File,
   MoreVertical,
-  Edit
+  Edit,
+  Inbox
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
+import { useLanguage } from '../../context/LanguageContext';
 
 function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] }) {
+  const { lang, t, tText } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -66,10 +69,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       return;
     }
 
-    let street = formData.streetAddress || '';
-    if (formData.addressLine2) {
-      street = street ? `${street}, ${formData.addressLine2}` : formData.addressLine2;
-    }
+    const street = formData.streetAddress || formData.address || '';
 
     const dataToSave = {
       customer_name: formData.customer_name,
@@ -274,11 +274,11 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
     ].filter(Boolean).join(', ') || selectedCustomer.address || '-';
 
     const fields = [
-      { label: 'Contact Person', value: selectedCustomer.contact_person, icon: User },
-      { label: 'Phone', value: selectedCustomer.phone, icon: Phone },
-      { label: 'Email', value: selectedCustomer.email, icon: Mail },
-      { label: 'Tax ID', value: selectedCustomer.tax_id, icon: FileText },
-      { label: 'Address', value: addressDisplay, icon: MapPin }
+      { label: tText('ผู้ติดต่อ', 'Contact Person'), value: selectedCustomer.contact_person, icon: User },
+      { label: tText('เบอร์โทรศัพท์', 'Phone'), value: selectedCustomer.phone, icon: Phone },
+      { label: tText('อีเมล', 'Email'), value: selectedCustomer.email, icon: Mail },
+      { label: tText('เลขประจำตัวผู้เสียภาษี', 'Tax ID'), value: selectedCustomer.tax_id, icon: FileText },
+      { label: tText('ที่อยู่', 'Address'), value: addressDisplay, icon: MapPin }
     ];
 
     return (
@@ -288,7 +288,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <div style={{ textAlign: 'left' }}>
             <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{selectedCustomer.customer_name}</h2>
-            <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Customer profile and history</p>
+            <p className="dashboard-view-subtitle" style={{ margin: 0 }}>{tText('ข้อมูลโปรไฟล์ลูกค้าและประวัติเอกสาร', 'Customer profile and history')}</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button 
@@ -297,7 +297,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               <ArrowLeft size={16} />
-              <span>Back</span>
+              <span>{t('actionBack', 'ย้อนกลับ')}</span>
             </button>
             <button 
               className="btn-primary" 
@@ -305,7 +305,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               <Pencil size={16} />
-              <span>Edit</span>
+              <span>{t('actionEdit', 'แก้ไข')}</span>
             </button>
           </div>
         </div>
@@ -371,18 +371,18 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
               <FileText size={24} />
             </div>
             <div style={{ fontSize: '32px', fontWeight: '800', color: '#1e3a8a', lineHeight: '1' }}>0</div>
-            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', marginTop: '8px' }}>Bookings</div>
+            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', marginTop: '8px' }}>{tText('รายการจองรถ (Bookings)', 'Bookings')}</div>
           </div>
         </div>
 
         {/* Booking History Panel */}
         <div className="dashboard-card-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>Booking History</h3>
-            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>0 records</span>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>{tText('ประวัติการจองรถ', 'Booking History')}</h3>
+            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>0 {tText('รายการ', 'records')}</span>
           </div>
           <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
-            No bookings for this customer yet.
+            {tText('ยังไม่มีประวัติการจองสำหรับลูกค้ารายนี้', 'No bookings for this customer yet.')}
           </div>
         </div>
 
@@ -391,7 +391,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
           <div className="modal-overlay">
             <div className="modal-box">
               <div className="modal-header">
-                <h3 className="modal-title">Edit Customer</h3>
+                <h3 className="modal-title">{tText('แก้ไขข้อมูลลูกค้า', 'Edit Customer')}</h3>
                 <button className="modal-close-btn" onClick={closeModal}>
                   <X size={18} />
                 </button>
@@ -402,13 +402,13 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   {/* Company Name */}
                   <div className="form-group">
                     <label className="form-label">
-                      Company Name
+                      {tText('ชื่อบริษัท / ลูกค้า', 'Company Name')}
                       <span className="form-label-required">*</span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="เช่น บริษัท เอสซีจี จำกัด..."
+                      placeholder={tText('เช่น บริษัท เอสซีจี จำกัด...', 'e.g. SCG Logistics Co., Ltd.')}
                       className="form-input"
                       value={formData.customer_name}
                       onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
@@ -419,10 +419,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   {/* Contact Person & Phone */}
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Contact Person</label>
+                      <label className="form-label">{tText('ผู้ติดต่อ', 'Contact Person')}</label>
                       <input
                         type="text"
-                        placeholder="ชื่อผู้ติดต่อ..."
+                        placeholder={tText('ชื่อผู้ติดต่อ...', 'Contact name...')}
                         className="form-input"
                         value={formData.contact_person}
                         onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
@@ -430,10 +430,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Phone</label>
+                      <label className="form-label">{tText('เบอร์โทรศัพท์', 'Phone')}</label>
                       <input
                         type="text"
-                        placeholder="เบอร์โทร..."
+                        placeholder={tText('เบอร์โทร...', 'Phone number...')}
                         className="form-input"
                         value={formData.phone}
                         onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -445,10 +445,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   {/* Email & Tax ID */}
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Email</label>
+                      <label className="form-label">{tText('อีเมล', 'Email')}</label>
                       <input
                         type="email"
-                        placeholder="อีเมล..."
+                        placeholder={tText('อีเมล...', 'Email...')}
                         className="form-input"
                         value={formData.email}
                         onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -456,10 +456,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Tax ID</label>
+                      <label className="form-label">{tText('เลขประจำตัวผู้เสียภาษี', 'Tax ID')}</label>
                       <input
                         type="text"
-                        placeholder="เลขผู้เสียภาษี..."
+                        placeholder={tText('เลขผู้เสียภาษี...', 'Tax ID...')}
                         className="form-input"
                         value={formData.tax_id}
                         onChange={e => setFormData({ ...formData, tax_id: e.target.value })}
@@ -468,91 +468,74 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     </div>
                   </div>
 
-                  {/* Street Address */}
+                  {/* Address Line */}
                   <div className="form-group">
-                    <label className="form-label">
-                      Street Address
-                      <span className="form-label-required">*</span>
-                    </label>
+                    <label className="form-label">{tText('ที่อยู่', 'Address Line')}</label>
                     <input
                       type="text"
-                      placeholder="House No., Building, Street"
+                      placeholder={tText('เลขที่ อาคาร ถนน...', 'Address Line')}
                       className="form-input"
-                      value={formData.streetAddress}
-                      onChange={e => setFormData({ ...formData, streetAddress: e.target.value })}
+                      value={formData.streetAddress || formData.address || ''}
+                      onChange={e => setFormData({ ...formData, streetAddress: e.target.value, address: e.target.value })}
                       autoComplete="new-password"
                     />
                   </div>
 
-                  {/* Address Line 2 */}
-                  <div className="form-group">
-                    <label className="form-label">Address Line 2</label>
-                    <input
-                      type="text"
-                      placeholder="Apartment, Suite, Building, Floor"
-                      className="form-input"
-                      value={formData.addressLine2}
-                      onChange={e => setFormData({ ...formData, addressLine2: e.target.value })}
-                      autoComplete="new-password"
-                    />
-                  </div>
-
-                  {/* Country & Postal Code */}
+                  {/* City / District & State / Province */}
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">
-                        Country
-                        <span className="form-label-required">*</span>
-                      </label>
-                      <select
-                        className="form-select"
-                        value={formData.country}
-                        onChange={e => setFormData({ ...formData, country: e.target.value })}
-                      >
-                        {countries.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">
-                        Postal Code
-                        <span className="form-label-required">*</span>
-                      </label>
+                      <label className="form-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                       <input
                         type="text"
-                        placeholder="50000"
+                        placeholder={tText('อำเภอ / เขต...', 'City / District')}
                         className="form-input"
-                        value={formData.postalCode}
-                        onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                        value={formData.city}
+                        onChange={e => setFormData({ ...formData, city: e.target.value })}
                         autoComplete="new-password"
                       />
                     </div>
-                  </div>
-
-                  {/* Province & City */}
-                  <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Province</label>
+                      <label className="form-label">{tText('จังหวัด', 'State / Province')}</label>
                       <input
                         type="text"
-                        placeholder="State / Province"
+                        placeholder={tText('จังหวัด...', 'State / Province')}
                         className="form-input"
                         value={formData.province}
                         onChange={e => setFormData({ ...formData, province: e.target.value })}
                         autoComplete="new-password"
                       />
                     </div>
+                  </div>
+
+                  {/* Postal Code & Country */}
+                  <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">City</label>
+                      <label className="form-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                       <input
                         type="text"
-                        placeholder="City"
+                        placeholder={tText('รหัสไปรษณีย์...', 'Postal Code')}
                         className="form-input"
-                        value={formData.city}
-                        onChange={e => setFormData({ ...formData, city: e.target.value })}
+                        value={formData.postalCode}
+                        onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
                         autoComplete="new-password"
                       />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">{tText('ประเทศ', 'Country')}</label>
+                      <input
+                        type="text"
+                        list="modal1-countries-list"
+                        placeholder={tText('ประเทศ...', 'Country')}
+                        className="form-input"
+                        value={formData.country}
+                        onChange={e => setFormData({ ...formData, country: e.target.value })}
+                        autoComplete="new-password"
+                      />
+                      <datalist id="modal1-countries-list">
+                        {countries.map(c => (
+                          <option key={c} value={c} />
+                        ))}
+                      </datalist>
                     </div>
                   </div>
 
@@ -560,10 +543,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
 
                 <div className="modal-footer">
                   <button type="button" className="btn-secondary" onClick={closeModal}>
-                    Cancel
+                    {t('actionCancel', 'ยกเลิก')}
                   </button>
                   <button type="submit" className="btn-primary">
-                    Save
+                    {t('actionSave', 'บันทึก')}
                   </button>
                 </div>
               </form>
@@ -580,12 +563,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
       {/* Header section */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>Customers</h2>
-          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>Manage your customer database</p>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('custPageTitle', 'ข้อมูลลูกค้า (Customers)')}</h2>
+          <p className="dashboard-view-subtitle" style={{ margin: 0 }}>{t('custPageSubtitle', 'จัดการข้อมูลลูกค้า รายละเอียดการติดต่อ และประวัติเอกสาร')}</p>
         </div>
         <button className="btn-primary" onClick={openAddModal}>
           <Plus size={16} />
-          <span>Add Customer</span>
+          <span>{t('custAddBtn', 'เพิ่มลูกค้าใหม่')}</span>
         </button>
       </div>
 
@@ -597,7 +580,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="Search customers..."
+              placeholder={t('custSearchPlaceholder', 'ค้นหาลูกค้าตามชื่อบริษัท, ผู้ติดต่อ, เบอร์โทร...')}
               className="panel-search-input"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -606,71 +589,72 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
         </div>
 
         {/* Clean UI table */}
-        <div className="table-responsive-wrapper">
-          <table className="custom-clean-table">
-            <thead>
-              <tr>
-                <th style={{ width: '25%', paddingLeft: '24px' }}>Company Name</th>
-                <th style={{ width: '25%' }}>Contact</th>
-                <th style={{ width: '20%' }}>Phone</th>
-                <th style={{ width: '20%' }}>Email</th>
-                <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map(c => (
-                <tr key={c.customer_id}>
-                  <td style={{ paddingLeft: '24px' }}>
-                    <button
-                      onClick={() => setSelectedCustomerId(c.customer_id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        color: '#0284c7',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                      onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                      onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                    >
-                      {c.customer_name}
-                    </button>
-                  </td>
-                  <td>{c.contact_person || '-'}</td>
-                  <td>{c.phone || '-'}</td>
-                  <td>{c.email || '-'}</td>
-                  <td style={{ textAlign: 'right', paddingRight: '24px' }}>
-                    <ActionDropdown
-                      items={[
-                        {
-                          label: 'Edit',
-                          icon: <Edit size={16} className="menu-icon" />,
-                          onClick: () => openEditModal(c)
-                        },
-                        {
-                          label: 'Delete',
-                          icon: <Trash2 size={16} className="menu-icon danger" />,
-                          danger: true,
-                          onClick: () => onDelete(c.customer_id)
-                        }
-                      ]}
-                    />
-                  </td>
+        <div className="table-responsive-wrapper" style={{ marginTop: '16px' }}>
+          {filteredCustomers.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '64px 24px', color: '#64748b' }}>
+              <Inbox size={48} style={{ margin: '0 auto 16px auto', opacity: 0.5 }} />
+              <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: '500' }}>
+                {tText('ยังไม่มีข้อมูลลูกค้า คลิก "เพิ่มลูกค้าใหม่" เพื่อสร้างข้อมูล', 'No customers yet. Click \'Add Customer\' to create one.')}
+              </p>
+            </div>
+          ) : (
+            <table className="custom-clean-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '25%', paddingLeft: '24px' }}>{t('custColCompany', 'ชื่อบริษัท / ลูกค้า')}</th>
+                  <th style={{ width: '25%' }}>{t('custColContact', 'ผู้ติดต่อ')}</th>
+                  <th style={{ width: '20%' }}>{tText('เบอร์โทรศัพท์', 'Phone')}</th>
+                  <th style={{ width: '20%' }}>{tText('อีเมล', 'Email')}</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px' }}>{t('actionActions', 'จัดการ')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredCustomers.map(c => (
+                  <tr key={c.customer_id}>
+                    <td style={{ paddingLeft: '24px' }}>
+                      <button
+                        onClick={() => setSelectedCustomerId(c.customer_id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          color: '#0284c7',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                      >
+                        {c.customer_name}
+                      </button>
+                    </td>
+                    <td>{c.contact_person || '-'}</td>
+                    <td>{c.phone || '-'}</td>
+                    <td>{c.email || '-'}</td>
+                    <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                      <ActionDropdown
+                        items={[
+                          {
+                            label: t('actionEdit', 'แก้ไข'),
+                            icon: <Edit size={16} className="menu-icon" />,
+                            onClick: () => openEditModal(c)
+                          },
+                          {
+                            label: t('actionDelete', 'ลบ'),
+                            icon: <Trash2 size={16} className="menu-icon danger" />,
+                            danger: true,
+                            onClick: () => onDelete(c.customer_id)
+                          }
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-
-        {/* Empty state container */}
-        {filteredCustomers.length === 0 && (
-          <div className="empty-state-wrapper">
-            <FolderOpen size={48} className="empty-state-icon" />
-            <p className="empty-state-text">No customers yet. Click 'Add Customer' to create one.</p>
-          </div>
-        )}
       </div>
 
       {/* Modal Dialog */}
@@ -679,7 +663,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
           <div className="modal-box">
             <div className="modal-header">
               <h3 className="modal-title">
-                {modalMode === 'add' ? 'Add Customer' : 'Edit Customer'}
+                {modalMode === 'add' ? tText('เพิ่มข้อมูลลูกค้า', 'Add Customer') : tText('แก้ไขข้อมูลลูกค้า', 'Edit Customer')}
               </h3>
               <button className="modal-close-btn" onClick={closeModal}>
                 <X size={18} />
@@ -691,13 +675,13 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                 {/* Company Name */}
                 <div className="form-group">
                   <label className="form-label">
-                    Company Name
+                    {tText('ชื่อบริษัท / ลูกค้า', 'Company Name')}
                     <span className="form-label-required">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="เช่น บริษัท เอสซีจี จำกัด..."
+                    placeholder={tText('เช่น บริษัท เอสซีจี จำกัด...', 'e.g. SCG Logistics Co., Ltd.')}
                     className="form-input"
                     value={formData.customer_name}
                     onChange={e => setFormData({ ...formData, customer_name: e.target.value })}
@@ -708,10 +692,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                 {/* Contact Person & Phone */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Contact Person</label>
+                    <label className="form-label">{tText('ผู้ติดต่อ', 'Contact Person')}</label>
                     <input
                       type="text"
-                      placeholder="ชื่อผู้ติดต่อ..."
+                      placeholder={tText('ชื่อผู้ติดต่อ...', 'Contact name...')}
                       className="form-input"
                       value={formData.contact_person}
                       onChange={e => setFormData({ ...formData, contact_person: e.target.value })}
@@ -719,10 +703,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Phone</label>
+                    <label className="form-label">{tText('เบอร์โทรศัพท์', 'Phone')}</label>
                     <input
                       type="text"
-                      placeholder="เบอร์โทร..."
+                      placeholder={tText('เบอร์โทร...', 'Phone number...')}
                       className="form-input"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
@@ -734,10 +718,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                 {/* Email & Tax ID */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Email</label>
+                    <label className="form-label">{tText('อีเมล', 'Email')}</label>
                     <input
                       type="email"
-                      placeholder="อีเมล..."
+                      placeholder={tText('อีเมล...', 'Email...')}
                       className="form-input"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
@@ -745,10 +729,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Tax ID</label>
+                    <label className="form-label">{tText('เลขประจำตัวผู้เสียภาษี', 'Tax ID')}</label>
                     <input
                       type="text"
-                      placeholder="เลขผู้เสียภาษี..."
+                      placeholder={tText('เลขผู้เสียภาษี...', 'Tax ID...')}
                       className="form-input"
                       value={formData.tax_id}
                       onChange={e => setFormData({ ...formData, tax_id: e.target.value })}
@@ -757,91 +741,74 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                   </div>
                 </div>
 
-                {/* Street Address */}
+                {/* Address Line */}
                 <div className="form-group">
-                  <label className="form-label">
-                    Street Address
-                    <span className="form-label-required">*</span>
-                  </label>
+                  <label className="form-label">{tText('ที่อยู่', 'Address Line')}</label>
                   <input
                     type="text"
-                    placeholder="House No., Building, Street"
+                    placeholder={tText('เลขที่ อาคาร ถนน...', 'Address Line')}
                     className="form-input"
-                    value={formData.streetAddress}
-                    onChange={e => setFormData({ ...formData, streetAddress: e.target.value })}
+                    value={formData.streetAddress || formData.address || ''}
+                    onChange={e => setFormData({ ...formData, streetAddress: e.target.value, address: e.target.value })}
                     autoComplete="new-password"
                   />
                 </div>
 
-                {/* Address Line 2 */}
-                <div className="form-group">
-                  <label className="form-label">Address Line 2</label>
-                  <input
-                    type="text"
-                    placeholder="Apartment, Suite, Building, Floor"
-                    className="form-input"
-                    value={formData.addressLine2}
-                    onChange={e => setFormData({ ...formData, addressLine2: e.target.value })}
-                    autoComplete="new-password"
-                  />
-                </div>
-
-                {/* Country & Postal Code */}
+                {/* City / District & State / Province */}
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">
-                      Country
-                      <span className="form-label-required">*</span>
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formData.country}
-                      onChange={e => setFormData({ ...formData, country: e.target.value })}
-                    >
-                      {countries.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">
-                      Postal Code
-                      <span className="form-label-required">*</span>
-                    </label>
+                    <label className="form-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                     <input
                       type="text"
-                      placeholder="50000"
+                      placeholder={tText('อำเภอ / เขต...', 'City / District')}
                       className="form-input"
-                      value={formData.postalCode}
-                      onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
+                      value={formData.city}
+                      onChange={e => setFormData({ ...formData, city: e.target.value })}
                       autoComplete="new-password"
                     />
                   </div>
-                </div>
-
-                {/* Province & City */}
-                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Province</label>
+                    <label className="form-label">{tText('จังหวัด', 'State / Province')}</label>
                     <input
                       type="text"
-                      placeholder="State / Province"
+                      placeholder={tText('จังหวัด...', 'State / Province')}
                       className="form-input"
                       value={formData.province}
                       onChange={e => setFormData({ ...formData, province: e.target.value })}
                       autoComplete="new-password"
                     />
                   </div>
+                </div>
+
+                {/* Postal Code & Country */}
+                <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">City</label>
+                    <label className="form-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                     <input
                       type="text"
-                      placeholder="City"
+                      placeholder={tText('รหัสไปรษณีย์...', 'Postal Code')}
                       className="form-input"
-                      value={formData.city}
-                      onChange={e => setFormData({ ...formData, city: e.target.value })}
+                      value={formData.postalCode}
+                      onChange={e => setFormData({ ...formData, postalCode: e.target.value })}
                       autoComplete="new-password"
                     />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">{tText('ประเทศ', 'Country')}</label>
+                    <input
+                      type="text"
+                      list="modal2-countries-list"
+                      placeholder={tText('ประเทศ...', 'Country')}
+                      className="form-input"
+                      value={formData.country}
+                      onChange={e => setFormData({ ...formData, country: e.target.value })}
+                      autoComplete="new-password"
+                    />
+                    <datalist id="modal2-countries-list">
+                      {countries.map(c => (
+                        <option key={c} value={c} />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 
@@ -849,10 +816,10 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal}>
-                  Cancel
+                  {t('actionCancel', 'ยกเลิก')}
                 </button>
                 <button type="submit" className="btn-primary">
-                  {modalMode === 'add' ? 'Create' : 'Save'}
+                  {modalMode === 'add' ? tText('บันทึกข้อมูล', 'Create') : tText('บันทึก', 'Save')}
                 </button>
               </div>
             </form>

@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import backgroundImage from '../assets/background.jpg';
+import { useLanguage } from '../context/LanguageContext';
+import { Globe } from 'lucide-react';
 
 function Login({ onLogin, loginError }) {
+  const { lang, setLang, tText } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -35,17 +38,44 @@ function Login({ onLogin, loginError }) {
             </svg>
           </div>
           <h1 className="login-system-title">S.T. TRAN EXPRESS</h1>
-          <p className="login-system-subtitle">Transportation Management System</p>
+          <p className="login-system-subtitle">
+            {tText('ระบบบริหารจัดการการขนส่งและโลจิสติกส์', 'Transportation Management System')}
+          </p>
         </div>
       </div>
 
       <div className="login-right">
-        <div className="login-form-card">
-          <h2 className="login-form-title">Login</h2>
+        <div className="login-form-card" style={{ position: 'relative' }}>
+          {/* Language Switcher in Login Card */}
+          <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Globe size={15} color="#64748b" />
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                border: '1px solid #cbd5e1',
+                backgroundColor: '#f8fafc',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: '#0284c7',
+                cursor: 'pointer'
+              }}
+              title={tText('เปลี่ยนภาษา', 'Toggle Language')}
+            >
+              <span>{lang === 'th' ? '🇹🇭 TH' : '🇬🇧 EN'}</span>
+            </button>
+          </div>
+
+          <h2 className="login-form-title">{tText('เข้าสู่ระบบ', 'Login')}</h2>
           {loginError && <div className="login-alert">⚠️ {loginError}</div>}
           <form onSubmit={handleSubmit}>
             <div className="login-form-group">
-              <label className="login-form-label">Email</label>
+              <label className="login-form-label">{tText('อีเมลผู้ใช้งาน', 'Email')}</label>
               <div className="login-input-wrapper">
                 <input
                   type="email"
@@ -59,7 +89,7 @@ function Login({ onLogin, loginError }) {
             </div>
 
             <div className="login-form-group">
-              <label className="login-form-label">Password</label>
+              <label className="login-form-label">{tText('รหัสผ่าน', 'Password')}</label>
               <div className="login-input-wrapper">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -73,7 +103,7 @@ function Login({ onLogin, loginError }) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="login-password-toggle"
-                  title={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                  title={showPassword ? tText('ซ่อนรหัสผ่าน', 'Hide password') : tText('แสดงรหัสผ่าน', 'Show password')}
                 >
                   {showPassword ? (
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -94,19 +124,19 @@ function Login({ onLogin, loginError }) {
             </div>
 
             <div className="login-forgot-container">
-              <a href="#" className="login-forgot-link" onClick={e => { e.preventDefault(); alert("กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน (support@st-tran.com)"); }}>
-                Forgot Password?
+              <a href="#" className="login-forgot-link" onClick={e => { e.preventDefault(); alert(tText('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน (support@st-tran.com)', 'Please contact system administrator to reset password (support@st-tran.com)')); }}>
+                {tText('ลืมรหัสผ่าน?', 'Forgot Password?')}
               </a>
             </div>
 
             <div className="login-btn-container">
-              <button type="submit" className="login-btn-submit">Login</button>
+              <button type="submit" className="login-btn-submit">{tText('เข้าสู่ระบบ', 'Login')}</button>
             </div>
           </form>
 
           <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
             <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px', fontWeight: 600, textAlign: 'center' }}>
-              ทดสอบเข้าสู่ระบบตามบทบาท (Quick Demo):
+              {tText('ทดสอบเข้าสู่ระบบตามบทบาท (Quick Demo):', 'Quick Demo Roles Login:')}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
@@ -127,7 +157,7 @@ function Login({ onLogin, loginError }) {
                   textAlign: 'left'
                 }}
               >
-                🚛 1. Operator (โลโก้ OP | สิทธิ์เข้าถึงเอกสารการเงิน)
+                🚛 {tText('1. Operator (โลโก้ OP | สิทธิ์เข้าถึงเอกสารการเงิน)', '1. Operator (OP | Financial & Operations Access)')}
               </button>
               <button
                 type="button"
@@ -147,7 +177,7 @@ function Login({ onLogin, loginError }) {
                   textAlign: 'left'
                 }}
               >
-                💼 2. Accounting (โลโก้ AC | ฝ่ายบัญชี + เอกสารการเงิน)
+                💼 {tText('2. Accounting (โลโก้ AC | ฝ่ายบัญชี + เอกสารการเงิน)', '2. Accounting (AC | Accounting & Finance Docs)')}
               </button>
               <button
                 type="button"
@@ -167,7 +197,7 @@ function Login({ onLogin, loginError }) {
                   textAlign: 'left'
                 }}
               >
-                👤 3. Employee (โลโก้ EM | พนักงานทั่วไป - ซ่อนเอกสารการเงิน)
+                👤 {tText('3. Employee (โลโก้ EM | พนักงานทั่วไป - ซ่อนเอกสารการเงิน)', '3. Employee (EM | Operations - Hides Finance Docs)')}
               </button>
             </div>
           </div>

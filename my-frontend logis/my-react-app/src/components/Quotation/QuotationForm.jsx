@@ -18,6 +18,7 @@ import {
 import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } from './apiQuotation';
 import QuotationPreview from './QuotationPreview';
 import ActionDropdown from '../Common/ActionDropdown';
+import { useLanguage } from '../../context/LanguageContext';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
@@ -71,6 +72,7 @@ const generateQuotationNo = (dateStr, documents = []) => {
 };
 
 export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [], serviceTypes = [] }) {
+  const { lang, t, tText, formatDateLocale } = useLanguage();
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
@@ -291,13 +293,13 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Delete Handler
   const handleDeleteQuotation = async (docId) => {
-    if (!confirm('ยืนยันการลบเอกสารนี้?')) return;
+    if (!confirm(lang === 'th' ? 'ยืนยันการลบเอกสารนี้?' : 'Are you sure you want to delete this document?')) return;
     try {
       await deleteQuotation(docId);
-      alert('ลบเอกสารสำเร็จ');
+      alert(lang === 'th' ? 'ลบเอกสารสำเร็จ' : 'Document deleted successfully');
       if (fetchData) fetchData();
     } catch (err) {
-      alert('ลบไม่สำเร็จ: ' + err.message);
+      alert((lang === 'th' ? 'ลบไม่สำเร็จ: ' : 'Failed to delete: ') + err.message);
     }
   };
 
@@ -309,7 +311,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       setPreviewData({ doc, items: Array.isArray(items) ? items : [] });
     } catch (err) {
       console.error('Preview load error:', err);
-      alert('โหลดข้อมูลพรีวิวไม่สำเร็จ: ' + err.message);
+      alert((lang === 'th' ? 'โหลดข้อมูลพรีวิวไม่สำเร็จ: ' : 'Failed to load preview: ') + err.message);
     }
   };
 
@@ -320,17 +322,17 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     try {
       if (editingDocId) {
         await updateQuotation(editingDocId, { formData, routes, items, grandTotal });
-        alert('แก้ไขใบเสนอราคาเรียบร้อยแล้ว!');
+        alert(lang === 'th' ? 'แก้ไขใบเสนอราคาเรียบร้อยแล้ว!' : 'Quotation updated successfully!');
         setEditingDocId(null);
       } else {
         await createQuotation({ formData, routes, items, grandTotal });
-        alert('สร้างใบเสนอราคาเรียบร้อยแล้ว!');
+        alert(lang === 'th' ? 'สร้างใบเสนอราคาเรียบร้อยแล้ว!' : 'Quotation created successfully!');
       }
       if (fetchData) fetchData();
       setViewMode('list');
     } catch (err) {
       console.error('Submit Quotation Error:', err);
-      alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+      alert((lang === 'th' ? 'เกิดข้อผิดพลาดในการบันทึก: ' : 'Error saving quotation: ') + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -355,11 +357,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Steps configuration
   const steps = [
-    { number: 1, title: 'Document Info' },
-    { number: 2, title: 'Customer' },
-    { number: 3, title: 'Route' },
-    { number: 4, title: 'Service Items' },
-    { number: 5, title: 'Terms & Notes' }
+    { number: 1, title: tText('ข้อมูลเอกสาร', 'Document Info') },
+    { number: 2, title: tText('ลูกค้า', 'Customer') },
+    { number: 3, title: tText('เส้นทาง/สถานที่', 'Route') },
+    { number: 4, title: tText('รายการบริการ', 'Service Items') },
+    { number: 5, title: tText('เงื่อนไขและหมายเหตุ', 'Terms & Notes') }
   ];
 
   // =========================================================================
@@ -372,14 +374,14 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {/* Page Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div style={{ textAlign: 'left' }}>
-            <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบเสนอราคา (Quotation)</h2>
+            <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('quotePageTitle', 'ใบเสนอราคา (Quotation)')}</h2>
             <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
-              สร้างและจัดการใบเสนอราคาสำหรับลูกค้า พร้อมอิงราคางานบริการขนส่ง
+              {t('quotePageSubtitle', 'สร้างและจัดการใบเสนอราคาสำหรับลูกค้า พร้อมอิงราคางานบริการขนส่ง')}
             </p>
           </div>
           <button className="btn-primary" onClick={startCreateNew}>
             <Plus size={16} />
-            <span>สร้างใบเสนอราคาใหม่</span>
+            <span>{t('quoteCreateBtn', 'สร้างใบเสนอราคาใหม่')}</span>
           </button>
         </div>
 
@@ -390,7 +392,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               <Search size={16} className="panel-search-icon" />
               <input 
                 type="text" 
-                placeholder="ค้นหาตามเลขที่ใบเสนอราคา, ลูกค้า, หรือโปรเจกต์..." 
+                placeholder={t('quoteSearchPlaceholder', 'ค้นหาตามเลขที่ใบเสนอราคา, ลูกค้า, หรือโปรเจกต์...')} 
                 className="panel-search-input"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -402,11 +404,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             <table className="custom-clean-table">
               <thead>
                 <tr>
-                  <th style={{ width: '22%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Quotation #</th>
-                  <th style={{ width: '28%', whiteSpace: 'nowrap' }}>ลูกค้า (CUSTOMER)</th>
-                  <th style={{ width: '24%', whiteSpace: 'nowrap' }}>โปรเจกต์ / รายละเอียด</th>
-                  <th style={{ width: '16%', whiteSpace: 'nowrap' }}>วันที่ออกเอกสาร</th>
-                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
+                  <th style={{ width: '22%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('quoteColNo', 'Quotation #')}</th>
+                  <th style={{ width: '28%', whiteSpace: 'nowrap' }}>{t('quoteColCustomer', 'ลูกค้า (Customer)')}</th>
+                  <th style={{ width: '24%', whiteSpace: 'nowrap' }}>{t('quoteColProject', 'โปรเจกต์ / รายละเอียด')}</th>
+                  <th style={{ width: '16%', whiteSpace: 'nowrap' }}>{t('quoteColDate', 'วันที่ออกเอกสาร')}</th>
+                  <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('actionActions', 'จัดการ')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -418,7 +420,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                         <span
                           style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                           onClick={() => handlePreview(doc)}
-                          title="คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสนอราคา"
+                          title={tText('คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสนอราคา', 'Click to preview / print')}
                         >
                           <FileText size={15} />
                           {doc.document_no || doc.document_id}
@@ -431,23 +433,23 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                         {doc.job_name || doc.project || '-'}
                       </td>
                       <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
-                        {doc.document_date ? new Date(doc.document_date).toLocaleDateString('th-TH') : (formatDateOnly(doc.document_date) || '-')}
+                        {doc.document_date ? formatDateLocale(doc.document_date) : '-'}
                       </td>
                       <td style={{ textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>
                         <ActionDropdown
                           items={[
                             {
-                              label: 'ดูตัวอย่าง / พิมพ์',
+                              label: t('actionPrint', 'ดูตัวอย่าง / พิมพ์'),
                               icon: <Printer size={16} className="menu-icon" />,
                               onClick: () => handlePreview(doc)
                             },
                             {
-                              label: 'แก้ไข',
+                              label: t('actionEdit', 'แก้ไข'),
                               icon: <Edit size={16} className="menu-icon" />,
                               onClick: () => handleEditQuotation(doc)
                             },
                             {
-                              label: 'ลบ',
+                              label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
                               onClick: () => handleDeleteQuotation(doc.document_id)
@@ -466,7 +468,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             <div className="empty-state-wrapper" style={{ padding: '36px', textAlign: 'center' }}>
               <FolderOpen size={44} className="empty-state-icon" style={{ opacity: 0.4, margin: '0 auto 8px auto' }} />
               <p className="empty-state-text" style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>
-                {searchQuery ? 'ไม่พบข้อมูลใบเสนอราคาที่ตรงกับการค้นหา' : 'ยังไม่มีใบเสนอราคาในระบบ คลิก "สร้างใบเสนอราคาใหม่" เพื่อเริ่มต้น'}
+                {searchQuery ? tText('ไม่พบข้อมูลใบเสนอราคาที่ตรงกับการค้นหา', 'No quotations found matching your search.') : t('quoteEmptyList', 'ยังไม่มีใบเสนอราคาในระบบ คลิก "สร้างใบเสนอราคาใหม่" เพื่อเริ่มต้น')}
               </p>
             </div>
           )}
@@ -497,12 +499,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: 0 }}
         >
           <ArrowLeft size={16} />
-          <span>Back to quotations</span>
+          <span>{tText('ย้อนกลับไปหน้ารายการใบเสนอราคา', 'Back to quotations')}</span>
         </button>
       </div>
 
       <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#0f172a', marginBottom: '24px', textAlign: 'left' }}>
-        {editingDocId ? 'Edit Quotation' : 'Create New Quotation'}
+        {editingDocId ? tText('แก้ไขใบเสนอราคา (Edit Quotation)', 'Edit Quotation') : tText('สร้างใบเสนอราคาใหม่ (New Quotation)', 'Create New Quotation')}
       </h2>
 
       {/* Main Form Container Card */}
@@ -568,7 +570,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
               <div className="form-group">
-                <label className="form-label">Quotation No. (auto)</label>
+                <label className="form-label">{tText('เลขที่ใบเสนอราคา (อัตโนมัติ)', 'Quotation No. (auto)')}</label>
                 <input 
                   type="text" 
                   className="form-input" 
@@ -578,7 +580,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Issue Date</label>
+                <label className="form-label">{tText('วันที่ออกเอกสาร', 'Issue Date')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -590,7 +592,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
               <div className="form-group">
-                <label className="form-label">Expiry Date</label>
+                <label className="form-label">{tText('วันหมดอายุ / ใช้ได้ถึง', 'Expiry Date')}</label>
                 <input 
                   type="date" 
                   className="form-input" 
@@ -599,11 +601,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 />
               </div>
               <div className="form-group">
-                <label className="form-label">Salesperson</label>
+                <label className="form-label">{tText('พนักงานขาย', 'Salesperson')}</label>
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="ชื่อพนักงานขาย..." 
+                  placeholder={tText('ชื่อพนักงานขาย...', 'Salesperson name...')} 
                   value={formData.salesperson || ''}
                   onChange={e => setFormData({ ...formData, salesperson: e.target.value })}
                 />
@@ -611,11 +613,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             </div>
 
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label">Project Name</label>
+              <label className="form-label">{tText('ชื่องาน / โครงการ', 'Project Name')}</label>
               <input 
                 type="text" 
                 className="form-input" 
-                placeholder="ชื่องาน / โครงการ..." 
+                placeholder={tText('ชื่องาน / โครงการ...', 'Project / Job name...')} 
                 value={formData.projectName || ''}
                 onChange={e => setFormData({ ...formData, projectName: e.target.value })}
               />
@@ -628,14 +630,14 @@ export default function QuotationForm({ customers: propCustomers = [], documents
           <div style={{ textAlign: 'left' }}>
             <div className="step-header-title-row">
               <User size={18} color="#0284c7" />
-              <span>Select Customer</span>
+              <span>{tText('เลือกลูกค้า', 'Select Customer')}</span>
             </div>
 
             <div className="customer-search-field-container">
               <Search size={16} className="search-icon-inside" />
               <input 
                 type="text" 
-                placeholder="Search by company, contact, phone..." 
+                placeholder={tText('ค้นหาตามชื่อบริษัท, ผู้ติดต่อ, เบอร์โทร, เลขภาษี...', 'Search by company, contact, phone, tax ID...')} 
                 value={customerSearch}
                 onChange={(e) => setCustomerSearch(e.target.value)}
               />
@@ -664,8 +666,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                         <div className="cust-name">{cust.customer_name || cust.name}</div>
                         {isSelected && <Check size={18} color="#0284c7" />}
                       </div>
-                      <div className="cust-contact">{cust.contact_person || cust.contactPerson || 'Contact Person'}</div>
-                      <div className="cust-phone">{cust.phone || 'Phone number'}</div>
+                      <div className="cust-contact">{cust.contact_person || cust.contactPerson || tText('ผู้ติดต่อ', 'Contact Person')}</div>
+                      <div className="cust-phone">{cust.phone || tText('เบอร์โทรศัพท์', 'Phone number')}</div>
                     </div>
                   );
                 })}
@@ -681,8 +683,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             }).length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
                 <User size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-                <div style={{ fontSize: '15px', fontWeight: 500 }}>ไม่พบข้อมูลลูกค้า</div>
-                <div style={{ fontSize: '13px', marginTop: '4px' }}>ลองค้นหาด้วยคำอื่น หรือเพิ่มข้อมูลลูกค้าใน Master Data &gt; Customers</div>
+                <div style={{ fontSize: '15px', fontWeight: 500 }}>{tText('ไม่พบข้อมูลลูกค้า', 'No customers found')}</div>
+                <div style={{ fontSize: '13px', marginTop: '4px' }}>{tText('ลองค้นหาด้วยคำอื่น หรือเพิ่มข้อมูลลูกค้าใน ข้อมูลหลัก > ลูกค้า', 'Try another search term or add customer in Master Data > Customers')}</div>
               </div>
             )}
           </div>
@@ -692,7 +694,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {currentStep === 3 && (
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>Transportation Routes</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>{tText('เส้นทางการขนส่ง', 'Transportation Routes')}</h3>
               <button 
                 type="button" 
                 className="btn-secondary" 
@@ -700,7 +702,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '6px 14px' }}
               >
                 <Plus size={16} />
-                <span>Add Route</span>
+                <span>{tText('เพิ่มเส้นทาง', 'Add Route')}</span>
               </button>
             </div>
 
@@ -717,12 +719,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                   alignItems: 'center'
                 }}>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Origin</label>
+                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>{tText('ต้นทาง (สถานที่รับสินค้า)', 'Origin (Pickup Location)')}</label>
                     <input 
                       list="origin-list"
                       type="text" 
                       className="form-input" 
-                      placeholder="ต้นทาง (เช่น สงขลา)..." 
+                      placeholder={tText('ต้นทาง (เช่น สงขลา)...', 'Origin (e.g. Songkhla)...')} 
                       value={route.origin}
                       onChange={e => handleRouteChange(route.id, 'origin', e.target.value)}
                     />
@@ -733,12 +735,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     </datalist>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>Destination</label>
+                    <label className="form-label" style={{ fontSize: '12px', color: '#64748b' }}>{tText('ปลายทาง (สถานที่ส่งมอบ)', 'Destination (Delivery Location)')}</label>
                     <input 
                       list="destination-list"
                       type="text" 
                       className="form-input" 
-                      placeholder="ปลายทาง (เช่น ชลบุรี)..." 
+                      placeholder={tText('ปลายทาง (เช่น ชลบุรี)...', 'Destination (e.g. Chonburi)...')} 
                       value={route.destination}
                       onChange={e => handleRouteChange(route.id, 'destination', e.target.value)}
                     />
@@ -754,7 +756,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                         type="button" 
                         className="btn-action-delete"
                         onClick={() => handleRemoveRoute(route.id)}
-                        title="Delete route"
+                        title={tText('ลบเส้นทางนี้', 'Delete route')}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -770,7 +772,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {currentStep === 4 && (
           <div style={{ textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>Service Items</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#0f172a', margin: 0 }}>{tText('รายการบริการ', 'Service Items')}</h3>
               <button 
                 type="button" 
                 className="btn-secondary" 
@@ -778,7 +780,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '6px 14px' }}
               >
                 <Plus size={16} />
-                <span>Add Item</span>
+                <span>{tText('เพิ่มรายการ', 'Add Item')}</span>
               </button>
             </div>
 
@@ -787,12 +789,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '13px', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 12px', width: '28%' }}>Service Type</th>
-                    <th style={{ padding: '8px 12px', width: '10%', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'center' }}>Unit Quantity</th>
-                    <th style={{ padding: '8px 12px', width: '16%', textAlign: 'right' }}>Unit Price</th>
-                    <th style={{ padding: '8px 12px', width: '12%', textAlign: 'center' }}>Unit</th>
-                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'right' }}>Total</th>
+                    <th style={{ padding: '8px 12px', width: '28%' }}>{tText('ประเภทบริการ', 'Service Type')}</th>
+                    <th style={{ padding: '8px 12px', width: '10%', textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</th>
+                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'center' }}>{tText('หน่วยนับ', 'Unit Quantity')}</th>
+                    <th style={{ padding: '8px 12px', width: '16%', textAlign: 'right' }}>{tText('ราคา/หน่วย', 'Unit Price')}</th>
+                    <th style={{ padding: '8px 12px', width: '12%', textAlign: 'center' }}>{tText('สกุลเงิน', 'Currency')}</th>
+                    <th style={{ padding: '8px 12px', width: '15%', textAlign: 'right' }}>{tText('รวมเงิน', 'Total')}</th>
                     <th style={{ padding: '8px 12px', width: '40px' }}></th>
                   </tr>
                 </thead>
@@ -805,7 +807,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                           type="text"
                           className="form-input"
                           style={{ fontSize: '13px', padding: '8px' }}
-                          placeholder="เลือกหรือพิมพ์ประเภทบริการ..."
+                          placeholder={tText('เลือกหรือพิมพ์ประเภทบริการ...', 'Select or type service type...')}
                           value={item.serviceType}
                           onChange={e => handleItemChange(item.id, 'serviceType', e.target.value)}
                         />
@@ -830,7 +832,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                           type="text"
                           className="form-input"
                           style={{ fontSize: '13px', padding: '8px', textAlign: 'center' }}
-                          placeholder="เช่น trip, คัน"
+                          placeholder={tText('เช่น เที่ยว, คัน, กล่อง', 'e.g. trip, truck, box')}
                           value={item.unitQuantity}
                           onChange={e => handleItemChange(item.id, 'unitQuantity', e.target.value)}
                         />
@@ -868,6 +870,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                             type="button" 
                             className="btn-action-delete"
                             onClick={() => handleRemoveItem(item.id)}
+                            title={tText('ลบรายการนี้', 'Delete item')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -883,15 +886,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
               <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                  <span>Subtotal</span>
+                  <span>{tText('ยอดรวม', 'Subtotal')}</span>
                   <span>THB {subtotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
-                {/* <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                  <span>VAT 7%</span>
-                  <span>THB {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
-                </div> */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', fontSize: '16px', color: '#0284c7', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
-                  <span>Grand Total</span>
+                  <span>{tText('ยอดสุทธิ', 'Grand Total')}</span>
                   <span>THB {grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0 })}</span>
                 </div>
               </div>
@@ -903,11 +902,11 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         {currentStep === 5 && (
           <div style={{ textAlign: 'left' }}>
             <div className="form-group" style={{ marginBottom: '24px' }}>
-              <label className="form-label">Notes (หมายเหตุ)</label>
+              <label className="form-label">{tText('หมายเหตุ / เงื่อนไขการขนส่ง', 'Terms & Notes')}</label>
               <textarea 
                 className="form-textarea"
                 rows="5"
-                placeholder="ระบุเงื่อนไขการขนส่ง หรือหมายเหตุเพิ่มเติม..."
+                placeholder={tText('ระบุเงื่อนไขการขนส่ง หรือหมายเหตุเพิ่มเติม...', 'Enter freight terms or additional notes...')}
                 value={formData.remark}
                 onChange={e => setFormData({ ...formData, remark: e.target.value })}
               />
@@ -932,7 +931,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
               }}
             >
               <ArrowLeft size={16} />
-              <span>Back</span>
+              <span>{t('actionBack', 'ย้อนกลับ')}</span>
             </button>
           </div>
 
@@ -944,7 +943,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 onClick={() => setCurrentStep(prev => Math.min(5, prev + 1))}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                <span>Next</span>
+                <span>{t('actionNext', 'ถัดไป')}</span>
                 <ArrowRight size={16} />
               </button>
             ) : (
@@ -956,7 +955,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
                 <Check size={16} />
-                <span>{isSubmitting ? 'Submitting...' : 'Create Quotation'}</span>
+                <span>{isSubmitting ? t('actionSaving', 'กำลังบันทึก...') : (editingDocId ? tText('บันทึกการแก้ไข', 'Save Changes') : tText('ยืนยันสร้างใบเสนอราคา', 'Create Quotation'))}</span>
               </button>
             )}
           </div>

@@ -28,6 +28,7 @@ import {
 import ReceiptPreview from './ReceiptPreview';
 import ActionDropdown from '../Common/ActionDropdown';
 import './ReceiptWizard.css';
+import { useLanguage } from '../../context/LanguageContext';
 
 const generateReceiptNo = (dateStr, receiptsList = []) => {
   let d = new Date();
@@ -51,6 +52,7 @@ const generateReceiptNo = (dateStr, receiptsList = []) => {
 };
 
 export default function ReceiptTable({ customers = [], documents = [], fetchData }) {
+  const { lang, t, tText, formatDateLocale } = useLanguage();
   const [receipts, setReceipts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -70,10 +72,10 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
   // 4 Steps matching Mockup Images 2, 3, 4, 5
   const steps = [
-    { number: 1, title: 'Select Invoice' },
-    { number: 2, title: 'Receipt Info' },
-    { number: 3, title: 'Service Items' },
-    { number: 4, title: 'Review' }
+    { number: 1, title: tText('เลือกใบแจ้งหนี้', 'Select Invoice') },
+    { number: 2, title: tText('ข้อมูลใบเสร็จ', 'Receipt Info') },
+    { number: 3, title: tText('รายการบริการ', 'Service Items') },
+    { number: 4, title: tText('ตรวจสอบและยืนยัน', 'Review') }
   ];
 
   // Helper date strings
@@ -161,16 +163,9 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
     return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Format date display (e.g. 23 Jul 2026)
+  // Format date display (dynamic locale)
   const formatDateDisplay = (dateStr) => {
-    if (!dateStr) return '-';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+    return formatDateLocale(dateStr);
   };
 
   // Format date input value (YYYY-MM-DD)
@@ -485,10 +480,10 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
             onClick={() => setViewMode('list')}
           >
             <ArrowLeft size={16} />
-            <span>Back to receipts</span>
+            <span>{tText('ย้อนกลับไปหน้ารายการใบเสร็จ', 'Back to receipts')}</span>
           </button>
           <h2 className="receipt-page-title">
-            {editingReceiptId ? 'Edit Receipt' : 'New Receipt'}
+            {editingReceiptId ? tText('แก้ไขใบเสร็จรับเงิน (Edit Receipt)', 'Edit Receipt') : tText('สร้างใบเสร็จรับเงินใหม่ (New Receipt)', 'New Receipt')}
           </h2>
         </div>
 
@@ -537,7 +532,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   <Search size={16} color="#94a3b8" />
                   <input
                     type="text"
-                    placeholder="Search by invoice number or customer..."
+                    placeholder={tText('ค้นหาตามเลขที่ใบแจ้งหนี้ หรือชื่อลูกค้า...', 'Search by invoice number or customer...')}
                     value={invoiceSearchQuery}
                     onChange={(e) => setInvoiceSearchQuery(e.target.value)}
                   />
@@ -549,7 +544,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', marginBottom: '20px' }}>
                   <FileSpreadsheet size={36} color="#94a3b8" style={{ margin: '0 auto 10px auto' }} />
                   <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-                    ไม่พบรายการใบแจ้งหนี้ (สามารถกด "Next" เพื่อกรอกข้อมูลออกใบเสร็จแบบ Manual ได้)
+                    {tText('ไม่พบรายการใบแจ้งหนี้ (สามารถกด "ถัดไป" เพื่อกรอกข้อมูลออกใบเสร็จแบบกำหนดเองได้)', 'No invoices found. (Click "Next" to enter details manually)')}
                   </p>
                 </div>
               ) : (
@@ -569,13 +564,13 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                         </div>
 
                         <div className="invoice-card-customer">
-                          {inv.customer_name || 'ลูกค้าทั่วไป'}
+                          {inv.customer_name || tText('ลูกค้าทั่วไป', 'General Customer')}
                         </div>
 
                         <div className="invoice-card-dates">
                           <span>
-                            {inv.invoice_date ? `Issue: ${formatDateDisplay(inv.invoice_date)}` : ''} 
-                            {inv.due_date ? ` · Due: ${formatDateDisplay(inv.due_date)}` : ''}
+                            {inv.invoice_date ? `${tText('วันที่ออก:', 'Issue:')} ${formatDateDisplay(inv.invoice_date)}` : ''} 
+                            {inv.due_date ? ` · ${tText('ครบกำหนด:', 'Due:')} ${formatDateDisplay(inv.due_date)}` : ''}
                           </span>
                         </div>
 
@@ -592,7 +587,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
               {(selectedInvoice || formData.invoice_no) && (
                 <div className="receipt-selected-banner">
                   <span>
-                    Selected: <strong>{formData.invoice_no}</strong> · {formData.customer_name || 'ลูกค้าที่เลือก'}
+                    {tText('เลือกแล้ว:', 'Selected:')} <strong>{formData.invoice_no}</strong> · {formData.customer_name || tText('ลูกค้าที่เลือก', 'Selected Customer')}
                   </span>
                 </div>
               )}
@@ -607,10 +602,10 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
               
               {/* Left Column: Receipt Details */}
               <div className="receipt-sub-card">
-                <h4 className="receipt-sub-card-title">Receipt Details</h4>
+                <h4 className="receipt-sub-card-title">{tText('ข้อมูลใบเสร็จรับเงิน', 'Receipt Details')}</h4>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Receipt No.</label>
+                  <label className="receipt-field-label">{tText('เลขที่ใบเสร็จ', 'Receipt No.')}</label>
                   <input
                     type="text"
                     className="receipt-field-input"
@@ -620,18 +615,18 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 </div>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Invoice No.</label>
+                  <label className="receipt-field-label">{tText('อ้างอิงเลขที่ใบแจ้งหนี้', 'Invoice No.')}</label>
                   <input
                     type="text"
                     className="receipt-field-input"
-                    placeholder="อ้างอิงเลขที่ใบแจ้งหนี้ (เช่น INV-20260723-9678)"
+                    placeholder={tText('อ้างอิงเลขที่ใบแจ้งหนี้ (เช่น INV-20260723-9678)', 'Reference invoice no. (e.g. INV-20260723-9678)')}
                     value={formData.invoice_no}
                     onChange={(e) => setFormData({ ...formData, invoice_no: e.target.value })}
                   />
                 </div>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Payment Date / วันที่</label>
+                  <label className="receipt-field-label">{tText('วันที่รับชำระ', 'Payment Date')}</label>
                   <input
                     type="date"
                     className="receipt-field-input"
@@ -641,21 +636,21 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 </div>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Payment Method</label>
+                  <label className="receipt-field-label">{tText('วิธีชำระเงิน', 'Payment Method')}</label>
                   <select
                     className="receipt-field-select"
                     value={formData.payment_method}
                     onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                   >
-                    <option value="Transfer">Transfer</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Cheque">Cheque</option>
-                    <option value="Credit Card">Credit Card</option>
+                    <option value="Transfer">{tText('โอนเงินผ่านธนาคาร (Transfer)', 'Bank Transfer')}</option>
+                    <option value="Cash">{tText('เงินสด (Cash)', 'Cash')}</option>
+                    <option value="Cheque">{tText('เช็ค (Cheque)', 'Cheque')}</option>
+                    <option value="Credit Card">{tText('บัตรเครดิต (Credit Card)', 'Credit Card')}</option>
                   </select>
                 </div>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Bank Account</label>
+                  <label className="receipt-field-label">{tText('บัญชีธนาคารรับเงิน', 'Bank Account')}</label>
                   <select
                     className="receipt-field-select"
                     value={formData.account_no || ''}
@@ -668,10 +663,10 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                       });
                     }}
                   >
-                    <option value="">— Kasikorn Bank - 001-2-34567-8 —</option>
+                    <option value="">{tText('— เลือกบัญชีธนาคาร —', '— Select Bank Account —')}</option>
                     {accounts.map(acc => (
                       <option key={acc.account_no} value={acc.account_no}>
-                        {acc.bank_name || 'Bank'} - {acc.account_no} ({acc.account_name})
+                        {acc.bank_name || tText('ธนาคาร', 'Bank')} - {acc.account_no} ({acc.account_name})
                       </option>
                     ))}
                   </select>
@@ -680,14 +675,14 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
               {/* Right Column: Customer Information */}
               <div className="receipt-sub-card">
-                <h4 className="receipt-sub-card-title">Customer / ข้อมูลลูกค้า</h4>
+                <h4 className="receipt-sub-card-title">{tText('ข้อมูลลูกค้า', 'Customer Information')}</h4>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Company</label>
+                  <label className="receipt-field-label">{tText('ชื่อบริษัท / ลูกค้า', 'Company / Customer')}</label>
                   <input
                     type="text"
                     className="receipt-field-input"
-                    placeholder="Thai Global Trading Co., Ltd."
+                    placeholder={tText('ชื่อบริษัทลูกค้า...', 'Customer company name...')}
                     value={formData.customer_name}
                     onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                   />
@@ -695,11 +690,11 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
                 {/* Address Line */}
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Address Line</label>
+                  <label className="receipt-field-label">{tText('ที่อยู่', 'Address Line')}</label>
                   <input
                     type="text"
                     className="receipt-field-input"
-                    placeholder="Address Line"
+                    placeholder={tText('เลขที่, อาคาร, ถนน...', 'Address line...')}
                     value={formData.customer_address_line}
                     onChange={(e) => handleAddressChange('customer_address_line', e.target.value)}
                   />
@@ -708,21 +703,21 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 {/* City & State / Province */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="receipt-form-field">
-                    <label className="receipt-field-label">City</label>
+                    <label className="receipt-field-label">{tText('อำเภอ / เขต', 'City / District')}</label>
                     <input
                       type="text"
                       className="receipt-field-input"
-                      placeholder="City"
+                      placeholder={tText('อำเภอ / เขต...', 'City / District...')}
                       value={formData.customer_city}
                       onChange={(e) => handleAddressChange('customer_city', e.target.value)}
                     />
                   </div>
                   <div className="receipt-form-field">
-                    <label className="receipt-field-label">State / Province</label>
+                    <label className="receipt-field-label">{tText('จังหวัด', 'State / Province')}</label>
                     <input
                       type="text"
                       className="receipt-field-input"
-                      placeholder="State / Province"
+                      placeholder={tText('จังหวัด...', 'State / Province...')}
                       value={formData.customer_province}
                       onChange={(e) => handleAddressChange('customer_province', e.target.value)}
                     />
@@ -732,21 +727,21 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 {/* Postal Code & Country */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="receipt-form-field">
-                    <label className="receipt-field-label">Postal Code</label>
+                    <label className="receipt-field-label">{tText('รหัสไปรษณีย์', 'Postal Code')}</label>
                     <input
                       type="text"
                       className="receipt-field-input"
-                      placeholder="Postal Code"
+                      placeholder="90320"
                       value={formData.customer_postal_code}
                       onChange={(e) => handleAddressChange('customer_postal_code', e.target.value)}
                     />
                   </div>
                   <div className="receipt-form-field">
-                    <label className="receipt-field-label">Country</label>
+                    <label className="receipt-field-label">{tText('ประเทศ', 'Country')}</label>
                     <input
                       type="text"
                       className="receipt-field-input"
-                      placeholder="Country"
+                      placeholder={tText('ไทย', 'Thailand')}
                       value={formData.customer_country}
                       onChange={(e) => handleAddressChange('customer_country', e.target.value)}
                     />
@@ -754,7 +749,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 </div>
 
                 <div className="receipt-form-field">
-                  <label className="receipt-field-label">Tax ID</label>
+                  <label className="receipt-field-label">{tText('เลขประจำตัวผู้เสียภาษี', 'Tax ID')}</label>
                   <input
                     type="text"
                     className="receipt-field-input"
@@ -775,7 +770,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
             <div className="items-card-container">
               <div className="items-header-bar">
                 <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                  Service Items / รายละเอียดบริการอ้างอิงอินวอย
+                  {tText('รายการบริการอ้างอิงใบแจ้งหนี้', 'Service Items from Invoice')}
                 </h4>
                 <button
                   type="button"
@@ -784,7 +779,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   style={{ padding: '6px 14px', fontSize: '13px', borderRadius: '8px' }}
                 >
                   <Plus size={15} />
-                  <span>Add</span>
+                  <span>{t('actionAdd', 'เพิ่ม')}</span>
                 </button>
               </div>
 
@@ -793,11 +788,11 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 <table className="items-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '42%' }}>Description</th>
-                      <th style={{ width: '18%', textAlign: 'center' }}>Date</th>
-                      <th style={{ width: '10%', textAlign: 'center' }}>Qty</th>
-                      <th style={{ width: '14%', textAlign: 'right' }}>Unit Price</th>
-                      <th style={{ width: '16%', textAlign: 'right' }}>Total</th>
+                      <th style={{ width: '42%' }}>{tText('รายการสินค้า / บริการ', 'Description')}</th>
+                      <th style={{ width: '18%', textAlign: 'center' }}>{tText('วันที่', 'Date')}</th>
+                      <th style={{ width: '10%', textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</th>
+                      <th style={{ width: '14%', textAlign: 'right' }}>{tText('ราคา/หน่วย', 'Unit Price')}</th>
+                      <th style={{ width: '16%', textAlign: 'right' }}>{tText('ยอดรวม', 'Total')}</th>
                       <th style={{ width: '38px', textAlign: 'center' }}></th>
                     </tr>
                   </thead>
@@ -809,7 +804,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                             type="text"
                             className="receipt-field-input"
                             style={{ padding: '8px 10px', fontSize: '13px' }}
-                            placeholder="เช่น Electronic Components"
+                            placeholder={tText('เช่น Electronic Components', 'e.g. Electronic Components')}
                             value={it.description}
                             onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
                             required
@@ -861,7 +856,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                               cursor: formData.items.length <= 1 ? 'not-allowed' : 'pointer',
                               padding: '4px'
                             }}
-                            title="ลบรายการ"
+                            title={t('actionDelete', 'ลบ')}
                           >
                             <Trash2 size={16} />
                           </button>
@@ -875,11 +870,11 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
               {/* Items Summary (Matching Image 4) */}
               <div className="items-summary-panel">
                 <div className="summary-row">
-                  <span className="summary-label">รวมเป็นเงิน / Subtotal</span>
+                  <span className="summary-label">{tText('รวมเป็นเงิน (Subtotal)', 'Subtotal')}</span>
                   <span className="summary-value">THB {formatMoney(subtotalAmount)}</span>
                 </div>
                 <div className="summary-row grand-total">
-                  <span className="summary-label">จำนวนรวมทั้งสิ้น / Grand Total</span>
+                  <span className="summary-label">{tText('จำนวนรวมทั้งสิ้น (Grand Total)', 'Grand Total')}</span>
                   <span className="summary-value highlight">THB {formatMoney(grandTotalAmount)}</span>
                 </div>
               </div>
@@ -896,36 +891,36 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 
                 {/* Left Card: RECEIPT */}
                 <div className="review-info-card">
-                  <div className="review-card-badge">RECEIPT</div>
+                  <div className="review-card-badge">{tText('ข้อมูลใบเสร็จ', 'RECEIPT')}</div>
                   <div className="review-data-line">
-                    <span className="review-data-label">Receipt No:</span>
+                    <span className="review-data-label">{tText('เลขที่ใบเสร็จ:', 'Receipt No:')}</span>
                     <strong style={{ color: '#0f172a' }}>{formData.receipt_no}</strong>
                   </div>
                   <div className="review-data-line">
-                    <span className="review-data-label">Invoice No:</span>
+                    <span className="review-data-label">{tText('เลขที่ใบแจ้งหนี้:', 'Invoice No:')}</span>
                     <span>{formData.invoice_no || '-'}</span>
                   </div>
                   <div className="review-data-line">
-                    <span className="review-data-label">Date:</span>
+                    <span className="review-data-label">{tText('วันที่:', 'Date:')}</span>
                     <span>{formatDateDisplay(formData.payment_date)}</span>
                   </div>
                   <div className="review-data-line">
-                    <span className="review-data-label">Method:</span>
+                    <span className="review-data-label">{tText('วิธีชำระ:', 'Method:')}</span>
                     <span>{formData.payment_method}</span>
                   </div>
                 </div>
 
                 {/* Right Card: CUSTOMER */}
                 <div className="review-info-card">
-                  <div className="review-card-badge">CUSTOMER</div>
+                  <div className="review-card-badge">{tText('ข้อมูลลูกค้า', 'CUSTOMER')}</div>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>
-                    {formData.customer_name || 'ลูกค้าทั่วไป'}
+                    {formData.customer_name || tText('ลูกค้าทั่วไป', 'General Customer')}
                   </div>
                   <div style={{ fontSize: '13px', color: '#64748b' }}>
                     {formData.customer_address || '-'}
                   </div>
                   <div className="review-data-line" style={{ marginTop: '4px' }}>
-                    <span className="review-data-label">Tax ID:</span>
+                    <span className="review-data-label">{tText('เลขผู้เสียภาษี:', 'Tax ID:')}</span>
                     <span>{formData.customer_tax_id || '-'}</span>
                   </div>
                 </div>
@@ -934,16 +929,16 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
               {/* Service Items Review Table */}
               <div className="items-card-container" style={{ padding: '20px', marginBottom: '20px' }}>
-                <div className="review-card-badge" style={{ marginBottom: '8px' }}>SERVICE ITEMS</div>
+                <div className="review-card-badge" style={{ marginBottom: '8px' }}>{tText('รายการบริการ', 'SERVICE ITEMS')}</div>
                 <div className="items-table-wrapper">
                   <table className="items-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '45%' }}>Description</th>
-                        <th style={{ width: '15%', textAlign: 'center' }}>Date</th>
-                        <th style={{ width: '10%', textAlign: 'center' }}>Qty</th>
-                        <th style={{ width: '15%', textAlign: 'right' }}>Unit Price</th>
-                        <th style={{ width: '15%', textAlign: 'right' }}>Total</th>
+                        <th style={{ width: '45%' }}>{tText('รายละเอียด', 'Description')}</th>
+                        <th style={{ width: '15%', textAlign: 'center' }}>{tText('วันที่', 'Date')}</th>
+                        <th style={{ width: '10%', textAlign: 'center' }}>{tText('จำนวน', 'Qty')}</th>
+                        <th style={{ width: '15%', textAlign: 'right' }}>{tText('ราคา/หน่วย', 'Unit Price')}</th>
+                        <th style={{ width: '15%', textAlign: 'right' }}>{tText('รวม', 'Total')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -970,25 +965,25 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 <div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-                      <span style={{ color: '#64748b', minWidth: '150px' }}>รวมเป็นเงิน / Subtotal:</span>
+                      <span style={{ color: '#64748b', minWidth: '150px' }}>{tText('รวมเป็นเงิน (Subtotal):', 'Subtotal:')}</span>
                       <strong>THB {formatMoney(subtotalAmount)}</strong>
                     </div>
                     <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-                      <span style={{ color: '#0f172a', fontWeight: '700', minWidth: '150px' }}>จำนวนรวมทั้งสิ้น / Grand Total:</span>
+                      <span style={{ color: '#0f172a', fontWeight: '700', minWidth: '150px' }}>{tText('จำนวนรวมทั้งสิ้น (Grand Total):', 'Grand Total:')}</span>
                       <strong>THB {formatMoney(grandTotalAmount)}</strong>
                     </div>
                     <div style={{ display: 'flex', gap: '16px', fontSize: '14px' }}>
-                      <span style={{ color: '#0284c7', fontWeight: '700', minWidth: '150px' }}>ยอดชำระ / Amount Paid:</span>
+                      <span style={{ color: '#0284c7', fontWeight: '700', minWidth: '150px' }}>{tText('ยอดชำระ (Amount Paid):', 'Amount Paid:')}</span>
                       <strong style={{ color: '#0284c7' }}>THB {formatMoney(formData.amount_paid || grandTotalAmount)}</strong>
                     </div>
                   </div>
 
                   <div className="notes-card">
-                    <label className="receipt-field-label">Notes</label>
+                    <label className="receipt-field-label">{tText('หมายเหตุ', 'Notes')}</label>
                     <textarea
                       rows="3"
                       className="notes-textarea"
-                      placeholder="หมายเหตุเพิ่มเติมในใบเสร็จ..."
+                      placeholder={tText('หมายเหตุเพิ่มเติมในใบเสร็จ...', 'Additional notes in receipt...')}
                       value={formData.remark}
                       onChange={(e) => setFormData({ ...formData, remark: e.target.value })}
                     />
@@ -997,7 +992,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
                 {/* Amount Paid Box (Matching Image 5) */}
                 <div className="review-amount-box">
-                  <label className="receipt-field-label">ยอดชำระ / Amount Paid (THB)</label>
+                  <label className="receipt-field-label">{tText('ยอดชำระ / Amount Paid (THB)', 'Amount Paid (THB)')}</label>
                   <input
                     type="number"
                     step="any"
@@ -1007,7 +1002,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                     onChange={(e) => setFormData({ ...formData, amount_paid: e.target.value })}
                   />
                   <small style={{ color: '#64748b', fontSize: '12px' }}>
-                    ยอดเงินที่ลูกค้าชำระจริงสำหรับใบเสร็จนี้
+                    {tText('ยอดเงินที่ลูกค้าชำระจริงสำหรับใบเสร็จนี้', 'Actual amount paid by customer for this receipt')}
                   </small>
                 </div>
 
@@ -1027,7 +1022,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                 onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
               >
                 <ArrowLeft size={16} />
-                <span>Back</span>
+                <span>{t('actionBack', 'ย้อนกลับ')}</span>
               </button>
             </div>
 
@@ -1038,13 +1033,13 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   className="receipt-btn-primary"
                   onClick={() => {
                     if (currentStep === 2 && !formData.customer_name) {
-                      alert('กรุณากรอกชื่อบริษัทลูกค้าก่อนดำเนินการต่อ');
+                      alert(lang === 'th' ? 'กรุณากรอกชื่อบริษัทลูกค้าก่อนดำเนินการต่อ' : 'Please enter customer company name before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(4, prev + 1));
                   }}
                 >
-                  <span>Next</span>
+                  <span>{t('actionNext', 'ถัดไป')}</span>
                   <ArrowRight size={16} />
                 </button>
               ) : (
@@ -1056,7 +1051,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   style={{ backgroundColor: '#0284c7' }}
                 >
                   <Check size={16} />
-                  <span>{isSubmitting ? 'กำลังบันทึก...' : (editingReceiptId ? 'Update Receipt' : 'Create Receipt')}</span>
+                  <span>{isSubmitting ? t('actionSaving', 'กำลังบันทึก...') : (editingReceiptId ? tText('บันทึกการแก้ไข', 'Update Receipt') : tText('ยืนยันสร้างใบเสร็จ', 'Create Receipt'))}</span>
                 </button>
               )}
             </div>
@@ -1076,14 +1071,14 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>ใบเสร็จรับเงิน (Receipt)</h2>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('recPageTitle', 'ใบเสร็จรับเงิน (Receipt)')}</h2>
           <p className="dashboard-view-subtitle" style={{ margin: 0 }}>
-            ออกใบเสร็จรับเงินสำหรับงานขนส่งที่จัดส่งสินค้าและชำระเงินเรียบร้อยแล้ว โดยอิงตามใบแจ้งหนี้
+            {t('recPageSubtitle', 'ออกใบเสร็จรับเงินสำหรับงานขนส่งที่จัดส่งสินค้าและชำระเงินเรียบร้อยแล้ว โดยอิงตามใบแจ้งหนี้')}
           </p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreate}>
           <Plus size={16} />
-          <span>สร้างใบเสร็จรับเงินใหม่</span>
+          <span>{t('recCreateBtn', 'สร้างใบเสร็จรับเงินใหม่')}</span>
         </button>
       </div>
 
@@ -1094,7 +1089,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
             <Search size={16} className="panel-search-icon" />
             <input
               type="text"
-              placeholder="ค้นหาตามเลขที่ใบเสร็จ, ลูกค้า, หรือเลขที่ใบแจ้งหนี้..."
+              placeholder={t('recSearchPlaceholder', 'ค้นหาตามเลขที่ใบเสร็จ, ลูกค้า, หรือเลขที่ใบแจ้งหนี้...')}
               className="panel-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1106,25 +1101,25 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>Receipt #</th>
-                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>ลูกค้า (CUSTOMER)</th>
-                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>เลขที่ใบแจ้งหนี้ (INVOICE #)</th>
-                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>วันที่ชำระเงิน</th>
-                <th style={{ width: '16%', textAlign: 'right', whiteSpace: 'nowrap' }}>ยอดเงินรวม (บาท)</th>
-                <th style={{ width: '50px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>จัดการ</th>
+                <th style={{ width: '20%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('recColNo', 'Receipt #')}</th>
+                <th style={{ width: '30%', whiteSpace: 'nowrap' }}>{t('recColCustomer', 'ลูกค้า (Customer)')}</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>{t('recColInvoiceNo', 'เลขที่ใบแจ้งหนี้ (Invoice #)')}</th>
+                <th style={{ width: '16%', whiteSpace: 'nowrap' }}>{t('recColDate', 'วันที่ชำระเงิน')}</th>
+                <th style={{ width: '16%', textAlign: 'right', whiteSpace: 'nowrap' }}>{t('recColTotal', 'ยอดเงินรวม (บาท)')}</th>
+                <th style={{ width: '50px', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('actionActions', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    ⏳ กำลังโหลดข้อมูลใบเสร็จรับเงิน...
+                    ⏳ {tText('กำลังโหลดข้อมูลใบเสร็จรับเงิน...', 'Loading receipts...')}
                   </td>
                 </tr>
               ) : filteredReceipts.length === 0 ? (
                 <tr>
                   <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
-                    {searchQuery ? 'ไม่พบข้อมูลใบเสร็จที่ตรงกับการค้นหา' : 'ยังไม่มีข้อมูลใบเสร็จรับเงิน คลิก "สร้างใบเสร็จรับเงินใหม่" เพื่อเริ่มต้น'}
+                    {searchQuery ? tText('ไม่พบข้อมูลใบเสร็จที่ตรงกับการค้นหา', 'No receipts found matching your search.') : t('recEmptyList', 'ยังไม่มีข้อมูลใบเสร็จรับเงิน คลิก "สร้างใบเสร็จรับเงินใหม่" เพื่อเริ่มต้น')}
                   </td>
                 </tr>
               ) : (
@@ -1135,7 +1130,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                       <span
                         style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         onClick={() => handleOpenPreview(rc)}
-                        title="คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสร็จ"
+                        title={tText('คลิกเพื่อดูตัวอย่าง/พิมพ์ใบเสร็จ', 'Click to preview / print')}
                       >
                         <FileText size={15} />
                         {rc.receipt_no}
@@ -1154,7 +1149,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
                     {/* Payment Date */}
                     <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {rc.payment_date ? new Date(rc.payment_date).toLocaleDateString('th-TH') : '-'}
+                      {rc.payment_date ? formatDateLocale(rc.payment_date) : '-'}
                     </td>
 
                     {/* Amount */}
@@ -1167,17 +1162,17 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                       <ActionDropdown
                         items={[
                           {
-                            label: 'ดูตัวอย่าง / พิมพ์',
+                            label: t('actionPrint', 'ดูตัวอย่าง / พิมพ์'),
                             icon: <Printer size={16} className="menu-icon" />,
                             onClick: () => handleOpenPreview(rc)
                           },
                           {
-                            label: 'แก้ไข',
+                            label: t('actionEdit', 'แก้ไข'),
                             icon: <Edit size={16} className="menu-icon" />,
                             onClick: () => handleOpenEdit(rc)
                           },
                           {
-                            label: 'ลบ',
+                            label: t('actionDelete', 'ลบ'),
                             icon: <Trash2 size={16} className="menu-icon danger" />,
                             danger: true,
                             onClick: () => handleDelete(rc)
