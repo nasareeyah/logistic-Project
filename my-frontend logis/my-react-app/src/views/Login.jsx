@@ -1,103 +1,233 @@
 import { useState } from 'react';
 import backgroundImage from '../assets/background.jpg';
+import logoWhite from '../assets/logo-white.png';
 import { useLanguage } from '../context/LanguageContext';
-import { Globe } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Globe,
+  Truck,
+  Briefcase,
+  User,
+  AlertCircle,
+  CheckCircle2,
+  Sparkles
+} from 'lucide-react';
 
 function Login({ onLogin, loginError }) {
   const { lang, setLang, tText } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [activeRole, setActiveRole] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     onLogin(email, password);
+    setTimeout(() => setIsSubmitting(false), 500);
+  };
+
+  const handleSelectRole = (roleKey) => {
+    setActiveRole(roleKey);
+    if (roleKey === 'operator') {
+      setEmail('operator@st-tran.com');
+      setPassword('1234');
+    } else if (roleKey === 'accounting') {
+      setEmail('account@st-tran.com');
+      setPassword('1234');
+    } else if (roleKey === 'employee') {
+      setEmail('employee@st-tran.com');
+      setPassword('1234');
+    }
   };
 
   return (
     <div className="login-container">
-      <div className="login-left" style={{ backgroundImage: `url(${backgroundImage})` }}>
-        <div className="login-left-content">
-          <div className="login-logo-container">
-            <svg viewBox="0 0 280 100" width="220" height="80" xmlns="http://www.w3.org/2000/svg">
-              <g stroke="#1e3a8a" strokeWidth="3" strokeLinecap="round">
-                <line x1="200" y1="20" x2="260" y2="20" />
-                <line x1="210" y1="32" x2="255" y2="32" />
-                <line x1="195" y1="44" x2="260" y2="44" />
-                <line x1="205" y1="56" x2="250" y2="56" />
-              </g>
-              <path d="M 90,65 L 190,65 L 190,15 L 90,15 Z" fill="none" stroke="#1e3a8a" strokeWidth="4" strokeLinejoin="round" />
-              <path d="M 90,65 L 45,65 L 45,45 L 65,25 L 90,25 Z" fill="none" stroke="#1e3a8a" strokeWidth="4" strokeLinejoin="round" />
-              <path d="M 65,25 L 65,45 L 45,45" fill="none" stroke="#1e3a8a" strokeWidth="2" />
-              <circle cx="70" cy="72" r="10" fill="#111827" stroke="#1e3a8a" strokeWidth="2" />
-              <circle cx="70" cy="72" r="4" fill="#ffffff" />
-              <circle cx="160" cy="72" r="10" fill="#111827" stroke="#1e3a8a" strokeWidth="2" />
-              <circle cx="160" cy="72" r="4" fill="#ffffff" />
-              <text x="105" y="52" fill="#ef4444" fontSize="38" fontWeight="900" fontStyle="italic" fontFamily="'Montserrat', 'Arial Black', sans-serif" letterSpacing="-1">ST</text>
-              <text x="60" y="92" fill="#1e3a8a" fontSize="13" fontWeight="800" letterSpacing="3" fontFamily="sans-serif">TRAN EXPRESS</text>
-            </svg>
+      {/* --------------------------------------------------------------- */}
+      {/* LEFT PANEL: Clean, Balanced, Left-Aligned Brand Showcase */}
+      {/* --------------------------------------------------------------- */}
+      <div className="login-hero-panel" style={{ backgroundImage: `url(${backgroundImage})` }}>
+        <div className="login-hero-overlay" />
+
+        <div className="login-hero-content">
+          {/* Top Logo */}
+          <div className="login-hero-top">
+            <img
+              src={logoWhite}
+              alt="S.T. TRANS EXPRESS"
+              className="login-brand-logo-img"
+            />
           </div>
-          <h1 className="login-system-title">S.T. TRAN EXPRESS</h1>
-          <p className="login-system-subtitle">
-            {tText('ระบบบริหารจัดการการขนส่งและโลจิสติกส์', 'Transportation Management System')}
-          </p>
+
+          {/* Middle Content */}
+          <div className="login-hero-middle">
+            <div className="login-brand-badge">
+              <Sparkles size={13} />
+              <span>{tText('ระบบบริหารจัดการงานขนส่งอัจฉริยะ', 'Intelligent Logistics Platform')}</span>
+            </div>
+
+            <h1 className="login-brand-title">
+              S.T. TRANS EXPRESS
+              <br />
+              <span>MANAGEMENT SYSTEM</span>
+            </h1>
+
+            <p className="login-brand-tagline">
+              {tText(
+                'ระบบบริหารจัดการงานขนส่ง โลจิสติกส์ และศูนย์รวมเอกสารการเงินครบวงจร ออกแบบเพื่อความรวดเร็ว แม่นยำ และความปลอดภัยระดับองค์กร',
+                'Comprehensive enterprise logistics, fleet dispatching, and automated financial document workflows.'
+              )}
+            </p>
+
+            {/* Clean Value Props Checklist */}
+            <div className="login-value-props">
+              <div className="login-value-prop-item">
+                <CheckCircle2 size={16} className="login-prop-icon" />
+                <span>{tText('วางแผนเที่ยววิ่ง จัดสรรรถ และติดตามสถานะขนส่งเรียลไทม์', 'Real-time booking dispatch & fleet tracking')}</span>
+              </div>
+              <div className="login-value-prop-item">
+                <CheckCircle2 size={16} className="login-prop-icon" />
+                <span>{tText('ศูนย์รวมเอกสาร Quotation, DO, Invoice, Receipt อัตโนมัติ', 'Automated Quotation, DO, Invoice & Receipt workflows')}</span>
+              </div>
+              <div className="login-value-prop-item">
+                <CheckCircle2 size={16} className="login-prop-icon" />
+                <span>{tText('ควบคุมความปลอดภัยแยกสิทธิ์ฝ่ายปฏิบัติการและการเงิน', 'Enterprise role-based security & audit trail')}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Footnote */}
+          <div className="login-hero-bottom">
+            <span>S.T. TRANS EXPRESS CO., LTD. • SECURE ENTERPRISE PORTAL</span>
+          </div>
         </div>
       </div>
 
-      <div className="login-right">
-        <div className="login-form-card" style={{ position: 'relative' }}>
-          {/* Language Switcher in Login Card */}
-          <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Globe size={15} color="#64748b" />
+      {/* --------------------------------------------------------------- */}
+      {/* RIGHT PANEL: Clean White Canvas Matching System Interior */}
+      {/* --------------------------------------------------------------- */}
+      <div className="login-auth-panel">
+        <div className="login-auth-card">
+          {/* Topbar: Status & Language Switcher */}
+          <div className="login-auth-topbar">
+            <div className="login-status-pill">
+              <span className="login-status-dot" />
+              <span>{tText('ระบบออนไลน์พร้อมใช้งาน', 'System Online • Secure SSL')}</span>
+            </div>
+
             <button
               type="button"
               onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '20px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#f8fafc',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#0284c7',
-                cursor: 'pointer'
-              }}
-              title={tText('เปลี่ยนภาษา', 'Toggle Language')}
+              className="login-lang-btn"
+              title={tText('สลับภาษา TH / EN', 'Toggle Language')}
             >
-              <span>{lang === 'th' ? '🇹🇭 TH' : '🇬🇧 EN'}</span>
+              <Globe size={14} />
+              <span>{lang === 'th' ? 'TH' : 'EN'}</span>
             </button>
           </div>
 
-          <h2 className="login-form-title">{tText('เข้าสู่ระบบ', 'Login')}</h2>
-          {loginError && <div className="login-alert">⚠️ {loginError}</div>}
+          {/* Header */}
+          <div className="login-header-group">
+            <h2 className="login-header-title">{tText('เข้าสู่ระบบ', 'Sign In')}</h2>
+            <p className="login-header-subtitle">
+              {tText(
+                'ยินดีต้อนรับสู่ระบบบริหารจัดการขนส่ง S.T. Trans Express',
+                'Welcome back to S.T. Trans Express Management System'
+              )}
+            </p>
+          </div>
+
+          {/* Quick Demo Role Selector (Clean Compact Pills) */}
+          <div className="login-demo-section">
+            <span className="login-demo-title">
+              {tText('ทดสอบเข้าใช้งาน (Quick Demo):', 'Quick Demo Access:')}
+            </span>
+            <div className="login-demo-pills">
+              <button
+                type="button"
+                className={`login-demo-pill ${activeRole === 'operator' ? 'active' : ''}`}
+                onClick={() => handleSelectRole('operator')}
+              >
+                <Truck size={14} />
+                <span>Operator</span>
+              </button>
+
+              <button
+                type="button"
+                className={`login-demo-pill ${activeRole === 'accounting' ? 'active' : ''}`}
+                onClick={() => handleSelectRole('accounting')}
+              >
+                <Briefcase size={14} />
+                <span>Accounting</span>
+              </button>
+
+              <button
+                type="button"
+                className={`login-demo-pill ${activeRole === 'employee' ? 'active' : ''}`}
+                onClick={() => handleSelectRole('employee')}
+              >
+                <User size={14} />
+                <span>Employee</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Login Error Notification */}
+          {loginError && (
+            <div className="login-alert">
+              <AlertCircle size={16} style={{ flexShrink: 0 }} />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          {/* Authentication Form */}
           <form onSubmit={handleSubmit}>
+            {/* Email Field */}
             <div className="login-form-group">
-              <label className="login-form-label">{tText('อีเมลผู้ใช้งาน', 'Email')}</label>
+              <label className="login-form-label">
+                {tText('อีเมลผู้ใช้งาน', 'Email Address')}
+              </label>
               <div className="login-input-wrapper">
+                <Mail size={16} className="login-input-icon" />
                 <input
                   type="email"
-                  placeholder="example@st-tran.com"
+                  placeholder="operator@st-tran.com"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setActiveRole(null);
+                  }}
                   className="login-field-input"
                   required
+                  autoComplete="username"
                 />
               </div>
             </div>
 
+            {/* Password Field */}
             <div className="login-form-group">
-              <label className="login-form-label">{tText('รหัสผ่าน', 'Password')}</label>
+              <label className="login-form-label">
+                {tText('รหัสผ่าน', 'Password')}
+              </label>
               <div className="login-input-wrapper">
+                <Lock size={16} className="login-input-icon" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
-                  onChange={e => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setActiveRole(null);
+                  }}
                   className="login-field-input"
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -105,101 +235,56 @@ function Login({ onLogin, loginError }) {
                   className="login-password-toggle"
                   title={showPassword ? tText('ซ่อนรหัสผ่าน', 'Hide password') : tText('แสดงรหัสผ่าน', 'Show password')}
                 >
-                  {showPassword ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 10c4 4 14 4 18 0" />
-                      <path d="M6 12l-1.5 2.5" />
-                      <path d="M10 13v3" />
-                      <path d="M14 13v3" />
-                      <path d="M18 12l1.5 2.5" />
-                    </svg>
-                  )}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            <div className="login-forgot-container">
-              <a href="#" className="login-forgot-link" onClick={e => { e.preventDefault(); alert(tText('กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน (support@st-tran.com)', 'Please contact system administrator to reset password (support@st-tran.com)')); }}>
-                {tText('ลืมรหัสผ่าน?', 'Forgot Password?')}
+            {/* Options Row */}
+            <div className="login-options-row">
+              <label className="login-remember-wrap">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="login-remember-checkbox"
+                />
+                <span>{tText('จดจำการเข้าสู่ระบบ', 'Remember me')}</span>
+              </label>
+
+              <a
+                href="#"
+                className="login-forgot-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  alert(
+                    tText(
+                      'กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน (support@st-tran.com)',
+                      'Please contact system administrator to reset password (support@st-tran.com)'
+                    )
+                  );
+                }}
+              >
+                {tText('ลืมรหัสผ่าน?', 'Forgot password?')}
               </a>
             </div>
 
+            {/* Submit Button */}
             <div className="login-btn-container">
-              <button type="submit" className="login-btn-submit">{tText('เข้าสู่ระบบ', 'Login')}</button>
+              <button
+                type="submit"
+                className="login-btn-submit"
+                disabled={isSubmitting}
+              >
+                <span>{isSubmitting ? tText('กำลังเข้าสู่ระบบ...', 'Signing in...') : tText('เข้าสู่ระบบ', 'Sign In')}</span>
+                <ArrowRight size={16} />
+              </button>
             </div>
           </form>
 
-          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-            <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px', fontWeight: 600, textAlign: 'center' }}>
-              {tText('ทดสอบเข้าสู่ระบบตามบทบาท (Quick Demo):', 'Quick Demo Roles Login:')}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('operator@st-tran.com');
-                  setPassword('1234');
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #3b82f6',
-                  backgroundColor: '#eff6ff',
-                  color: '#1d4ed8',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                🚛 {tText('1. Operator (โลโก้ OP | สิทธิ์เข้าถึงเอกสารการเงิน)', '1. Operator (OP | Financial & Operations Access)')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('account@st-tran.com');
-                  setPassword('1234');
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #8b5cf6',
-                  backgroundColor: '#f5f3ff',
-                  color: '#6d28d9',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                💼 {tText('2. Accounting (โลโก้ AC | ฝ่ายบัญชี + เอกสารการเงิน)', '2. Accounting (AC | Accounting & Finance Docs)')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('employee@st-tran.com');
-                  setPassword('1234');
-                }}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #10b981',
-                  backgroundColor: '#ecfdf5',
-                  color: '#047857',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textAlign: 'left'
-                }}
-              >
-                👤 {tText('3. Employee (โลโก้ EM | พนักงานทั่วไป - ซ่อนเอกสารการเงิน)', '3. Employee (EM | Operations - Hides Finance Docs)')}
-              </button>
-            </div>
+          {/* Footer note */}
+          <div className="login-card-footer">
+            S.T. TRANS EXPRESS LOGISTICS • SYSTEM v2.4
           </div>
         </div>
       </div>
