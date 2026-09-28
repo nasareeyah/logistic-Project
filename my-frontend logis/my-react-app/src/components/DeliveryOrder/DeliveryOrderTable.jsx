@@ -52,6 +52,9 @@ export default function DeliveryOrderTable({
   const [bookingSearchQuery, setBookingSearchQuery] = useState('');
   const [selectedBooking, setSelectedBooking] = useState(null);
 
+  // Optional customer in Step 2
+  const [includeCustomer, setIncludeCustomer] = useState(false);
+
   // 6-step form data
   const getTodayStr = () => {
     const d = new Date();
@@ -129,6 +132,11 @@ export default function DeliveryOrderTable({
     consignee_country: 'Thailand',
 
     customer_name: '',
+    customer_address: '',
+    customer_city: '',
+    customer_state: '',
+    customer_postal_code: '',
+    customer_country: 'Thailand',
 
     // Step 3: Transport & Document Info
     do_no: '',
@@ -227,6 +235,7 @@ export default function DeliveryOrderTable({
     setEditingDoId(null);
     setSelectedBooking(null);
     setBookingSearchQuery('');
+    setIncludeCustomer(false);
 
     let nextDo = generateDoNumber(deliveryOrders);
     try {
@@ -256,6 +265,7 @@ export default function DeliveryOrderTable({
     fetchBookingsList();
     setEditingDoId(item.do_id || item.do_no);
     setBookingSearchQuery('');
+    setIncludeCustomer(Boolean(item.customer_name && item.customer_name !== 'Unassigned Customer'));
     
     // Check if matched booking exists
     const matchedBooking = bookingsList.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id) || bookings.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id);
@@ -314,6 +324,11 @@ export default function DeliveryOrderTable({
       consignee_postal_code: item.consignee_postal_code || '',
       consignee_country: item.consignee_country || 'Thailand',
       customer_name: item.customer_name || '',
+      customer_address: item.customer_address || '',
+      customer_city: item.customer_city || '',
+      customer_state: item.customer_state || '',
+      customer_postal_code: item.customer_postal_code || '',
+      customer_country: item.customer_country || 'Thailand',
       do_no: item.do_no || '',
       invoice_no: item.invoice_no || (matchedBooking?.cargo_details?.[0]?.inv_no || ''),
       date_of_load: formatInputDate(item.date_of_load) || formatInputDate(matchedBooking?.pickup_date) || getTodayStr(),
@@ -421,7 +436,7 @@ export default function DeliveryOrderTable({
       car_id: resolvedCarId,
       driver_id: resolvedDriverId,
       invoice_no: resolvedInvoiceNo || prev.invoice_no,
-      customer_name: bk.customer_name || '',
+      // Do not auto-populate customer from booking
       consignor_name: sender.company_name || '',
       consignor_address: sender.address_line || '',
       consignor_city: sender.city || '',
@@ -479,6 +494,12 @@ export default function DeliveryOrderTable({
 
       const payload = {
         ...formData,
+        customer_name: includeCustomer ? formData.customer_name : '',
+        customer_address: includeCustomer ? formData.customer_address : '',
+        customer_city: includeCustomer ? formData.customer_city : '',
+        customer_state: includeCustomer ? formData.customer_state : '',
+        customer_postal_code: includeCustomer ? formData.customer_postal_code : '',
+        customer_country: includeCustomer ? formData.customer_country : 'Thailand',
         destination: destinationSummary,
         cargo_details: cargoSummary
       };
@@ -976,32 +997,182 @@ export default function DeliveryOrderTable({
                 </div>
               </div>
 
-              {/* Customer / ลูกค้า */}
-              <div
-                style={{
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '20px'
-                }}
-              >
-                <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>
-                  Customer / ลูกค้า
-                </h4>
-                <div className="form-group" style={{ maxWidth: '480px' }}>
-                  <label className="form-label">
-                    Customer Name <span className="form-label-required">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    placeholder="Customer Name..."
-                    value={formData.customer_name}
-                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                  />
+              {/* Customer / ลูกค้า (ตัวเลือกเพิ่มเติม - Optional) */}
+              {!includeCustomer ? (
+                <div style={{ marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIncludeCustomer(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '14px 20px',
+                      backgroundColor: '#f8fafc',
+                      border: '1.5px dashed #0284c7',
+                      borderRadius: '12px',
+                      color: '#0284c7',
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      justifyContent: 'center'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f0f9ff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                    }}
+                  >
+                    <Plus size={16} />
+                    <span>เพิ่มสถานที่จัดส่ง (ตัวเลือกเพิ่มเติม)</span>
+                  </button>
                 </div>
-              </div>
+              ) : (
+                <div
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    marginTop: '4px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
+                        สถานที่จัดส่ง
+                      </h4>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          backgroundColor: '#f1f5f9',
+                          color: '#64748b',
+                          padding: '2px 8px',
+                          borderRadius: '6px'
+                        }}
+                      >
+                        ตัวเลือกเพิ่มเติม
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIncludeCustomer(false);
+                        setFormData((prev) => ({
+                          ...prev,
+                          customer_name: '',
+                          customer_address: '',
+                          customer_city: '',
+                          customer_state: '',
+                          customer_postal_code: '',
+                          customer_country: 'Thailand'
+                        }));
+                      }}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: '#fee2e2',
+                        border: 'none',
+                        color: '#ef4444',
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.15s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fecaca';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fee2e2';
+                      }}
+                      title="ลบข้อมูลสถานที่จัดส่ง"
+                    >
+                      <Trash2 size={14} />
+                      <span>ลบข้อมูลสถานที่จัดส่ง</span>
+                    </button>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Customer / Company Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Customer name or company..."
+                      value={formData.customer_name}
+                      onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Address Line</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Street address / Location"
+                      value={formData.customer_address}
+                      onChange={(e) => setFormData({ ...formData, customer_address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">City</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="City"
+                        value={formData.customer_city}
+                        onChange={(e) => setFormData({ ...formData, customer_city: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">State / Province</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="State / Province"
+                        value={formData.customer_state}
+                        onChange={(e) => setFormData({ ...formData, customer_state: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Postal Code</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Postal code"
+                        value={formData.customer_postal_code}
+                        onChange={(e) => setFormData({ ...formData, customer_postal_code: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Country</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Country"
+                        value={formData.customer_country}
+                        onChange={(e) => setFormData({ ...formData, customer_country: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1321,7 +1492,7 @@ export default function DeliveryOrderTable({
                       {formData.booking_no || 'Manual Entry'}
                     </div>
                     <div style={{ fontSize: '14px', color: '#1e293b', marginTop: '2px' }}>
-                      {formData.customer_name || '-'}
+                      {includeCustomer && formData.customer_name ? formData.customer_name : '—'}
                     </div>
                   </div>
 
@@ -1357,6 +1528,18 @@ export default function DeliveryOrderTable({
                       {[formData.consignee_address, formData.consignee_city, formData.consignee_state, formData.consignee_postal_code, formData.consignee_country].filter(Boolean).join(', ') || '-'}
                     </div>
                   </div>
+
+                  {includeCustomer && formData.customer_name && (
+                    <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0', gridColumn: '1 / -1' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>
+                        CUSTOMER (ลูกค้า)
+                      </div>
+                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#0f172a' }}>{formData.customer_name}</div>
+                      <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                        {[formData.customer_address, formData.customer_city, formData.customer_state, formData.customer_postal_code, formData.customer_country].filter(Boolean).join(', ') || '-'}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Transport & Dates */}

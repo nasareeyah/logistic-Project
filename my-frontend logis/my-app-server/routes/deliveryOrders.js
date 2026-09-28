@@ -17,6 +17,11 @@ async function initDeliveryOrdersTable() {
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS car_id VARCHAR(50);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS driver_id VARCHAR(50);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255);`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_address TEXT;`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_city VARCHAR(100);`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_state VARCHAR(100);`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_postal_code VARCHAR(20);`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS customer_country VARCHAR(100);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS date_of_load DATE;`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS eta DATE;`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS warehouse VARCHAR(100);`);
@@ -75,7 +80,7 @@ const DO_SELECT_QUERY = `
         COALESCE(bk.delivery_date, d.eta) AS eta,
         -- Customer details from customers
         cust.tax_id AS customer_tax_id,
-        cust.address AS customer_address,
+        COALESCE(d.customer_address, cust.address) AS customer_address,
         cust.phone AS customer_phone,
         cust.email AS customer_email,
         cust.contact_person AS customer_contact_person,
@@ -149,6 +154,11 @@ router.post('/delivery-orders', async (req, res) => {
             car_id,
             driver_id,
             customer_name,
+            customer_address,
+            customer_city,
+            customer_state,
+            customer_postal_code,
+            customer_country,
             date_of_load,
             eta,
             warehouse,
@@ -279,6 +289,11 @@ router.post('/delivery-orders', async (req, res) => {
                 driver_id,
                 do_no,
                 customer_name,
+                customer_address,
+                customer_city,
+                customer_state,
+                customer_postal_code,
+                customer_country,
                 date_of_load,
                 eta,
                 warehouse,
@@ -286,7 +301,7 @@ router.post('/delivery-orders', async (req, res) => {
                 remark
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14
+                $11, $12, $13, $14, $15, $16, $17, $18, $19
             )`,
             [
                 finalId,
@@ -297,7 +312,12 @@ router.post('/delivery-orders', async (req, res) => {
                 resolvedCarId,
                 resolvedDriverId,
                 finalDoNo,
-                customer_name || 'Unassigned Customer',
+                customer_name || null,
+                customer_address || null,
+                customer_city || null,
+                customer_state || null,
+                customer_postal_code || null,
+                customer_country || 'Thailand',
                 resolvedDateOfLoad,
                 resolvedEta,
                 warehouse || null,
@@ -342,6 +362,11 @@ router.put('/delivery-orders/:id', async (req, res) => {
             car_id,
             driver_id,
             customer_name,
+            customer_address,
+            customer_city,
+            customer_state,
+            customer_postal_code,
+            customer_country,
             date_of_load,
             eta,
             warehouse,
@@ -359,12 +384,17 @@ router.put('/delivery-orders/:id', async (req, res) => {
                 car_id = COALESCE($5, car_id),
                 driver_id = COALESCE($6, driver_id),
                 customer_name = COALESCE($7, customer_name),
-                date_of_load = COALESCE($8, date_of_load),
-                eta = COALESCE($9, eta),
-                warehouse = COALESCE($10, warehouse),
-                shipping = COALESCE($11, shipping),
-                remark = COALESCE($12, remark)
-             WHERE delivery_orders_id = $13 OR do_no = $13`,
+                customer_address = COALESCE($8, customer_address),
+                customer_city = COALESCE($9, customer_city),
+                customer_state = COALESCE($10, customer_state),
+                customer_postal_code = COALESCE($11, customer_postal_code),
+                customer_country = COALESCE($12, customer_country),
+                date_of_load = COALESCE($13, date_of_load),
+                eta = COALESCE($14, eta),
+                warehouse = COALESCE($15, warehouse),
+                shipping = COALESCE($16, shipping),
+                remark = COALESCE($17, remark)
+             WHERE delivery_orders_id = $18 OR do_no = $18`,
             [
                 booking_id !== undefined ? booking_id : null,
                 cargo_id !== undefined ? cargo_id : null,
@@ -373,6 +403,11 @@ router.put('/delivery-orders/:id', async (req, res) => {
                 car_id !== undefined ? car_id : null,
                 driver_id !== undefined ? driver_id : null,
                 customer_name !== undefined ? customer_name : null,
+                customer_address !== undefined ? customer_address : null,
+                customer_city !== undefined ? customer_city : null,
+                customer_state !== undefined ? customer_state : null,
+                customer_postal_code !== undefined ? customer_postal_code : null,
+                customer_country !== undefined ? customer_country : null,
                 date_of_load ? date_of_load : null,
                 eta ? eta : null,
                 warehouse !== undefined ? warehouse : null,
