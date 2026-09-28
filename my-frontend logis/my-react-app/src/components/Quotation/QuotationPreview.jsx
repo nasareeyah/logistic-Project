@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Globe, FileText, Info, Check } from 'lucide-react';
 import logoImg from '../../assets/LOGO.svg';
 import quotationDictionary from './quotationDictionary';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Format currency as standard number without prepended symbol in cells
 const formatNumber = (num) => {
@@ -119,7 +120,12 @@ const bahtText = (num) => {
 };
 
 export default function QuotationPreview({ doc, items = [], customerList = [], onClose }) {
-  const [lang, setLang] = useState('th');
+  const { lang: globalLang } = useLanguage();
+  const [lang, setLang] = useState(globalLang || 'th');
+
+  useEffect(() => {
+    if (globalLang) setLang(globalLang);
+  }, [globalLang]);
 
   // Close modal on Escape key press
   useEffect(() => {

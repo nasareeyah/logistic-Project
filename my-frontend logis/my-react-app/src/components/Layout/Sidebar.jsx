@@ -11,8 +11,10 @@ import {
   User, 
   LogOut 
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 
 function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
+  const { lang, t } = useLanguage();
   const [isDocOpen, setIsDocOpen] = useState(() => {
     return ['quotation', 'invoice', 'receipt'].includes(activeTab);
   });
@@ -42,7 +44,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
         
         {/* --- MAIN GROUP --- */}
         <div className="sidebar-group">
-          <div className="sidebar-group-title">MAIN</div>
+          <div className="sidebar-group-title">{t('menuMain', 'MAIN')}</div>
           <ul className="sidebar-menu-list">
             
             {/* Dashboard */}
@@ -53,7 +55,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <LayoutGrid size={18} />
               </span>
-              <span>Dashboard</span>
+              <span>{t('menuDashboard', 'Dashboard')}</span>
             </li>
 
             {/* Booking */}
@@ -64,7 +66,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <FileText size={18} />
               </span>
-              <span>Booking</span>
+              <span>{t('menuBooking', 'Booking')}</span>
             </li>
 
             {/* Document Center (เข้าถึงได้เฉพาะ Operator และ Accounting) */}
@@ -83,7 +85,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
                     <span className="sidebar-menu-item-icon">
                       <Folder size={18} />
                     </span>
-                    <span>Document Center</span>
+                    <span>{t('menuDocCenter', 'Document Center')}</span>
                   </div>
                   <ChevronDown 
                     size={14} 
@@ -117,21 +119,21 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
                       onClick={() => setActiveTab('quotation')}
                     >
                       <FileText size={16} />
-                      <span>Quotation</span>
+                      <span>{t('menuQuotation', 'Quotation')}</span>
                     </li>
                     <li 
                       className={`sidebar-sub-item ${activeTab === 'invoice' ? 'active' : ''}`}
                       onClick={() => setActiveTab('invoice')}
                     >
                       <FileText size={16} />
-                      <span>Invoice</span>
+                      <span>{t('menuInvoice', 'Invoice')}</span>
                     </li>
                     <li 
                       className={`sidebar-sub-item ${activeTab === 'receipt' ? 'active' : ''}`}
                       onClick={() => setActiveTab('receipt')}
                     >
                       <FileText size={16} />
-                      <span>Receipt</span>
+                      <span>{t('menuReceipt', 'Receipt')}</span>
                     </li>
                   </ul>
                 </div>
@@ -146,7 +148,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <Package size={18} />
               </span>
-              <span>Delivery Order (DO)</span>
+              <span>{t('menuDeliveryOrder', 'Delivery Order (DO)')}</span>
             </li>
 
           </ul>
@@ -154,7 +156,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
 
         {/* --- MASTER DATA GROUP --- */}
         <div className="sidebar-group">
-          <div className="sidebar-group-title">MASTER DATA</div>
+          <div className="sidebar-group-title">{t('menuMasterData', 'MASTER DATA')}</div>
           <ul className="sidebar-menu-list">
             
             {/* Customers */}
@@ -165,7 +167,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <Users size={18} />
               </span>
-              <span>Customers</span>
+              <span>{t('menuCustomers', 'Customers')}</span>
             </li>
 
             {/* Trucks */}
@@ -176,7 +178,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <Truck size={18} />
               </span>
-              <span>Trucks</span>
+              <span>{t('menuTrucks', 'Trucks')}</span>
             </li>
 
             {/* Drivers */}
@@ -187,7 +189,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
               <span className="sidebar-menu-item-icon">
                 <User size={18} />
               </span>
-              <span>Drivers</span>
+              <span>{t('menuDrivers', 'Drivers')}</span>
             </li>
 
           </ul>
@@ -198,7 +200,7 @@ function Sidebar({ activeTab, setActiveTab, onLogout, userRole }) {
       <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
         <button className="sidebar-logout-btn" onClick={onLogout}>
           <LogOut size={16} />
-          <span>Log out</span>
+          <span>{t('menuLogout', 'Log out')}</span>
         </button>
       </div>
     </div>

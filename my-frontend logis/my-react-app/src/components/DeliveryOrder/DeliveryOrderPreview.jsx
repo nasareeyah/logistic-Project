@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Globe, FileText, Info, Truck, Calendar, MapPin, User, Check } from 'lucide-react';
 import logoImg from '../../assets/LOGO.svg';
 import doDictionary from './doDictionary';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Date formatting helper (English): 08 Sept 2026
 const formatDate = (dateStr) => {
@@ -39,7 +40,12 @@ const formatThaiDate = (dateStr) => {
 };
 
 export default function DeliveryOrderPreview({ doc, onClose }) {
-  const [lang, setLang] = useState('th');
+  const { lang: globalLang } = useLanguage();
+  const [lang, setLang] = useState(globalLang || 'th');
+
+  useEffect(() => {
+    if (globalLang) setLang(globalLang);
+  }, [globalLang]);
 
   // Close modal on Escape key press
   useEffect(() => {
