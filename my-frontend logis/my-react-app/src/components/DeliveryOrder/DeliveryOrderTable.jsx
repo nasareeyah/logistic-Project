@@ -1019,7 +1019,7 @@ export default function DeliveryOrderTable({
                     }}
                   >
                     <Plus size={16} />
-                    <span>{tText('เพิ่มสถานที่จัดส่ง (ตัวเลือกเพิ่มเติม)', '+ Add Delivery Location (Optional)')}</span>
+                    <span>{tText('เพิ่มสถานที่จัดส่ง (ตัวเลือกเพิ่มเติม)', 'Add Delivery Location (Optional)')}</span>
                   </button>
                 </div>
               ) : (
