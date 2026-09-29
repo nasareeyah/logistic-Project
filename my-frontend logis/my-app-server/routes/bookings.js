@@ -8,6 +8,18 @@ const fs = require('fs');
 
 let isBookingTableInit = false;
 
+// Decode original filename from latin1/utf8 if it was corrupted by multipart parsers
+const fixOriginalName = (name) => {
+    if (!name) return '';
+    try {
+        if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/.test(name)) {
+            const decoded = Buffer.from(name, 'latin1').toString('utf8');
+            if (decoded && !decoded.includes('\ufffd')) return decoded;
+        }
+    } catch (e) {}
+    return name;
+};
+
 async function saveConsignerFromBooking(sender) {
     if (!sender) return null;
     const consigner_name = sender.company_name || null;
@@ -188,6 +200,19 @@ async function initBookingTables() {
             );
         `);
 
+        // Auto-repair any previously corrupted filenames in database
+        try {
+            const rawAtts = await db.query(`SELECT attachment_id, original_name FROM booking_attachments WHERE original_name LIKE '%à¹%' OR original_name LIKE '%à¸%'`);
+            for (const r of rawAtts.rows) {
+                const cleaned = fixOriginalName(r.original_name);
+                if (cleaned && cleaned !== r.original_name) {
+                    await db.query(`UPDATE booking_attachments SET original_name = $1 WHERE attachment_id = $2`, [cleaned, r.attachment_id]);
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
         isBookingTableInit = true;
     } catch (err) {
         console.error('Error initializing booking tables:', err.message);
@@ -237,7 +262,10 @@ router.get('/bookings', async (req, res) => {
         const attachmentsMap = {};
         attachmentsRes.rows.forEach(att => {
             if (!attachmentsMap[att.booking_id]) attachmentsMap[att.booking_id] = [];
-            attachmentsMap[att.booking_id].push(att);
+            attachmentsMap[att.booking_id].push({
+                ...att,
+                original_name: fixOriginalName(att.original_name)
+            });
         });
 
         const cargoMap = {};
@@ -528,18 +556,19 @@ router.post('/bookings/:id/attachments', upload.array('files', 10), async (req, 
         for (const file of uploadedFiles) {
             const attachment_id = await nextId('seq_booking_attachment', 'att-', 5);
             const relativePath = '/uploads/' + file.filename;
+            const originalName = fixOriginalName(file.originalname);
 
             await db.query(
                 `INSERT INTO booking_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                [attachment_id, booking_id, file.filename, file.originalname, relativePath, file.mimetype, file.size]
+                [attachment_id, booking_id, file.filename, originalName, relativePath, file.mimetype, file.size]
             );
 
             savedAttachments.push({
                 attachment_id,
                 booking_id,
                 file_name: file.filename,
-                original_name: file.originalname,
+                original_name: originalName,
                 file_path: relativePath,
                 file_type: file.mimetype,
                 file_size: file.size,

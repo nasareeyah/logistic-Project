@@ -37,6 +37,18 @@ import './BookingWizard.css';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
 
+// Helper to decode latin1 mojibake characters back to clean UTF-8 text (e.g. Thai characters)
+const decodeAttachmentName = (name) => {
+  if (!name) return '';
+  try {
+    if (/[àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/.test(name)) {
+      const decoded = decodeURIComponent(escape(name));
+      if (decoded) return decoded;
+    }
+  } catch (e) {}
+  return name;
+};
+
 export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], documentItems = [], fetchData }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
   const [bookings, setBookings] = useState([]);
@@ -1272,7 +1284,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                     {wizardAttachedFiles.map((att, i) => (
                       <li key={`existing-${i}`}>
                         <Paperclip size={14} color="#0284c7" />
-                        <span>{att.original_name || att.file_name}</span>
+                        <span>{decodeAttachmentName(att.original_name) || att.file_name}</span>
                         <small>({tText('มีอยู่ในระบบ', 'Existing')})</small>
                       </li>
                     ))}
@@ -1577,7 +1589,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           style={{ textDecoration: 'none' }}
                         >
                           <Paperclip size={13} className="chip-paperclip-icon" />
-                          <span>{att.original_name || att.file_name}</span>
+                          <span>{decodeAttachmentName(att.original_name) || att.file_name}</span>
                           <Eye size={13} className="chip-eye-icon" />
                         </a>
                       ))}
@@ -1738,7 +1750,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           >
                             <Paperclip size={13} className="chip-paperclip-icon" />
                             <span className="chip-filename-text">
-                              {firstAtt?.original_name || firstAtt?.file_name || 'DO_File.pdf'}
+                              {decodeAttachmentName(firstAtt?.original_name) || firstAtt?.file_name || 'DO_File.pdf'}
                             </span>
                             {booking.attachments.length > 1 && (
                               <span className="chip-count-badge">+{booking.attachments.length - 1}</span>
@@ -1865,8 +1877,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           <FileCheck size={24} color="#0284c7" />
                         </div>
                         <div className="att-file-info">
-                          <span className="att-file-name" title={att.original_name || att.file_name}>
-                            {att.original_name || att.file_name}
+                          <span className="att-file-name" title={decodeAttachmentName(att.original_name) || att.file_name}>
+                            {decodeAttachmentName(att.original_name) || att.file_name}
                           </span>
                           <span className="att-file-meta">
                             {att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : tText('แนบแล้ว', 'Attached')}
