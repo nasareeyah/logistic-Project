@@ -5,8 +5,10 @@ import {
   createBooking,
   updateBooking,
   deleteBooking,
-  uploadAttachments,
-  deleteAttachment
+  uploadCustomerAttachments,
+  deleteCustomerAttachment,
+  uploadDoFiles,
+  deleteDoFile
 } from './apiBooking';
 import {
   Search,
@@ -62,13 +64,17 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const [viewMode, setViewMode] = useState('table');
   const [editingBooking, setEditingBooking] = useState(null);
 
-  // Attachments Modal State
-  const [selectedBookingForAttach, setSelectedBookingForAttach] = useState(null);
-  const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  // 1. Customer Documents Modal State (เอกสารเพิ่มเติมจากลูกค้า)
+  const [selectedBookingForCustDoc, setSelectedBookingForCustDoc] = useState(null);
+  const [isCustDocModalOpen, setIsCustDocModalOpen] = useState(false);
+  const [uploadingCustDoc, setUploadingCustDoc] = useState(false);
+  const custDocFileInputRef = useRef(null);
 
-  const fileInputRef = useRef(null);
+  // 2. Completed DO Files Modal State (เอกสารใบ DO ปิดงาน)
+  const [selectedBookingForDo, setSelectedBookingForDo] = useState(null);
+  const [isDoModalOpen, setIsDoModalOpen] = useState(false);
+  const [uploadingDo, setUploadingDo] = useState(false);
+  const doFileInputRef = useRef(null);
 
   // ----------------------------------------------------
   // WIZARD STATE (6 Steps)
@@ -376,7 +382,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
     }
 
-    setWizardAttachedFiles(booking.attachments || []);
+    setWizardAttachedFiles(booking.customer_attachments || booking.attachments || []);
     setWizardNewFiles([]);
     setCurrentStep(1);
     setViewMode('wizard');
@@ -402,76 +408,155 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     }
   };
 
-  // Attach Modal Handlers
-  const handleOpenAttachModal = (booking) => {
-    setSelectedBookingForAttach(booking);
-    setSelectedFiles([]);
-    setIsAttachModalOpen(true);
+  // ----------------------------------------------------
+  // 1. CUSTOMER DOCUMENTS MODAL HANDLERS
+  // ----------------------------------------------------
+  const handleOpenCustDocModal = (booking) => {
+    setSelectedBookingForCustDoc(booking);
+    setIsCustDocModalOpen(true);
   };
 
-  const handleFileSelect = async (e) => {
+  const handleCustDocSelect = async (e) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      if (!selectedBookingForAttach) return;
+      if (!selectedBookingForCustDoc) return;
 
       try {
-        setUploading(true);
-        const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบไฟล์สำเร็จ' : 'Files attached successfully'));
+        setUploadingCustDoc(true);
+        const resData = await uploadCustomerAttachments(selectedBookingForCustDoc.booking_id, files);
+        alert(resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
-          setSelectedBookingForAttach(prev => ({
+          setSelectedBookingForCustDoc(prev => ({
             ...prev,
-            attachments: [...(prev.attachments || []), ...resData.attachments]
+            customer_attachments: [...(prev.customer_attachments || []), ...resData.attachments]
           }));
         }
       } catch (err) {
         alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
       } finally {
-        setUploading(false);
+        setUploadingCustDoc(false);
       }
     }
   };
 
-  const handleDragOver = (e) => {
+  const handleCustDocDragOver = (e) => {
     e.preventDefault();
   };
 
-  const handleDrop = async (e) => {
+  const handleCustDocDrop = async (e) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
-      if (!selectedBookingForAttach) return;
+      if (!selectedBookingForCustDoc) return;
 
       try {
-        setUploading(true);
-        const resData = await uploadAttachments(selectedBookingForAttach.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบไฟล์สำเร็จ' : 'Files attached successfully'));
+        setUploadingCustDoc(true);
+        const resData = await uploadCustomerAttachments(selectedBookingForCustDoc.booking_id, files);
+        alert(resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
-          setSelectedBookingForAttach(prev => ({
+          setSelectedBookingForCustDoc(prev => ({
             ...prev,
-            attachments: [...(prev.attachments || []), ...resData.attachments]
+            customer_attachments: [...(prev.customer_attachments || []), ...resData.attachments]
           }));
         }
       } catch (err) {
         alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
       } finally {
-        setUploading(false);
+        setUploadingCustDoc(false);
       }
     }
   };
 
-  const handleDeleteAttachmentFile = async (attachmentId) => {
-    if (!window.confirm(lang === 'th' ? 'ยืนยันลบไฟล์แนบนี้?' : 'Are you sure you want to delete this attachment?')) return;
+  const handleDeleteCustDoc = async (attachmentId) => {
+    if (!window.confirm(lang === 'th' ? 'ยืนยันลบเอกสารลูกค้านี้?' : 'Are you sure you want to delete this customer document?')) return;
     try {
-      const resData = await deleteAttachment(attachmentId);
-      alert(resData.message || (lang === 'th' ? 'ลบไฟล์สำเร็จ' : 'Attachment deleted successfully'));
-      setSelectedBookingForAttach(prev => ({
+      const resData = await deleteCustomerAttachment(attachmentId);
+      alert(resData.message || (lang === 'th' ? 'ลบเอกสารสำเร็จ' : 'Document deleted successfully'));
+      setSelectedBookingForCustDoc(prev => ({
         ...prev,
-        attachments: (prev.attachments || []).filter(a => a.attachment_id !== attachmentId)
+        customer_attachments: (prev.customer_attachments || []).filter(a => a.attachment_id !== attachmentId)
+      }));
+      await loadBookingsData();
+    } catch (err) {
+      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+    }
+  };
+
+  // ----------------------------------------------------
+  // 2. COMPLETED DO FILES MODAL HANDLERS
+  // ----------------------------------------------------
+  const handleOpenDoModal = (booking) => {
+    setSelectedBookingForDo(booking);
+    setIsDoModalOpen(true);
+  };
+
+  const handleDoFileSelect = async (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      if (!selectedBookingForDo) return;
+
+      try {
+        setUploadingDo(true);
+        const resData = await uploadDoFiles(selectedBookingForDo.booking_id, files);
+        alert(resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
+        await loadBookingsData();
+
+        if (resData.do_files) {
+          setSelectedBookingForDo(prev => ({
+            ...prev,
+            do_files: [...(prev.do_files || []), ...resData.do_files]
+          }));
+        }
+      } catch (err) {
+        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+      } finally {
+        setUploadingDo(false);
+      }
+    }
+  };
+
+  const handleDoDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDoDrop = async (e) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      if (!selectedBookingForDo) return;
+
+      try {
+        setUploadingDo(true);
+        const resData = await uploadDoFiles(selectedBookingForDo.booking_id, files);
+        alert(resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
+        await loadBookingsData();
+
+        if (resData.do_files) {
+          setSelectedBookingForDo(prev => ({
+            ...prev,
+            do_files: [...(prev.do_files || []), ...resData.do_files]
+          }));
+        }
+      } catch (err) {
+        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+      } finally {
+        setUploadingDo(false);
+      }
+    }
+  };
+
+  const handleDeleteDoFile = async (doFileId) => {
+    if (!window.confirm(lang === 'th' ? 'ยืนยันลบไฟล์ DO นี้?' : 'Are you sure you want to delete this DO file?')) return;
+    try {
+      const resData = await deleteDoFile(doFileId);
+      alert(resData.message || (lang === 'th' ? 'ลบไฟล์ DO สำเร็จ' : 'DO file deleted successfully'));
+      setSelectedBookingForDo(prev => ({
+        ...prev,
+        do_files: (prev.do_files || []).filter(f => f.do_file_id !== doFileId)
       }));
       await loadBookingsData();
     } catch (err) {
@@ -512,7 +597,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       }
 
       if (wizardNewFiles.length > 0 && bookingId) {
-        await uploadAttachments(bookingId, wizardNewFiles);
+        await uploadCustomerAttachments(bookingId, wizardNewFiles);
       }
 
       alert(editingBooking ? (lang === 'th' ? 'แก้ไข Booking สำเร็จ' : 'Booking updated successfully') : (lang === 'th' ? 'สร้าง Booking สำเร็จ' : 'Booking created successfully'));
@@ -533,8 +618,9 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     const bNo = (booking.booking_no || '').toLowerCase();
     const cust = (booking.customer_name || '').toLowerCase();
     const truck = (booking.truck_name || '').toLowerCase();
-    const atts = (booking.attachments || []).map(a => (a.original_name || a.file_name || '').toLowerCase()).join(' ');
-    return bNo.includes(q) || cust.includes(q) || truck.includes(q) || atts.includes(q);
+    const custAtts = (booking.customer_attachments || booking.attachments || []).map(a => (a.original_name || a.file_name || '').toLowerCase()).join(' ');
+    const doFiles = (booking.do_files || []).map(a => (a.original_name || a.file_name || '').toLowerCase()).join(' ');
+    return bNo.includes(q) || cust.includes(q) || truck.includes(q) || custAtts.includes(q) || doFiles.includes(q);
   });
 
   const stepsList = [
@@ -542,7 +628,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     { num: 2, label: tText('ใบเสนอราคา/ราคา', 'Quotation') },
     { num: 3, label: tText('ข้อมูลสินค้า', 'Cargo') },
     { num: 4, label: tText('เส้นทาง/สถานที่', 'Route') },
-    { num: 5, label: tText('เอกสารแนบ', 'Attachments') },
+    { num: 5, label: tText('เอกสารจากลูกค้า', 'Customer Docs') },
     { num: 6, label: tText('ตรวจสอบและยืนยัน', 'Review') }
   ];
 
@@ -1253,10 +1339,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
             </div>
           )}
 
-          {/* STEP 5: ATTACHMENTS */}
+          {/* STEP 5: CUSTOMER DOCUMENTS */}
           {currentStep === 5 && (
             <div className="wizard-step-body">
-              <h2 className="step-section-heading">{tText('เอกสารแนบ', 'Attachments')}</h2>
+              <h2 className="step-section-heading">{tText('เอกสารเพิ่มเติมจากลูกค้า', 'Additional Customer Documents')}</h2>
+              <p style={{ fontSize: '13px', color: '#64748b', marginTop: '-10px', marginBottom: '18px' }}>
+                {tText('แนบเอกสารที่ได้รับจากทางบริษัท/ลูกค้าที่มาติดต่อ เช่น ใบสั่งซื้อ (PO), เอกสารเปิดงาน, รายละเอียดสินค้า (PDF, รูปภาพ, Excel)', 'Attach additional documents provided by the customer (e.g. PO, cargo specifications, job order)')}
+              </p>
 
               <div className="attachments-large-dropzone">
                 <input
@@ -1272,14 +1361,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   onClick={() => wizardFileInputRef.current?.click()}
                 >
                   <Upload size={38} className="upload-tray-icon" />
-                  <span className="upload-click-title">{tText('คลิกเพื่อเลือกไฟล์อัปโหลด', 'Click to upload files')}</span>
-                  <span className="upload-click-sub">{tText('รองรับ PDF, รูปภาพ, Excel, เอกสารต่างๆ', 'PDF, images, Excel, documents')}</span>
+                  <span className="upload-click-title">{tText('คลิกเพื่อเลือกไฟล์เอกสารจากลูกค้า', 'Click to upload customer documents')}</span>
+                  <span className="upload-click-sub">{tText('รองรับ PDF, รูปภาพ, Excel, Word, เอกสารทั่วไป', 'Supports PDF, images, Excel, Word, documents')}</span>
                 </div>
               </div>
 
               {(wizardAttachedFiles.length > 0 || wizardNewFiles.length > 0) && (
                 <div className="attached-files-list-box">
-                  <h4>{tText('ไฟล์ที่แนบแล้ว:', 'Attached Files:')}</h4>
+                  <h4>{tText('ไฟล์เอกสารลูกค้าที่แนบแล้ว:', 'Attached Customer Documents:')}</h4>
                   <ul>
                     {wizardAttachedFiles.map((att, i) => (
                       <li key={`existing-${i}`}>
@@ -1573,10 +1662,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
               </div>
 
               <div className="review-card-item" style={{ gridColumn: 'span 2' }}>
-                <span className="review-label">{tText('ไฟล์ DO และเอกสารแนบ', 'ATTACHED DO FILES & DOCUMENTS')} ({wizardAttachedFiles.length})</span>
+                <span className="review-label">{tText('เอกสารเพิ่มเติมจากลูกค้า', 'CUSTOMER DOCUMENTS')} ({wizardAttachedFiles.length + wizardNewFiles.length})</span>
                 <span className="review-value">
-                  {wizardAttachedFiles.length === 0 ? (
-                    <span style={{ color: '#94a3b8' }}>{tText('ไม่มีเอกสารแนบสำหรับการจองนี้', 'No attached files for this booking.')}</span>
+                  {wizardAttachedFiles.length === 0 && wizardNewFiles.length === 0 ? (
+                    <span style={{ color: '#94a3b8' }}>{tText('ไม่มีเอกสารเพิ่มเติมจากลูกค้า', 'No customer documents for this booking.')}</span>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                       {wizardAttachedFiles.map((att, i) => (
@@ -1592,6 +1681,13 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           <span>{decodeAttachmentName(att.original_name) || att.file_name}</span>
                           <Eye size={13} className="chip-eye-icon" />
                         </a>
+                      ))}
+                      {wizardNewFiles.map((file, i) => (
+                        <div key={`new-${i}`} className="attached-preview-chip" style={{ backgroundColor: '#f0fdf4', borderColor: '#bbf7d0', color: '#16a34a' }}>
+                          <FileText size={13} style={{ color: '#16a34a' }} />
+                          <span>{file.name}</span>
+                          <small>({tText('ใหม่', 'New')})</small>
+                        </div>
                       ))}
                     </div>
                   )}
@@ -1666,27 +1762,28 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '13%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('bookingColNo', 'Booking #')}</th>
+                <th style={{ width: '12%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('bookingColNo', 'Booking #')}</th>
                 <th style={{ width: '14%', whiteSpace: 'nowrap' }}>{t('bookingColCustomer', 'ลูกค้า')}</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{t('bookingColService', 'บริการขนส่ง')}</th>
                 <th style={{ width: '11%', whiteSpace: 'nowrap' }}>{t('bookingColPickupDate', 'วันที่ขึ้นของ (Pickup)')}</th>
                 <th style={{ width: '11%', whiteSpace: 'nowrap' }}>{t('bookingColDeliveryDate', 'วันที่ส่งมอบ (Delivery)')}</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{t('bookingColTruck', 'รถบรรทุก')}</th>
-                <th style={{ width: '17%', whiteSpace: 'nowrap' }}>{t('bookingColDoFile', 'ไฟล์ DO / เอกสารแนบ')}</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{tText('เอกสารจากลูกค้า', 'Customer Docs')}</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{tText('เอกสารใบ DO ปิดงาน', 'Signed DO (POD)')}</th>
                 <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('bookingColActions', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                     ⏳ {tText('กำลังโหลดข้อมูลการจอง...', 'Loading bookings...')}
                   </td>
                 </tr>
               ) : (
                 filteredBookings.map((booking) => {
-                  const hasAttachments = booking.attachments && booking.attachments.length > 0;
-                  const firstAtt = hasAttachments ? booking.attachments[0] : null;
+                  const custDocs = booking.customer_attachments || booking.attachments || [];
+                  const doDocs = booking.do_files || [];
 
                   return (
                     <tr key={booking.booking_id}>
@@ -1740,20 +1837,20 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         </div>
                       </td>
 
-                      {/* DO FILE PREVIEW BADGE / CHIP */}
+                      {/* 1. CUSTOMER DOCUMENTS (เอกสารเพิ่มเติมจากลูกค้า) */}
                       <td style={{ whiteSpace: 'nowrap' }}>
-                        {hasAttachments ? (
+                        {custDocs.length > 0 ? (
                           <div
                             className="attached-preview-chip"
-                            onClick={() => handleOpenAttachModal(booking)}
-                            title={tText('คลิกเพื่อดูเอกสารแนบ', 'Click to preview/view attached files')}
+                            onClick={() => handleOpenCustDocModal(booking)}
+                            title={tText('คลิกเพื่อดูเอกสารเพิ่มเติมจากลูกค้า', 'Click to view customer documents')}
                           >
                             <Paperclip size={13} className="chip-paperclip-icon" />
                             <span className="chip-filename-text">
-                              {decodeAttachmentName(firstAtt?.original_name) || firstAtt?.file_name || 'DO_File.pdf'}
+                              {decodeAttachmentName(custDocs[0]?.original_name) || custDocs[0]?.file_name}
                             </span>
-                            {booking.attachments.length > 1 && (
-                              <span className="chip-count-badge">+{booking.attachments.length - 1}</span>
+                            {custDocs.length > 1 && (
+                              <span className="chip-count-badge">+{custDocs.length - 1}</span>
                             )}
                             <Eye size={13} className="chip-eye-icon" />
                           </div>
@@ -1761,11 +1858,45 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                           <button
                             type="button"
                             className="attach-do-ghost-btn"
-                            onClick={() => handleOpenAttachModal(booking)}
-                            title={tText('แนบเอกสาร DO', 'Attach DO File')}
+                            onClick={() => handleOpenCustDocModal(booking)}
+                            title={tText('แนบเอกสารเพิ่มเติมจากลูกค้า', 'Attach customer document')}
                           >
                             <Paperclip size={13} />
-                            <span>{tText('+ แนบไฟล์', '+ Attach')}</span>
+                            <span>{tText('+ แนบเอกสาร', '+ Attach')}</span>
+                          </button>
+                        )}
+                      </td>
+
+                      {/* 2. COMPLETED DO FILES (เอกสารใบ DO ปิดงาน) */}
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {doDocs.length > 0 ? (
+                          <div
+                            className="attached-preview-chip"
+                            onClick={() => handleOpenDoModal(booking)}
+                            title={tText('คลิกเพื่อดูเอกสารใบ DO ปิดงาน', 'Click to view completed DO files')}
+                            style={{ backgroundColor: '#ecfdf5', borderColor: '#a7f3d0', color: '#047857' }}
+                          >
+                            <FileCheck size={13} style={{ color: '#059669', flexShrink: 0 }} />
+                            <span className="chip-filename-text" style={{ color: '#047857', fontWeight: 600 }}>
+                              {decodeAttachmentName(doDocs[0]?.original_name) || doDocs[0]?.file_name}
+                            </span>
+                            {doDocs.length > 1 && (
+                              <span className="chip-count-badge" style={{ backgroundColor: '#059669', color: '#fff' }}>
+                                +{doDocs.length - 1}
+                              </span>
+                            )}
+                            <Eye size={13} style={{ color: '#059669' }} />
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="attach-do-ghost-btn"
+                            onClick={() => handleOpenDoModal(booking)}
+                            title={tText('แนบเอกสารใบ DO เมื่องานเสร็จสิ้น', 'Attach completed DO file')}
+                            style={{ borderColor: '#bbf7d0', color: '#059669', backgroundColor: '#f0fdf4' }}
+                          >
+                            <Plus size={13} />
+                            <span>{tText('+ แนบใบ DO', '+ Attach DO')}</span>
                           </button>
                         )}
                       </td>
@@ -1804,128 +1935,273 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         )}
       </div>
 
-      {/* ==========================================
-          MODAL: ATTACH DO FILE / ATTACHMENT MANAGER
-          ========================================== */}
-      {isAttachModalOpen && selectedBookingForAttach && (
-        <div className="modal-backdrop-overlay">
-          <div className="attachment-modal-card">
-            <div className="modal-header-bar">
-              <div className="modal-header-title">
-                <Paperclip size={20} color="#0284c7" />
-                <div>
-                  <h2>{tText('ไฟล์ DO และเอกสารแนบ', 'DO Files & Attachments')}</h2>
-                  <p className="modal-subtitle">
-                    {tText('การจอง:', 'Booking:')} <strong>{selectedBookingForAttach.booking_no}</strong> ({selectedBookingForAttach.customer_name})
-                  </p>
+      {/* ====================================================
+          MODAL 1: CUSTOMER DOCUMENTS (เอกสารเพิ่มเติมจากลูกค้า)
+          ==================================================== */}
+      {isCustDocModalOpen && selectedBookingForCustDoc && (() => {
+        const custDocsList = selectedBookingForCustDoc.customer_attachments || selectedBookingForCustDoc.attachments || [];
+
+        return (
+          <div className="modal-backdrop-overlay">
+            <div className="attachment-modal-card">
+              <div className="modal-header-bar">
+                <div className="modal-header-title">
+                  <Paperclip size={22} color="#0284c7" />
+                  <div>
+                    <h2>{tText('เอกสารเพิ่มเติมจากลูกค้า', 'Customer Additional Documents')}</h2>
+                    <p className="modal-subtitle">
+                      {tText('การจอง:', 'Booking:')} <strong>{selectedBookingForCustDoc.booking_no}</strong> ({selectedBookingForCustDoc.customer_name})
+                    </p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setIsCustDocModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="modal-body-content">
+                {/* Customer Dropzone */}
+                <div
+                  className="upload-dropzone"
+                  onClick={() => !uploadingCustDoc && custDocFileInputRef.current?.click()}
+                  onDragOver={handleCustDocDragOver}
+                  onDrop={handleCustDocDrop}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    ref={custDocFileInputRef}
+                    onChange={handleCustDocSelect}
+                    style={{ display: 'none' }}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                    disabled={uploadingCustDoc}
+                  />
+                  {uploadingCustDoc ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '10px 0' }}>
+                      <span style={{ fontSize: '24px' }}>⏳</span>
+                      <p style={{ margin: 0, fontWeight: 600, color: '#0284c7' }}>
+                        {tText('กำลังอัปโหลดเอกสารลูกค้า กรุณารอสักครู่...', 'Uploading customer documents, please wait...')}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload size={36} className="dropzone-upload-icon" />
+                      <p className="dropzone-text">
+                        {tText('ลากและวางเอกสารที่ได้รับจากลูกค้าที่นี่ หรือ', 'Drag & drop customer documents here, or')}{' '}
+                        <span className="browse-link">{tText('เลือกไฟล์', 'browse')}</span>
+                      </p>
+                      <p className="dropzone-hint">
+                        {tText('สำหรับใบสั่งซื้อ (PO), เอกสารเปิดงาน, รายละเอียดสินค้า (PDF, รูปภาพ, Excel, Word)', 'For purchase orders (PO), job orders, cargo specifications (PDF, Images, Excel, Word)')}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* List of Attached Customer Files */}
+                <div className="attached-files-section">
+                  <h3>
+                    {tText('รายการเอกสารจากลูกค้า', 'Customer Documents')} ({custDocsList.length})
+                  </h3>
+
+                  {custDocsList.length === 0 ? (
+                    <div className="no-attachments-placeholder">
+                      <AlertCircle size={24} color="#9ca3af" />
+                      <span>{tText('ยังไม่มีเอกสารจากลูกค้าในรายการนี้ (ใช้พื้นที่ด้านบนเพื่อแนบใบ PO หรือเอกสารเปิดงาน)', 'No customer documents attached yet. (Use the area above to attach PO or job order documents)')}</span>
+                    </div>
+                  ) : (
+                    <div className="attachments-grid">
+                      {custDocsList.map((att) => (
+                        <div key={att.attachment_id} className="attachment-item-card">
+                          <div className="att-file-icon">
+                            <Paperclip size={24} color="#0284c7" />
+                          </div>
+                          <div className="att-file-info">
+                            <span className="att-file-name" title={decodeAttachmentName(att.original_name) || att.file_name}>
+                              {decodeAttachmentName(att.original_name) || att.file_name}
+                            </span>
+                            <span className="att-file-meta">
+                              {att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : tText('แนบแล้ว', 'Attached')}
+                              {' • '}
+                              <strong style={{ color: '#0284c7' }}>{tText('เอกสารลูกค้า', 'Customer Doc')}</strong>
+                            </span>
+                          </div>
+                          <div className="att-file-actions">
+                            <a
+                              href={`http://localhost:3000${att.file_path}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="att-action-btn view"
+                              title={tText('เปิดดูไฟล์', 'Preview / View File')}
+                            >
+                              <Eye size={16} />
+                            </a>
+                            <a
+                              href={`http://localhost:3000${att.file_path}`}
+                              download
+                              className="att-action-btn download"
+                              title={tText('ดาวน์โหลดไฟล์', 'Download File')}
+                            >
+                              <Download size={16} />
+                            </a>
+                            <button
+                              type="button"
+                              className="att-action-btn delete"
+                              onClick={() => handleDeleteCustDoc(att.attachment_id)}
+                              title={tText('ลบไฟล์แนบ', 'Delete Attachment')}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setIsAttachModalOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="modal-body-content">
-              {/* Dropzone */}
-              <div
-                className="upload-dropzone"
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-              >
-                <input
-                  type="file"
-                  multiple
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
-                  disabled={uploading}
-                />
-                {uploading ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '10px 0' }}>
-                    <span style={{ fontSize: '24px' }}>⏳</span>
-                    <p style={{ margin: 0, fontWeight: 600, color: '#0284c7' }}>{tText('กำลังอัปโหลดไฟล์ กรุณารอสักครู่...', 'Uploading files, please wait...')}</p>
-                  </div>
-                ) : (
-                  <>
-                    <Upload size={36} className="dropzone-upload-icon" />
-                    <p className="dropzone-text">
-                      {tText('ลากและวางไฟล์ที่นี่ หรือ', 'Drag and drop files here, or')} <span className="browse-link">{tText('เลือกไฟล์', 'browse')}</span>
-                    </p>
-                    <p className="dropzone-hint">{tText('รองรับไฟล์ DO, PDF, รูปภาพ, เอกสารต่างๆ', 'Supports DO files, PDFs, images, documents')}</p>
-                  </>
-                )}
+              <div className="modal-footer-bar">
+                <button className="btn-secondary" onClick={() => setIsCustDocModalOpen(false)}>
+                  {tText('เสร็จสิ้น', 'Done')}
+                </button>
               </div>
-
-              {/* List of Attached Files */}
-              <div className="attached-files-section">
-                <h3>
-                  {tText('ไฟล์แนบของรายการจองนี้', 'Attached Files for this Booking')} ({selectedBookingForAttach.attachments?.length || 0})
-                </h3>
-
-                {(!selectedBookingForAttach.attachments || selectedBookingForAttach.attachments.length === 0) ? (
-                  <div className="no-attachments-placeholder">
-                    <AlertCircle size={24} color="#9ca3af" />
-                    <span>{tText('ยังไม่มีไฟล์แนบในรายการนี้ ใช้พื้นที่ด้านบนเพื่ออัปโหลดไฟล์ DO', 'No files attached to this booking yet. Use the area above to attach DO files.')}</span>
-                  </div>
-                ) : (
-                  <div className="attachments-grid">
-                    {selectedBookingForAttach.attachments.map((att) => (
-                      <div key={att.attachment_id} className="attachment-item-card">
-                        <div className="att-file-icon">
-                          <FileCheck size={24} color="#0284c7" />
-                        </div>
-                        <div className="att-file-info">
-                          <span className="att-file-name" title={decodeAttachmentName(att.original_name) || att.file_name}>
-                            {decodeAttachmentName(att.original_name) || att.file_name}
-                          </span>
-                          <span className="att-file-meta">
-                            {att.file_size ? `${(att.file_size / 1024).toFixed(1)} KB` : tText('แนบแล้ว', 'Attached')}
-                          </span>
-                        </div>
-                        <div className="att-file-actions">
-                          <a
-                            href={`http://localhost:3000${att.file_path}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="att-action-btn view"
-                            title={tText('เปิดดูไฟล์', 'Preview / View File')}
-                          >
-                            <Eye size={16} />
-                          </a>
-                          <a
-                            href={`http://localhost:3000${att.file_path}`}
-                            download
-                            className="att-action-btn download"
-                            title={tText('ดาวน์โหลดไฟล์', 'Download File')}
-                          >
-                            <Download size={16} />
-                          </a>
-                          <button
-                            type="button"
-                            className="att-action-btn delete"
-                            onClick={() => handleDeleteAttachmentFile(att.attachment_id)}
-                            title={tText('ลบไฟล์แนบ', 'Delete Attachment')}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="modal-footer-bar">
-              <button className="btn-secondary" onClick={() => setIsAttachModalOpen(false)}>
-                {tText('เสร็จสิ้น', 'Done')}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* ====================================================
+          MODAL 2: COMPLETED DO FILES (เอกสารใบ DO เมื่องานเสร็จสิ้น)
+          ==================================================== */}
+      {isDoModalOpen && selectedBookingForDo && (() => {
+        const doList = selectedBookingForDo.do_files || [];
+
+        return (
+          <div className="modal-backdrop-overlay">
+            <div className="attachment-modal-card">
+              <div className="modal-header-bar">
+                <div className="modal-header-title">
+                  <FileCheck size={22} color="#059669" />
+                  <div>
+                    <h2>{tText('เอกสารใบ DO ปิดงาน (Signed DO / POD)', 'Completed DO & POD Files')}</h2>
+                    <p className="modal-subtitle">
+                      {tText('การจอง:', 'Booking:')} <strong>{selectedBookingForDo.booking_no}</strong> ({selectedBookingForDo.customer_name})
+                    </p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setIsDoModalOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="modal-body-content">
+                {/* DO Dropzone */}
+                <div
+                  className="upload-dropzone do-dropzone"
+                  onClick={() => !uploadingDo && doFileInputRef.current?.click()}
+                  onDragOver={handleDoDragOver}
+                  onDrop={handleDoDrop}
+                >
+                  <input
+                    type="file"
+                    multiple
+                    ref={doFileInputRef}
+                    onChange={handleDoFileSelect}
+                    style={{ display: 'none' }}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                    disabled={uploadingDo}
+                  />
+                  {uploadingDo ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '10px 0' }}>
+                      <span style={{ fontSize: '24px' }}>⏳</span>
+                      <p style={{ margin: 0, fontWeight: 600, color: '#059669' }}>
+                        {tText('กำลังอัปโหลดไฟล์ DO กรุณารอสักครู่...', 'Uploading DO files, please wait...')}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload size={36} className="dropzone-upload-icon" />
+                      <p className="dropzone-text">
+                        {tText('ลากและวางไฟล์ใบ DO / POD ที่เซ็นรับมอบแล้วที่นี่ หรือ', 'Drag & drop signed DO / POD files here, or')}{' '}
+                        <span className="browse-link">{tText('เลือกไฟล์', 'browse')}</span>
+                      </p>
+                      <p className="dropzone-hint">
+                        {tText('สำหรับเอกสาร DO เมื่องานขนส่งเสร็จสิ้น, ใบส่งของที่ลูกค้าเซ็นรับแล้ว, รูปถ่ายส่งมอบสินค้า (PDF, รูปภาพ)', 'For signed DO after delivery completion, POD, proof of delivery photos (PDF, images)')}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* List of Attached DO Files */}
+                <div className="attached-files-section">
+                  <h3>
+                    {tText('รายการเอกสารใบ DO ปิดงาน', 'Completed DO Files')} ({doList.length})
+                  </h3>
+
+                  {doList.length === 0 ? (
+                    <div className="no-attachments-placeholder">
+                      <AlertCircle size={24} color="#9ca3af" />
+                      <span>{tText('ยังไม่มีไฟล์ DO ในรายการนี้ (อัปโหลดเมื่อขนส่งเสร็จสิ้นและลูกค้าเซ็นรับมอบแล้ว)', 'No DO files attached yet. (Upload when delivery is done and signed by customer)')}</span>
+                    </div>
+                  ) : (
+                    <div className="attachments-grid">
+                      {doList.map((file) => (
+                        <div key={file.do_file_id} className="attachment-item-card">
+                          <div className="att-file-icon">
+                            <FileCheck size={24} color="#059669" />
+                          </div>
+                          <div className="att-file-info">
+                            <span className="att-file-name" title={decodeAttachmentName(file.original_name) || file.file_name}>
+                              {decodeAttachmentName(file.original_name) || file.file_name}
+                            </span>
+                            <span className="att-file-meta">
+                              {file.file_size ? `${(file.file_size / 1024).toFixed(1)} KB` : tText('แนบแล้ว', 'Attached')}
+                              {' • '}
+                              <strong style={{ color: '#059669' }}>{tText('DO ปิดงาน', 'Signed DO')}</strong>
+                            </span>
+                          </div>
+                          <div className="att-file-actions">
+                            <a
+                              href={`http://localhost:3000${file.file_path}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="att-action-btn view"
+                              title={tText('เปิดดูไฟล์', 'Preview / View File')}
+                            >
+                              <Eye size={16} />
+                            </a>
+                            <a
+                              href={`http://localhost:3000${file.file_path}`}
+                              download
+                              className="att-action-btn download"
+                              title={tText('ดาวน์โหลดไฟล์', 'Download File')}
+                            >
+                              <Download size={16} />
+                            </a>
+                            <button
+                              type="button"
+                              className="att-action-btn delete"
+                              onClick={() => handleDeleteDoFile(file.do_file_id)}
+                              title={tText('ลบไฟล์ DO', 'Delete DO File')}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-footer-bar">
+                <button className="btn-secondary" onClick={() => setIsDoModalOpen(false)}>
+                  {tText('เสร็จสิ้น', 'Done')}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

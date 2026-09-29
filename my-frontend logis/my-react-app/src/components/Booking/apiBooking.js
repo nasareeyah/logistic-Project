@@ -37,23 +37,50 @@ export const deleteBooking = async (id) => {
     return result;
 };
 
-export const uploadAttachments = async (bookingId, files) => {
+// 1. CUSTOMER ATTACHMENTS (เอกสารเพิ่มเติมจากลูกค้า)
+export const uploadCustomerAttachments = async (bookingId, files) => {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
-    const res = await fetch(`${BASE_URL}/bookings/${bookingId}/attachments`, {
+    const res = await fetch(`${BASE_URL}/bookings/${bookingId}/customer-attachments`, {
         method: 'POST',
         body: formData
     });
     const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'อัปโหลดไฟล์ไม่สำเร็จ');
+    if (!res.ok) throw new Error(result.error || 'อัปโหลดเอกสารลูกค้าไม่สำเร็จ');
     return result;
 };
 
-export const deleteAttachment = async (attachmentId) => {
-    const res = await fetch(`${BASE_URL}/attachments/${attachmentId}`, {
+export const deleteCustomerAttachment = async (attachmentId) => {
+    const res = await fetch(`${BASE_URL}/customer-attachments/${attachmentId}`, {
         method: 'DELETE'
     });
     const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'ลบไฟล์ไม่สำเร็จ');
+    if (!res.ok) throw new Error(result.error || 'ลบเอกสารลูกค้าไม่สำเร็จ');
     return result;
 };
+
+// 2. COMPLETED DO FILES (เอกสารใบ DO เมื่องานเสร็จสิ้น)
+export const uploadDoFiles = async (bookingId, files) => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    const res = await fetch(`${BASE_URL}/bookings/${bookingId}/do-files`, {
+        method: 'POST',
+        body: formData
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'อัปโหลดไฟล์ DO ไม่สำเร็จ');
+    return result;
+};
+
+export const deleteDoFile = async (doFileId) => {
+    const res = await fetch(`${BASE_URL}/do-files/${doFileId}`, {
+        method: 'DELETE'
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'ลบไฟล์ DO ไม่สำเร็จ');
+    return result;
+};
+
+// Legacy generic attachments aliases
+export const uploadAttachments = uploadCustomerAttachments;
+export const deleteAttachment = deleteCustomerAttachment;

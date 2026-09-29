@@ -56,7 +56,7 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
                 COALESCE(s.unit_quantity, qs.unit_quantity, cust_qs.unit_quantity, 'คันรถ') AS unit_quantity,
                 COALESCE(b.quotation_id, cust_qd.document_id) AS quotation_id,
                 COALESCE(qd.document_no, cust_qd.document_no) AS quotation_no,
-                COALESCE(d.do_no, (SELECT ba.file_name FROM booking_attachments ba WHERE ba.booking_id = b.booking_id LIMIT 1)) AS do_no,
+                COALESCE(d.do_no, (SELECT bdf.file_name FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id LIMIT 1), (SELECT ba.file_name FROM booking_attachments ba WHERE ba.booking_id = b.booking_id LIMIT 1)) AS do_no,
                 (
                     SELECT STRING_AGG(DISTINCT bc.product_name, ', ')
                     FROM booking_cargo bc
@@ -81,7 +81,9 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
             LEFT JOIN service_type cust_qst ON cust_qs.service_typeid = cust_qst.service_typeid
             LEFT JOIN delivery_orders d ON d.booking_id = b.booking_id
             WHERE EXISTS (
-                SELECT 1 FROM booking_attachments ba WHERE ba.booking_id = b.booking_id
+                SELECT 1 FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id
+            ) OR EXISTS (
+                SELECT 1 FROM booking_attachments ba WHERE ba.booking_id = b.booking_id AND (ba.file_name ILIKE '%do%' OR ba.original_name ILIKE '%do%')
             ) OR d.do_no IS NOT NULL
             ORDER BY b.created_at DESC;
         `;
