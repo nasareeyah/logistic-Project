@@ -187,6 +187,36 @@ async function initBookingTables() {
         await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);`);
         await db.query(`ALTER TABLE consignee ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT 'Thailand';`);
 
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_cust_attachment START WITH 1;`);
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_dofile START WITH 1;`);
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS booking_customer_attachments (
+                attachment_id VARCHAR(50) PRIMARY KEY,
+                booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+                file_name VARCHAR(255),
+                original_name VARCHAR(255),
+                file_path TEXT,
+                file_type VARCHAR(100),
+                file_size INT,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS booking_do_files (
+                do_file_id VARCHAR(50) PRIMARY KEY,
+                booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+                file_name VARCHAR(255),
+                original_name VARCHAR(255),
+                file_path TEXT,
+                file_type VARCHAR(100),
+                file_size INT,
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
+        // Backward compatibility: keep booking_attachments table and migrate existing records
         await db.query(`
             CREATE TABLE IF NOT EXISTS booking_attachments (
                 attachment_id VARCHAR(50) PRIMARY KEY,
@@ -200,13 +230,24 @@ async function initBookingTables() {
             );
         `);
 
-        // Auto-repair any previously corrupted filenames in database
+        // Auto-migrate any existing records into separate tables
         try {
-            const rawAtts = await db.query(`SELECT attachment_id, original_name FROM booking_attachments WHERE original_name LIKE '%à¹%' OR original_name LIKE '%à¸%'`);
-            for (const r of rawAtts.rows) {
-                const cleaned = fixOriginalName(r.original_name);
-                if (cleaned && cleaned !== r.original_name) {
-                    await db.query(`UPDATE booking_attachments SET original_name = $1 WHERE attachment_id = $2`, [cleaned, r.attachment_id]);
+            const oldAtts = await db.query(`SELECT * FROM booking_attachments`);
+            for (const att of oldAtts.rows) {
+                const cleaned = fixOriginalName(att.original_name);
+                const isDo = (cleaned || '').toLowerCase().includes('do') || (att.file_name || '').toLowerCase().includes('do');
+                if (isDo) {
+                    await db.query(`
+                        INSERT INTO booking_do_files (do_file_id, booking_id, file_name, original_name, file_path, file_type, file_size, uploaded_at)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        ON CONFLICT (do_file_id) DO NOTHING
+                    `, [att.attachment_id, att.booking_id, att.file_name, cleaned, att.file_path, att.file_type, att.file_size, att.uploaded_at]);
+                } else {
+                    await db.query(`
+                        INSERT INTO booking_customer_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size, uploaded_at)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        ON CONFLICT (attachment_id) DO NOTHING
+                    `, [att.attachment_id, att.booking_id, att.file_name, cleaned, att.file_path, att.file_type, att.file_size, att.uploaded_at]);
                 }
             }
         } catch (e) {
@@ -256,15 +297,25 @@ router.get('/bookings', async (req, res) => {
             LEFT JOIN consignee cge ON b.consignee_id = cge.consignee_id
             ORDER BY b.created_at DESC, b.booking_id DESC
         `);
-        const attachmentsRes = await db.query(`SELECT * FROM booking_attachments ORDER BY uploaded_at ASC`);
+        const custAttsRes = await db.query(`SELECT * FROM booking_customer_attachments ORDER BY uploaded_at ASC`);
+        const doFilesRes = await db.query(`SELECT * FROM booking_do_files ORDER BY uploaded_at ASC`);
         const cargoRes = await db.query(`SELECT * FROM booking_cargo`);
 
-        const attachmentsMap = {};
-        attachmentsRes.rows.forEach(att => {
-            if (!attachmentsMap[att.booking_id]) attachmentsMap[att.booking_id] = [];
-            attachmentsMap[att.booking_id].push({
+        const custAttsMap = {};
+        custAttsRes.rows.forEach(att => {
+            if (!custAttsMap[att.booking_id]) custAttsMap[att.booking_id] = [];
+            custAttsMap[att.booking_id].push({
                 ...att,
                 original_name: fixOriginalName(att.original_name)
+            });
+        });
+
+        const doFilesMap = {};
+        doFilesRes.rows.forEach(file => {
+            if (!doFilesMap[file.booking_id]) doFilesMap[file.booking_id] = [];
+            doFilesMap[file.booking_id].push({
+                ...file,
+                original_name: fixOriginalName(file.original_name)
             });
         });
 
@@ -277,6 +328,9 @@ router.get('/bookings', async (req, res) => {
         const result = bookingsRes.rows.map(b => {
             const pickupDateText = b.pickup_date ? new Date(b.pickup_date).toISOString().slice(0, 10) : '';
             const deliveryDateText = b.delivery_date ? new Date(b.delivery_date).toISOString().slice(0, 10) : '';
+            const custAtts = custAttsMap[b.booking_id] || [];
+            const doFiles = doFilesMap[b.booking_id] || [];
+
             return {
                 ...b,
                 sender_details: b.consigner_id ? [{
@@ -300,7 +354,9 @@ router.get('/bookings', async (req, res) => {
                     delivery_date: deliveryDateText
                 }] : [],
                 cargo_details: cargoMap[b.booking_id] || [],
-                attachments: attachmentsMap[b.booking_id] || []
+                customer_attachments: custAtts,
+                do_files: doFiles,
+                attachments: custAtts // backwards compatibility alias
             };
         });
 
@@ -524,8 +580,11 @@ router.put('/bookings/:id', async (req, res) => {
 router.delete('/bookings/:id', async (req, res) => {
     try {
         await initBookingTables();
-        const atts = await db.query(`SELECT file_path FROM booking_attachments WHERE booking_id = $1`, [req.params.id]);
-        atts.rows.forEach(att => {
+        const bookingId = req.params.id;
+
+        // Clean up files from customer attachments
+        const custAtts = await db.query(`SELECT file_path FROM booking_customer_attachments WHERE booking_id = $1`, [bookingId]);
+        custAtts.rows.forEach(att => {
             if (att.file_path) {
                 const fullPath = path.join(__dirname, '..', att.file_path);
                 if (fs.existsSync(fullPath)) {
@@ -533,15 +592,150 @@ router.delete('/bookings/:id', async (req, res) => {
                 }
             }
         });
-        await db.query(`DELETE FROM booking_attachments WHERE booking_id = $1`, [req.params.id]);
-        await db.query('DELETE FROM bookings WHERE booking_id = $1', [req.params.id]);
+
+        // Clean up files from DO files
+        const doFiles = await db.query(`SELECT file_path FROM booking_do_files WHERE booking_id = $1`, [bookingId]);
+        doFiles.rows.forEach(file => {
+            if (file.file_path) {
+                const fullPath = path.join(__dirname, '..', file.file_path);
+                if (fs.existsSync(fullPath)) {
+                    try { fs.unlinkSync(fullPath); } catch (e) { }
+                }
+            }
+        });
+
+        await db.query(`DELETE FROM booking_customer_attachments WHERE booking_id = $1`, [bookingId]);
+        await db.query(`DELETE FROM booking_do_files WHERE booking_id = $1`, [bookingId]);
+        await db.query(`DELETE FROM booking_attachments WHERE booking_id = $1`, [bookingId]);
+        await db.query('DELETE FROM bookings WHERE booking_id = $1', [bookingId]);
+
         res.json({ message: 'ลบ Booking สำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// UPLOAD ATTACHMENT(S) FOR A BOOKING
+// ----------------------------------------------------
+// 1. CUSTOMER ATTACHMENTS (เอกสารเพิ่มเติมจากลูกค้า)
+// ----------------------------------------------------
+router.post('/bookings/:id/customer-attachments', upload.array('files', 10), async (req, res) => {
+    try {
+        await initBookingTables();
+        const booking_id = req.params.id;
+        const uploadedFiles = req.files || [];
+
+        if (uploadedFiles.length === 0) {
+            return res.status(400).json({ error: 'กรุณาเลือกไฟล์ที่ต้องการแนบ' });
+        }
+
+        const savedAttachments = [];
+        for (const file of uploadedFiles) {
+            const attachment_id = await nextId('seq_cust_attachment', 'catt-', 5);
+            const relativePath = '/uploads/' + file.filename;
+            const originalName = fixOriginalName(file.originalname);
+
+            await db.query(
+                `INSERT INTO booking_customer_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [attachment_id, booking_id, file.filename, originalName, relativePath, file.mimetype, file.size]
+            );
+
+            savedAttachments.push({
+                attachment_id,
+                booking_id,
+                file_name: file.filename,
+                original_name: originalName,
+                file_path: relativePath,
+                file_type: file.mimetype,
+                file_size: file.size,
+                uploaded_at: new Date()
+            });
+        }
+
+        res.json({ message: 'แนบเอกสารลูกค้าสำเร็จ', attachments: savedAttachments });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/customer-attachments/:id', async (req, res) => {
+    try {
+        await initBookingTables();
+        const attRes = await db.query(`SELECT file_path FROM booking_customer_attachments WHERE attachment_id = $1`, [req.params.id]);
+        if (attRes.rows.length > 0 && attRes.rows[0].file_path) {
+            const fullPath = path.join(__dirname, '..', attRes.rows[0].file_path);
+            if (fs.existsSync(fullPath)) {
+                try { fs.unlinkSync(fullPath); } catch (e) { }
+            }
+        }
+        await db.query(`DELETE FROM booking_customer_attachments WHERE attachment_id = $1`, [req.params.id]);
+        res.json({ message: 'ลบเอกสารลูกค้าเรียบร้อย' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ----------------------------------------------------
+// 2. COMPLETED DO FILES (เอกสารใบ DO เมื่องานเสร็จสิ้น)
+// ----------------------------------------------------
+router.post('/bookings/:id/do-files', upload.array('files', 10), async (req, res) => {
+    try {
+        await initBookingTables();
+        const booking_id = req.params.id;
+        const uploadedFiles = req.files || [];
+
+        if (uploadedFiles.length === 0) {
+            return res.status(400).json({ error: 'กรุณาเลือกไฟล์ DO ที่ต้องการแนบ' });
+        }
+
+        const savedDoFiles = [];
+        for (const file of uploadedFiles) {
+            const do_file_id = await nextId('seq_booking_dofile', 'dof-', 5);
+            const relativePath = '/uploads/' + file.filename;
+            const originalName = fixOriginalName(file.originalname);
+
+            await db.query(
+                `INSERT INTO booking_do_files (do_file_id, booking_id, file_name, original_name, file_path, file_type, file_size)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [do_file_id, booking_id, file.filename, originalName, relativePath, file.mimetype, file.size]
+            );
+
+            savedDoFiles.push({
+                do_file_id,
+                booking_id,
+                file_name: file.filename,
+                original_name: originalName,
+                file_path: relativePath,
+                file_type: file.mimetype,
+                file_size: file.size,
+                uploaded_at: new Date()
+            });
+        }
+
+        res.json({ message: 'แนบไฟล์ DO ปิดงานสำเร็จ', do_files: savedDoFiles });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.delete('/do-files/:id', async (req, res) => {
+    try {
+        await initBookingTables();
+        const fileRes = await db.query(`SELECT file_path FROM booking_do_files WHERE do_file_id = $1`, [req.params.id]);
+        if (fileRes.rows.length > 0 && fileRes.rows[0].file_path) {
+            const fullPath = path.join(__dirname, '..', fileRes.rows[0].file_path);
+            if (fs.existsSync(fullPath)) {
+                try { fs.unlinkSync(fullPath); } catch (e) { }
+            }
+        }
+        await db.query(`DELETE FROM booking_do_files WHERE do_file_id = $1`, [req.params.id]);
+        res.json({ message: 'ลบไฟล์ DO เรียบร้อย' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Backward compatibility endpoints for generic attachments
 router.post('/bookings/:id/attachments', upload.array('files', 10), async (req, res) => {
     try {
         await initBookingTables();
@@ -554,12 +748,12 @@ router.post('/bookings/:id/attachments', upload.array('files', 10), async (req, 
 
         const savedAttachments = [];
         for (const file of uploadedFiles) {
-            const attachment_id = await nextId('seq_booking_attachment', 'att-', 5);
+            const attachment_id = await nextId('seq_cust_attachment', 'catt-', 5);
             const relativePath = '/uploads/' + file.filename;
             const originalName = fixOriginalName(file.originalname);
 
             await db.query(
-                `INSERT INTO booking_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size)
+                `INSERT INTO booking_customer_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size)
                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
                 [attachment_id, booking_id, file.filename, originalName, relativePath, file.mimetype, file.size]
             );
@@ -582,18 +776,37 @@ router.post('/bookings/:id/attachments', upload.array('files', 10), async (req, 
     }
 });
 
-// DELETE ATTACHMENT
 router.delete('/attachments/:id', async (req, res) => {
     try {
         await initBookingTables();
-        const attRes = await db.query(`SELECT file_path FROM booking_attachments WHERE attachment_id = $1`, [req.params.id]);
-        if (attRes.rows.length > 0 && attRes.rows[0].file_path) {
-            const fullPath = path.join(__dirname, '..', attRes.rows[0].file_path);
-            if (fs.existsSync(fullPath)) {
-                try { fs.unlinkSync(fullPath); } catch (e) { }
+        const attId = req.params.id;
+
+        // Try deleting from customer attachments
+        const custRes = await db.query(`SELECT file_path FROM booking_customer_attachments WHERE attachment_id = $1`, [attId]);
+        if (custRes.rows.length > 0) {
+            if (custRes.rows[0].file_path) {
+                const fullPath = path.join(__dirname, '..', custRes.rows[0].file_path);
+                if (fs.existsSync(fullPath)) {
+                    try { fs.unlinkSync(fullPath); } catch (e) { }
+                }
             }
+            await db.query(`DELETE FROM booking_customer_attachments WHERE attachment_id = $1`, [attId]);
+            return res.json({ message: 'ลบไฟล์แนบเรียบร้อย' });
         }
-        await db.query(`DELETE FROM booking_attachments WHERE attachment_id = $1`, [req.params.id]);
+
+        // Try deleting from DO files
+        const doRes = await db.query(`SELECT file_path FROM booking_do_files WHERE do_file_id = $1`, [attId]);
+        if (doRes.rows.length > 0) {
+            if (doRes.rows[0].file_path) {
+                const fullPath = path.join(__dirname, '..', doRes.rows[0].file_path);
+                if (fs.existsSync(fullPath)) {
+                    try { fs.unlinkSync(fullPath); } catch (e) { }
+                }
+            }
+            await db.query(`DELETE FROM booking_do_files WHERE do_file_id = $1`, [attId]);
+            return res.json({ message: 'ลบไฟล์แนบเรียบร้อย' });
+        }
+
         res.json({ message: 'ลบไฟล์แนบเรียบร้อย' });
     } catch (err) {
         res.status(500).json({ error: err.message });
