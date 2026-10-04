@@ -491,19 +491,6 @@ function Dashboard({
                 {displayedBookings.length} {tText('รายการ', 'items')}
               </span>
             </div>
-
-            <div className="table-header-actions">
-              {setActiveTab && (
-                <button 
-                  className="btn-view-all-link"
-                  onClick={() => setActiveTab('booking')}
-                  title={tText('ไปที่ระบบจัดการ Booking เต็ม', 'Go to full booking management')}
-                >
-                  <span>{tText('จัดการ Booking ทั้งหมด', 'Manage All Bookings')}</span>
-                  <ArrowRight size={15} />
-                </button>
-              )}
-            </div>
           </div>
 
           {/* Table Container */}
@@ -577,23 +564,7 @@ function Dashboard({
                 <div className="dash-table-empty-icon">
                   <ClipboardList size={26} />
                 </div>
-                <div className="dash-table-empty-text">ไม่มีรายการ Booking ในช่วงเวลานี้</div>
-                <div className="dash-table-empty-subtext">
-                  {selectedDate 
-                    ? `ไม่มีงานในวันที่ ${selectedDate} ลองคลิกเลือกวันอื่นหรือดูงานทั้งเดือน` 
-                    : 'ยังไม่มีประวัติการจองรถในเดือนนี้ สามารถกดสร้าง Booking ใหม่ได้ทันที'}
-                </div>
-                {setActiveTab && (
-                  <button 
-                    type="button" 
-                    className="btn-primary-action"
-                    style={{ marginTop: '8px' }}
-                    onClick={() => setActiveTab('booking')}
-                  >
-                    <Plus size={16} />
-                    <span>สร้าง Booking ใหม่</span>
-                  </button>
-                )}
+                <div className="dash-table-empty-text">{tText('ไม่มีรายการ', 'No records found')}</div>
               </div>
             )}
           </div>

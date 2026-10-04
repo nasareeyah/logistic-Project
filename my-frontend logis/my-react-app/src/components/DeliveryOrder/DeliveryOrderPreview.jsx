@@ -110,6 +110,14 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
     doc.consignee_country
   ].filter(Boolean).join(' ');
 
+  const customerAddress = [
+    doc.customer_address || doc.address,
+    doc.customer_city || doc.city,
+    doc.customer_state || doc.province,
+    doc.customer_postal_code || doc.postal_code,
+    doc.customer_country || doc.country
+  ].filter(Boolean).join(' ');
+
   const destinationDisplay = goods[0]?.destination || doc.destination || '-';
   const loadDateDisplay = lang === 'th' ? formatThaiDate(doc.date_of_load) : formatDate(doc.date_of_load);
   const etaDisplay = lang === 'th' ? formatThaiDate(doc.eta) : formatDate(doc.eta);
@@ -449,7 +457,7 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
                       <tr>
                         <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustAddress}</td>
                         <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#334155', lineHeight: '1.4' }}>
-                          {doc.customer_address || doc.address || '-'}
+                          {customerAddress || '-'}
                         </td>
                       </tr>
                       <tr>
