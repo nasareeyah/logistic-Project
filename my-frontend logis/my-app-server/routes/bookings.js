@@ -126,6 +126,121 @@ async function saveConsigneeFromBooking(receiver) {
     return finalId;
 }
 
+async function resolveBookingService({ service_id, quotation_id, service_items, service_typename, pricing_mode }) {
+    // 1. If Quotation mode or quotation_id is provided, prioritize service from quotation
+    if (pricing_mode === 'quotation' || quotation_id) {
+        if (service_id) {
+            return service_id;
+        }
+        if (quotation_id) {
+            const qRes = await db.query('SELECT service_id FROM document WHERE document_id = $1', [quotation_id]);
+            if (qRes.rows[0]?.service_id) {
+                return qRes.rows[0].service_id;
+            }
+        }
+    }
+
+    // 2. If service_id is already provided and exists in DB, use it
+    if (service_id) {
+        const checkSv = await db.query('SELECT service_id FROM service WHERE service_id = $1', [service_id]);
+        if (checkSv.rows.length > 0) {
+            return service_id;
+        }
+    }
+
+    // 3. Custom pricing (or without quotation):
+    // Flow: save to service_type -> get service_typeid -> save to service -> get service_id -> return service_id
+    const firstItem = Array.isArray(service_items) && service_items.length > 0 ? service_items[0] : null;
+    const rawName = (service_typename || firstItem?.description || '').trim();
+    const candidateName = rawName || 'ค่าขนส่ง';
+
+    // Step A: Check/Insert service_type
+    let typeId;
+    const stCheck = await db.query(
+        'SELECT service_typeid FROM service_type WHERE LOWER(TRIM(service_typename)) = LOWER(TRIM($1)) LIMIT 1',
+        [candidateName]
+    );
+    if (stCheck.rows.length > 0) {
+        typeId = stCheck.rows[0].service_typeid;
+    } else {
+        typeId = await nextId('seq_service_type', 'st-', 5);
+        await db.query(
+            'INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)',
+            [typeId, candidateName]
+        );
+    }
+
+    // Step B: Check/Insert service
+    let resolvedServiceId;
+    const svCheck = await db.query(
+        'SELECT service_id FROM service WHERE service_typeid = $1 LIMIT 1',
+        [typeId]
+    );
+
+    const finalQty = firstItem?.quantity ? parseFloat(firstItem.quantity) : 1;
+    const finalPrice = firstItem?.unit_price ? parseFloat(firstItem.unit_price) : 0;
+    const finalUnit = firstItem?.unit || 'trip';
+
+    if (svCheck.rows.length > 0) {
+        resolvedServiceId = svCheck.rows[0].service_id;
+    } else {
+        resolvedServiceId = await nextId('seq_service', 'sv-', 5);
+        await db.query(
+            `INSERT INTO service (service_id, service_typeid, description, quantity, default_price, unit)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [resolvedServiceId, typeId, candidateName, finalQty, finalPrice, finalUnit]
+        );
+    }
+
+    return resolvedServiceId;
+}
+
+async function saveBookingServiceItems(booking_id, primaryServiceId, service_items, pricing_mode) {
+    if (!Array.isArray(service_items) || service_items.length === 0) return;
+    try {
+        await db.query('DELETE FROM booking_services WHERE booking_id = $1', [booking_id]);
+        for (let i = 0; i < service_items.length; i++) {
+            const item = service_items[i];
+            if (!item.description && !item.unit_price) continue;
+
+            // Resolve or create service_type -> service for each individual service item!
+            let itemServiceId = null;
+            if (pricing_mode === 'quotation' && i === 0 && primaryServiceId) {
+                itemServiceId = primaryServiceId;
+            } else {
+                itemServiceId = await resolveBookingService({
+                    service_id: null,
+                    quotation_id: null,
+                    service_items: [item],
+                    service_typename: item.description,
+                    pricing_mode: 'custom'
+                });
+            }
+
+            const bsId = await nextId('seq_booking_services', 'bs-', 6);
+            const qty = item.quantity ? parseFloat(item.quantity) : 1;
+            const price = item.unit_price ? parseFloat(item.unit_price) : 0;
+            const total = item.total ? parseFloat(item.total) : (qty * price);
+            await db.query(
+                `INSERT INTO booking_services (booking_service_id, booking_id, service_id, description, quantity, unit, unit_price, total_amount)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [
+                    bsId,
+                    booking_id,
+                    itemServiceId || primaryServiceId || null,
+                    item.description || null,
+                    qty,
+                    item.unit || 'trip',
+                    price,
+                    total
+                ]
+            );
+        }
+    } catch (err) {
+        console.error('Error saving booking_services:', err.message);
+    }
+}
+
 async function initBookingTables() {
     if (isBookingTableInit) return;
     try {
@@ -153,6 +268,21 @@ async function initBookingTables() {
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_cargo;`);
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_attachment;`);
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_upload_filename;`);
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_service_type START WITH 1;`);
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_service START WITH 1;`);
+        await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_booking_services START WITH 1;`);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS booking_services (
+                booking_service_id VARCHAR(50) PRIMARY KEY,
+                booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+                service_id VARCHAR(50),
+                description VARCHAR(255),
+                quantity NUMERIC,
+                unit VARCHAR(50),
+                unit_price NUMERIC,
+                total_amount NUMERIC
+            );
+        `);
         await db.query(`
             CREATE TABLE IF NOT EXISTS booking_cargo (
                 cargo_id VARCHAR(50) PRIMARY KEY,
@@ -254,6 +384,17 @@ async function initBookingTables() {
             // ignore
         }
 
+        // Auto-link existing booking bk-00041 to service if null
+        try {
+            await db.query(`
+                UPDATE bookings 
+                SET service_id = 'sv-00022' 
+                WHERE booking_id = 'bk-00041' AND service_id IS NULL
+            `);
+        } catch (e) {
+            // ignore
+        }
+
         isBookingTableInit = true;
     } catch (err) {
         console.error('Error initializing booking tables:', err.message);
@@ -266,7 +407,7 @@ router.get('/bookings', async (req, res) => {
         await initBookingTables();
         const bookingsRes = await db.query(`
             SELECT b.*, 
-              COALESCE(st.service_typename, '') AS service_name,
+              COALESCE(st.service_typename, s.description, '') AS service_name,
               st.service_typename,
               qd.document_no AS quotation_no,
               cgr.consigner_name,
@@ -300,6 +441,7 @@ router.get('/bookings', async (req, res) => {
         const custAttsRes = await db.query(`SELECT * FROM booking_customer_attachments ORDER BY uploaded_at ASC`);
         const doFilesRes = await db.query(`SELECT * FROM booking_do_files ORDER BY uploaded_at ASC`);
         const cargoRes = await db.query(`SELECT * FROM booking_cargo`);
+        const bookingServicesRes = await db.query(`SELECT * FROM booking_services ORDER BY booking_service_id ASC`);
 
         const custAttsMap = {};
         custAttsRes.rows.forEach(att => {
@@ -325,14 +467,35 @@ router.get('/bookings', async (req, res) => {
             cargoMap[item.booking_id].push(item);
         });
 
+        const bookingServicesMap = {};
+        bookingServicesRes.rows.forEach(item => {
+            if (!bookingServicesMap[item.booking_id]) bookingServicesMap[item.booking_id] = [];
+            bookingServicesMap[item.booking_id].push({
+                id: item.booking_service_id,
+                description: item.description,
+                quantity: parseFloat(item.quantity) || 1,
+                unit: item.unit || 'trip',
+                unit_price: parseFloat(item.unit_price) || 0,
+                total: parseFloat(item.total_amount) || 0
+            });
+        });
+
         const result = bookingsRes.rows.map(b => {
             const pickupDateText = b.pickup_date ? new Date(b.pickup_date).toISOString().slice(0, 10) : '';
             const deliveryDateText = b.delivery_date ? new Date(b.delivery_date).toISOString().slice(0, 10) : '';
             const custAtts = custAttsMap[b.booking_id] || [];
             const doFiles = doFilesMap[b.booking_id] || [];
+            const bServices = bookingServicesMap[b.booking_id] || [];
+            const allServiceNames = bServices.map(s => s.description).filter(Boolean);
+            const primaryServiceName = allServiceNames.length > 0 
+                ? allServiceNames.join(', ')
+                : (b.service_name || b.service_typename || '-');
 
             return {
                 ...b,
+                service_name: primaryServiceName,
+                service_typename: primaryServiceName,
+                service_items: bServices,
                 sender_details: b.consigner_id ? [{
                     company_name: b.consigner_name,
                     address_line: b.consigner_address_line || b.consigner_address || '',
@@ -370,7 +533,12 @@ router.get('/bookings', async (req, res) => {
 router.post('/bookings', async (req, res) => {
     try {
         await initBookingTables();
-        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, service_id, quotation_id, cargo_details, sender_details, receiver_details } = req.body;
+        const { 
+            booking_no, customer_id, customer_name, pickup_date, delivery_date, 
+            car_id, truck_name, status, remark, service_id, quotation_id, 
+            cargo_details, sender_details, receiver_details,
+            service_items, service_typename, pricing_mode 
+        } = req.body;
         
         const booking_id = await nextId('seq_booking', 'bk-', 5);
         
@@ -419,6 +587,18 @@ router.post('/bookings', async (req, res) => {
             firstConsigneeId = await saveConsigneeFromBooking(receiver_details);
         }
 
+        // Resolve service ID:
+        // If quotation mode, use service from quotation
+        // If custom pricing mode (no quotation), create/link service_type -> service -> service_id
+        const finalQuotationId = pricing_mode === 'quotation' ? (quotation_id || null) : null;
+        const resolvedServiceId = await resolveBookingService({
+            service_id,
+            quotation_id: finalQuotationId,
+            service_items,
+            service_typename,
+            pricing_mode
+        });
+
         await db.query(
             `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, consigner_id, consignee_id, service_id, quotation_id) 
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
@@ -435,10 +615,15 @@ router.post('/bookings', async (req, res) => {
                 remark || null,
                 firstConsignerId,
                 firstConsigneeId,
-                service_id || null,
-                quotation_id || null
+                resolvedServiceId || null,
+                finalQuotationId
             ]
         );
+
+        // Save service items to booking_services table
+        if (Array.isArray(service_items) && service_items.length > 0) {
+            await saveBookingServiceItems(booking_id, resolvedServiceId, service_items, pricing_mode);
+        }
 
         // Save cargo details to booking_cargo table
         if (Array.isArray(cargo_details) && cargo_details.length > 0) {
@@ -466,7 +651,7 @@ router.post('/bookings', async (req, res) => {
             }
         }
 
-        res.json({ message: 'สร้าง Booking สำเร็จ', booking_id, booking_no: finalBookingNo });
+        res.json({ message: 'สร้าง Booking สำเร็จ', booking_id, booking_no: finalBookingNo, service_id: resolvedServiceId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -476,7 +661,12 @@ router.post('/bookings', async (req, res) => {
 router.put('/bookings/:id', async (req, res) => {
     try {
         await initBookingTables();
-        const { booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, service_id, quotation_id, cargo_details, sender_details, receiver_details } = req.body;
+        const { 
+            booking_no, customer_id, customer_name, pickup_date, delivery_date, 
+            car_id, truck_name, status, remark, service_id, quotation_id, 
+            cargo_details, sender_details, receiver_details,
+            service_items, service_typename, pricing_mode 
+        } = req.body;
 
         // Save senders to consigner table and get the first one's ID
         let firstConsignerId = null;
@@ -500,9 +690,30 @@ router.put('/bookings/:id', async (req, res) => {
             firstConsigneeId = await saveConsigneeFromBooking(receiver_details);
         }
 
+        const finalQuotationId = pricing_mode === 'quotation' ? (quotation_id || null) : (pricing_mode === 'custom' ? null : (quotation_id !== undefined ? quotation_id : null));
+
+        let resolvedServiceId = null;
+        if (pricing_mode === 'quotation') {
+            resolvedServiceId = await resolveBookingService({
+                service_id,
+                quotation_id: finalQuotationId,
+                pricing_mode: 'quotation'
+            });
+        } else if (pricing_mode === 'custom' || (!finalQuotationId && (service_items || service_typename))) {
+            resolvedServiceId = await resolveBookingService({
+                service_id: null,
+                quotation_id: null,
+                service_items,
+                service_typename,
+                pricing_mode: 'custom'
+            });
+        } else if (service_id) {
+            resolvedServiceId = service_id;
+        }
+
         const hasCarId = req.body.hasOwnProperty('car_id');
-        const hasServiceId = req.body.hasOwnProperty('service_id');
-        const hasQuotationId = req.body.hasOwnProperty('quotation_id');
+        const hasServiceId = req.body.hasOwnProperty('service_id') || resolvedServiceId !== null;
+        const hasQuotationId = req.body.hasOwnProperty('quotation_id') || req.body.hasOwnProperty('pricing_mode');
 
         await db.query(
             `UPDATE bookings SET 
@@ -517,8 +728,8 @@ router.put('/bookings/:id', async (req, res) => {
                 remark = COALESCE(NULLIF($9, ''), remark),
                 consigner_id = COALESCE($10, consigner_id),
                 consignee_id = COALESCE($11, consignee_id),
-                service_id = CASE WHEN $14::boolean THEN NULLIF($13, '') ELSE service_id END,
-                quotation_id = CASE WHEN $16::boolean THEN NULLIF($15, '') ELSE quotation_id END
+                service_id = CASE WHEN $14::boolean THEN $13 ELSE service_id END,
+                quotation_id = CASE WHEN $16::boolean THEN $15 ELSE quotation_id END
              WHERE booking_id = $17`,
             [
                 booking_no || null, 
@@ -533,13 +744,18 @@ router.put('/bookings/:id', async (req, res) => {
                 firstConsignerId,
                 firstConsigneeId,
                 hasCarId,
-                service_id || null,
+                resolvedServiceId || null,
                 hasServiceId,
-                quotation_id || null,
+                finalQuotationId,
                 hasQuotationId,
                 req.params.id
             ]
         );
+
+        // Update service items in booking_services table
+        if (service_items !== undefined) {
+            await saveBookingServiceItems(req.params.id, resolvedServiceId, service_items, pricing_mode);
+        }
 
         // Update cargo details (delete old ones and insert new ones)
         if (cargo_details !== undefined) {
@@ -570,7 +786,7 @@ router.put('/bookings/:id', async (req, res) => {
             }
         }
 
-        res.json({ message: 'แก้ไข Booking สำเร็จ' });
+        res.json({ message: 'แก้ไข Booking สำเร็จ', service_id: resolvedServiceId });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

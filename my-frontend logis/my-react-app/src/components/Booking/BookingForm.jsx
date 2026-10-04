@@ -317,7 +317,14 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     }
 
     if (Array.isArray(booking.service_items) && booking.service_items.length > 0) {
-      setServiceItems(booking.service_items);
+      setServiceItems(booking.service_items.map((it, idx) => ({
+        id: it.id || idx + 1,
+        description: it.description || '',
+        quantity: it.quantity || 1,
+        unit: it.unit || 'trip',
+        unit_price: it.unit_price || 0,
+        total: it.total || ((it.quantity || 1) * (it.unit_price || 0))
+      })));
     } else if (booking.service_name || booking.service_typename) {
       setServiceItems([{
         id: 1,
@@ -570,6 +577,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     try {
       const autoBookingNo = editingBooking?.booking_no || '';
 
+      const firstDesc = serviceItems?.[0]?.description?.trim() || '';
       const payload = {
         booking_no: autoBookingNo,
         customer_id: selectedCustomer?.customer_id || null,
@@ -578,7 +586,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         delivery_date: receiversList[0]?.delivery_date || todayStr,
         truck_name: editingBooking?.truck_name || '— Select truck —',
         status: editingBooking?.status || 'Active',
-        service_id: selectedServiceId || null,
+        service_id: pricingMode === 'quotation' ? (selectedServiceId || null) : null,
+        service_typename: firstDesc || (pricingMode === 'custom' ? 'ค่าขนส่ง' : ''),
         quotation_id: pricingMode === 'quotation' ? (selectedQuotationId || null) : null,
         cargo_details: cargoItems,
         sender_details: sendersList,
@@ -1606,7 +1615,9 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 <span className="review-value-bold">
                   {(Array.isArray(services) ? services : []).find(s => s.service_id === (selectedServiceId || editingBooking?.service_id))?.description ||
                    editingBooking?.service_name ||
-                   editingBooking?.service_typename || '-'}
+                   editingBooking?.service_typename ||
+                   editingBooking?.service_items?.[0]?.description ||
+                   serviceItems?.[0]?.description || '-'}
                 </span>
               </div>
 
@@ -1805,7 +1816,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
 
                       {/* Service */}
                       <td style={{ color: '#334155', whiteSpace: 'nowrap' }}>
-                        {booking.service_name || booking.service_typename || '-'}
+                        {booking.service_name || booking.service_typename || booking.service_items?.[0]?.description || '-'}
                       </td>
 
                       {/* Pickup Date */}

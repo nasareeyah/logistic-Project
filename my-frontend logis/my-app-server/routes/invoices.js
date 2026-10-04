@@ -88,7 +88,50 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
             ORDER BY b.created_at DESC;
         `;
         const result = await db.query(sql);
-        res.json(result.rows);
+
+        const bookingServicesRes = await db.query(`SELECT * FROM booking_services ORDER BY booking_service_id ASC`);
+        const bsMap = {};
+        bookingServicesRes.rows.forEach(item => {
+            if (!bsMap[item.booking_id]) bsMap[item.booking_id] = [];
+            bsMap[item.booking_id].push({
+                booking_service_id: item.booking_service_id,
+                service_id: item.service_id,
+                description: item.description,
+                quantity: parseFloat(item.quantity) || 1,
+                unit: item.unit || 'คัน',
+                unit_price: parseFloat(item.unit_price) || 0,
+                total_amount: parseFloat(item.total_amount) || 0
+            });
+        });
+
+        const docItemsRes = await db.query(`
+            SELECT di.*, d.document_id 
+            FROM document_items di 
+            JOIN document d ON di.document_id = d.document_id
+        `);
+        const docItemsMap = {};
+        docItemsRes.rows.forEach(di => {
+            if (!docItemsMap[di.document_id]) docItemsMap[di.document_id] = [];
+            docItemsMap[di.document_id].push({
+                booking_service_id: di.document_items_id,
+                service_id: di.service_id,
+                description: di.description || 'บริการขนส่ง',
+                quantity: parseFloat(di.item_quantity) || 1,
+                unit: di.unit || 'คัน',
+                unit_price: parseFloat(di.unit_price) || 0,
+                total_amount: (parseFloat(di.item_quantity) || 1) * (parseFloat(di.unit_price) || 0)
+            });
+        });
+
+        const rows = result.rows.map(b => {
+            const bServices = bsMap[b.booking_id] || (b.quotation_id ? docItemsMap[b.quotation_id] : []) || [];
+            return {
+                ...b,
+                service_items: bServices
+            };
+        });
+
+        res.json(rows);
     } catch (err) {
         console.error('Error fetching eligible bookings:', err);
         res.status(500).json({ error: err.message });

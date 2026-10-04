@@ -253,22 +253,30 @@ export default function InvoiceTable({
     const bk = eligibleBookings.find(b => b.booking_id === bookingId);
     if (!bk) return;
 
-    // Compose description: e.g. "ค่าขนส่ง เม็ดพลาสติก"
-    const serviceName = bk.service_typename || bk.service_name || 'ค่าขนส่ง';
     const cargoNames = bk.cargo_product_names ? ` ${bk.cargo_product_names}` : '';
-    const fullDesc = `${serviceName}${cargoNames}`.trim();
 
-    const unitPrice = parseFloat(bk.default_price) || 0;
-    const qty = parseFloat(bk.service_qty) || 1;
-    const unit = bk.unit_quantity || 'คัน';
-
-    setFormData(prev => ({
-      ...prev,
-      booking_id: bk.booking_id,
-      customer_id: bk.customer_id || prev.customer_id,
-      quotation_id: bk.quotation_id || '',
-      do_no: bk.do_no || '',
-      items: [
+    let importedItems = [];
+    if (Array.isArray(bk.service_items) && bk.service_items.length > 0) {
+      importedItems = bk.service_items.map((it, idx) => {
+        const desc = idx === 0 && cargoNames ? `${it.description || 'บริการขนส่ง'}${cargoNames}` : (it.description || 'บริการขนส่ง');
+        const qty = parseFloat(it.quantity) || 1;
+        const price = parseFloat(it.unit_price) || 0;
+        return {
+          service_id: it.service_id || bk.service_id || '',
+          description: desc,
+          quantity: qty,
+          unit: it.unit || 'คัน',
+          unit_price: price,
+          total_amount: qty * price
+        };
+      });
+    } else {
+      const serviceName = bk.service_typename || bk.service_name || 'ค่าขนส่ง';
+      const fullDesc = `${serviceName}${cargoNames}`.trim();
+      const unitPrice = parseFloat(bk.default_price) || 0;
+      const qty = parseFloat(bk.service_qty) || 1;
+      const unit = bk.unit_quantity || 'คัน';
+      importedItems = [
         {
           service_id: bk.service_id || '',
           description: fullDesc || 'ค่าขนส่งสินค้า',
@@ -277,7 +285,16 @@ export default function InvoiceTable({
           unit_price: unitPrice,
           total_amount: qty * unitPrice
         }
-      ]
+      ];
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      booking_id: bk.booking_id,
+      customer_id: bk.customer_id || prev.customer_id,
+      quotation_id: bk.quotation_id || '',
+      do_no: bk.do_no || '',
+      items: importedItems
     }));
   };
 
