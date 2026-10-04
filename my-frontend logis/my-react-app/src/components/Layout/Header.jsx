@@ -1,11 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
+import { Globe } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 function Header({ user }) {
   const { lang, setLang, t } = useLanguage();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
 
   const role = user?.role;
 
@@ -38,17 +36,6 @@ function Header({ user }) {
     };
   }
 
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
     <div className="dashboard-header">
       {/* Left section: Original Header Title */}
@@ -58,44 +45,16 @@ function Header({ user }) {
 
       {/* User Actions on the Right */}
       <div className="header-actions">
-        {/* Language Dropdown */}
-        <div className="header-lang-dropdown" ref={dropdownRef}>
-          <button
-            type="button"
-            className="header-lang-trigger"
-            onClick={() => setIsOpen(prev => !prev)}
-            aria-expanded={isOpen}
-            title={lang === 'th' ? 'เปลี่ยนภาษา' : 'Change Language'}
-          >
-            <span className="header-lang-code">{lang.toUpperCase()}</span>
-            <ChevronDown size={14} className={`header-lang-chevron ${isOpen ? 'open' : ''}`} />
-          </button>
-
-          {isOpen && (
-            <div className="header-lang-menu">
-              <button
-                type="button"
-                className={`header-lang-option ${lang === 'th' ? 'active' : ''}`}
-                onClick={() => {
-                  setLang('th');
-                  setIsOpen(false);
-                }}
-              >
-                <span>ไทย (TH)</span>
-              </button>
-              <button
-                type="button"
-                className={`header-lang-option ${lang === 'en' ? 'active' : ''}`}
-                onClick={() => {
-                  setLang('en');
-                  setIsOpen(false);
-                }}
-              >
-                <span>ENGLISH (EN)</span>
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Language Toggle Button (Matching Login page style) */}
+        <button
+          type="button"
+          onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+          className="login-lang-btn"
+          title={lang === 'th' ? 'สลับภาษา TH / EN' : 'Toggle Language TH / EN'}
+        >
+          <Globe size={14} />
+          <span>{lang === 'th' ? 'TH' : 'EN'}</span>
+        </button>
 
         {/* User Profile Avatar (Far Right) */}
         <div 

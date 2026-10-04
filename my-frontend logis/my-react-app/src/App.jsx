@@ -12,6 +12,7 @@ import BookingForm from './components/Booking/BookingForm';
 import DeliveryOrderTable from './components/DeliveryOrder/DeliveryOrderTable';
 import InvoiceTable from './components/Invoice/InvoiceTable';
 import ReceiptTable from './components/Receipt/ReceiptTable';
+import LoadingScreen from './components/Common/LoadingScreen';
 import { useLanguage } from './context/LanguageContext';
 
 function App() {
@@ -70,6 +71,7 @@ function App() {
         setLoginError(data.error || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
         return;
       }
+      setLoading(true);
       setIsLoggedIn(true);
       setCurrentUser(data.user);
       localStorage.setItem('isLoggedIn', 'true');
@@ -104,6 +106,9 @@ function App() {
     const roleHeaders = currentUser?.role ? { 'x-user-role': currentUser.role } : {};
     const isEmployee = currentUser?.role === 'employee';
 
+    // หน่วงเวลาขั้นต่ำอย่างน้อย 1.2 วินาที เพื่อให้โมชั่นแอนิเมชันรถขนส่งเล่นอย่างสมูทและเห็นชัดเจน
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1500));
+
     Promise.all([
       fetch('http://localhost:3000/api/customers').then(r => r.json()),     // [0] ลูกค้า
       fetch('http://localhost:3000/api/cars').then(r => r.json()),          // [1] รถ
@@ -119,7 +124,8 @@ function App() {
       fetch('http://localhost:3000/api/invoices').then(r => r.ok ? r.json() : []).catch(() => []),       // [11]
       fetch('http://localhost:3000/api/receipts').then(r => r.ok ? r.json() : []).catch(() => []),        // [12]
       fetch('http://localhost:3000/api/accounts').then(r => r.ok ? r.json() : []).catch(() => []),        // [13] บัญชีธนาคาร
-      fetch('http://localhost:3000/api/banks').then(r => r.ok ? r.json() : []).catch(() => [])            // [14] ธนาคาร
+      fetch('http://localhost:3000/api/banks').then(r => r.ok ? r.json() : []).catch(() => []),           // [14] ธนาคาร
+      minLoadingTime
     ])
       .then(([c, carsData, d, docData, itemsData, serviceData, typeData, consignerData, consigneeData, bookingsData, doData, invData, rcData, accData, bankData]) => {
         setCustomers(Array.isArray(c) ? c : []);
@@ -400,7 +406,7 @@ function App() {
     return <Login onLogin={handleLogin} loginError={loginError} />;
   }
 
-  if (loading) return <div style={{ padding: '30px', textAlign: 'center', fontSize: '20px' }}>{tText('กำลังโหลดข้อมูล...', 'Loading data...')}</div>;
+  if (loading) return <LoadingScreen />;
   if (error) return <div style={{ padding: '30px', textAlign: 'center', color: 'red', fontSize: '18px' }}>{error}</div>;
 
   return (

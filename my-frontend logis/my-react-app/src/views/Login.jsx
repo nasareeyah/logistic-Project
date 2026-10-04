@@ -37,13 +37,13 @@ function Login({ onLogin, loginError }) {
     setActiveRole(roleKey);
     if (roleKey === 'operator') {
       setEmail('operator@st-tran.com');
-      setPassword('1234');
+      setPassword('St@2026!');
     } else if (roleKey === 'accounting') {
       setEmail('account@st-tran.com');
-      setPassword('1234');
+      setPassword('St@2026!');
     } else if (roleKey === 'employee') {
       setEmail('employee@st-tran.com');
-      setPassword('1234');
+      setPassword('St@2026!');
     }
   };
 

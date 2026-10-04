@@ -20,9 +20,9 @@ async function setupUsers() {
     await pool.query(`
       INSERT INTO users (user_id, username, email, password, full_name, role, department)
       VALUES 
-        ('usr-001', 'operator', 'operator@st-tran.com', '1234', 'Operator', 'operator', 'Operations'),
-        ('usr-002', 'employee', 'employee@st-tran.com', '1234', 'Employee', 'employee', 'Logistics'),
-        ('usr-003', 'accounting', 'account@st-tran.com', '1234', 'Accounting', 'accounting', 'Accounting')
+        ('usr-001', 'operator', 'operator@st-tran.com', 'St@2026!', 'Operator', 'operator', 'Operations'),
+        ('usr-002', 'employee', 'employee@st-tran.com', 'St@2026!', 'Employee', 'employee', 'Logistics'),
+        ('usr-003', 'accounting', 'account@st-tran.com', 'St@2026!', 'Accounting', 'accounting', 'Accounting')
       ON CONFLICT (email) DO UPDATE 
       SET password = EXCLUDED.password,
           full_name = EXCLUDED.full_name,
