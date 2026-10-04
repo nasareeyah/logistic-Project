@@ -528,7 +528,7 @@ function Dashboard({
                     const bookingDate = b.pickup_date ? String(b.pickup_date).slice(0, 10) : (b.created_at ? String(b.created_at).slice(0, 10) : '—');
 
                     return (
-                      <tr key={b.booking_id} onClick={() => setSelectedBookingForDetail(b)}>
+                      <tr key={b.booking_id}>
                         <td>
                           <span className="dash-booking-no">
                             {b.booking_no || b.booking_id}
@@ -560,14 +560,11 @@ function Dashboard({
                           <button
                             type="button"
                             className="dash-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedBookingForDetail(b);
-                            }}
-                            title="ดูรายละเอียด Booking"
+                            onClick={() => setSelectedBookingForDetail(b)}
+                            title={tText('ดูรายละเอียด Booking', 'View booking details')}
                           >
                             <Eye size={14} />
-                            <span>ดู</span>
+                            <span>{tText('ดู', 'View')}</span>
                           </button>
                         </td>
                       </tr>

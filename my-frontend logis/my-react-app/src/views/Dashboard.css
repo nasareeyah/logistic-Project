@@ -230,7 +230,7 @@
 .dash-schedule-table tbody tr {
   border-bottom: 1px solid #f1f5f9;
   transition: background-color 0.15s ease;
-  cursor: pointer;
+  cursor: default;
 }
 
 .dash-schedule-table tbody tr:hover {
@@ -254,6 +254,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  cursor: default;
+  user-select: text;
 }
 
 .dash-customer-name {
