@@ -38,6 +38,7 @@ import './BookingTable.css';
 import './BookingWizard.css';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 // Helper to decode latin1 mojibake characters back to clean UTF-8 text (e.g. Thai characters)
 const decodeAttachmentName = (name) => {
@@ -53,6 +54,7 @@ const decodeAttachmentName = (name) => {
 
 export default function BookingForm({ customers = [], cars = [], consigners = [], consignees = [], services = [], documents = [], documentItems = [], fetchData }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tableSearch, setTableSearch] = useState('');
@@ -403,16 +405,30 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   };
 
   // Delete Booking
-  const handleDeleteBooking = async (bookingId) => {
-    if (!window.confirm(lang === 'th' ? 'คุณต้องการลบ Booking นี้ใช่หรือไม่?' : 'Are you sure you want to delete this booking?')) return;
-    try {
-      await deleteBooking(bookingId);
-      alert(lang === 'th' ? 'ลบสำเร็จ' : 'Deleted successfully');
-      await loadBookingsData();
-      if (fetchData) fetchData();
-    } catch (err) {
-      alert((lang === 'th' ? 'เกิดข้อผิดพลาดในการลบ: ' : 'Error deleting booking: ') + err.message);
-    }
+  const handleDeleteBooking = (booking) => {
+    const bookingId = typeof booking === 'object' ? booking.booking_id : booking;
+    const bookingNo = typeof booking === 'object' ? booking.booking_no : 'รายการจอง';
+    const custName = typeof booking === 'object' ? booking.customer_name : 'ลูกค้าทั่วไป';
+    const truckName = typeof booking === 'object' ? booking.truck_name : '';
+
+    confirmDelete({
+      title: 'ยืนยันการลบรายการจอง Booking นี้?',
+      itemName: bookingNo || 'Booking',
+      itemSubtitle: custName || 'ลูกค้าทั่วไป',
+      itemCode: truckName ? `รถขนส่ง: ${truckName}` : '',
+      warningText: 'ข้อมูลการจอง รายการสินค้า เอกสารแนบ และประวัติการจัดส่งทั้งหมดจะถูกลบและกู้คืนไม่ได้',
+      confirmText: 'ลบ Booking',
+      onConfirm: async () => {
+        try {
+          await deleteBooking(bookingId);
+          notify.delete('ลบ Booking สำเร็จ', `นำรายการจองเลขที่ ${bookingNo} ออกจากระบบเรียบร้อยแล้ว`);
+          await loadBookingsData();
+          if (fetchData) fetchData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // ----------------------------------------------------
@@ -431,7 +447,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploadingCustDoc(true);
         const resData = await uploadCustomerAttachments(selectedBookingForCustDoc.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
+        notify.create('แนบเอกสารลูกค้าสำเร็จ', resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
@@ -441,7 +457,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+        notify.error('เกิดข้อผิดพลาด', err.message);
       } finally {
         setUploadingCustDoc(false);
       }
@@ -461,7 +477,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploadingCustDoc(true);
         const resData = await uploadCustomerAttachments(selectedBookingForCustDoc.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
+        notify.create('แนบเอกสารลูกค้าสำเร็จ', resData.message || (lang === 'th' ? 'แนบเอกสารลูกค้าสำเร็จ' : 'Customer documents attached successfully'));
         await loadBookingsData();
 
         if (resData.attachments) {
@@ -471,26 +487,37 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+        notify.error('เกิดข้อผิดพลาด', err.message);
       } finally {
         setUploadingCustDoc(false);
       }
     }
   };
 
-  const handleDeleteCustDoc = async (attachmentId) => {
-    if (!window.confirm(lang === 'th' ? 'ยืนยันลบเอกสารลูกค้านี้?' : 'Are you sure you want to delete this customer document?')) return;
-    try {
-      const resData = await deleteCustomerAttachment(attachmentId);
-      alert(resData.message || (lang === 'th' ? 'ลบเอกสารสำเร็จ' : 'Document deleted successfully'));
-      setSelectedBookingForCustDoc(prev => ({
-        ...prev,
-        customer_attachments: (prev.customer_attachments || []).filter(a => a.attachment_id !== attachmentId)
-      }));
-      await loadBookingsData();
-    } catch (err) {
-      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
-    }
+  const handleDeleteCustDoc = (attachment) => {
+    const attId = typeof attachment === 'object' ? attachment.attachment_id : attachment;
+    const fileName = typeof attachment === 'object' ? (decodeAttachmentName(attachment.original_name) || attachment.file_name) : 'เอกสารแนบ';
+
+    confirmDelete({
+      title: 'ยืนยันการลบเอกสารลูกค้านี้?',
+      itemName: fileName,
+      itemSubtitle: selectedBookingForCustDoc?.booking_no ? `Booking ${selectedBookingForCustDoc.booking_no}` : '',
+      warningText: 'ไฟล์เอกสารนี้จะถูกลบออกจากระบบอย่างถาวร',
+      confirmText: 'ลบเอกสาร',
+      onConfirm: async () => {
+        try {
+          const resData = await deleteCustomerAttachment(attId);
+          notify.delete('ลบเอกสารสำเร็จ', resData.message || 'ลบไฟล์เอกสารลูกค้าเรียบร้อยแล้ว');
+          setSelectedBookingForCustDoc(prev => ({
+            ...prev,
+            customer_attachments: (prev.customer_attachments || []).filter(a => a.attachment_id !== attId)
+          }));
+          await loadBookingsData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // ----------------------------------------------------
@@ -509,7 +536,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploadingDo(true);
         const resData = await uploadDoFiles(selectedBookingForDo.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
+        notify.create('แนบไฟล์ DO สำเร็จ', resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
         await loadBookingsData();
 
         if (resData.do_files) {
@@ -519,7 +546,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+        notify.error('เกิดข้อผิดพลาด', err.message);
       } finally {
         setUploadingDo(false);
       }
@@ -539,7 +566,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       try {
         setUploadingDo(true);
         const resData = await uploadDoFiles(selectedBookingForDo.booking_id, files);
-        alert(resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
+        notify.create('แนบไฟล์ DO สำเร็จ', resData.message || (lang === 'th' ? 'แนบไฟล์ DO สำเร็จ' : 'DO files attached successfully'));
         await loadBookingsData();
 
         if (resData.do_files) {
@@ -549,26 +576,37 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
           }));
         }
       } catch (err) {
-        alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+        notify.error('เกิดข้อผิดพลาด', err.message);
       } finally {
         setUploadingDo(false);
       }
     }
   };
 
-  const handleDeleteDoFile = async (doFileId) => {
-    if (!window.confirm(lang === 'th' ? 'ยืนยันลบไฟล์ DO นี้?' : 'Are you sure you want to delete this DO file?')) return;
-    try {
-      const resData = await deleteDoFile(doFileId);
-      alert(resData.message || (lang === 'th' ? 'ลบไฟล์ DO สำเร็จ' : 'DO file deleted successfully'));
-      setSelectedBookingForDo(prev => ({
-        ...prev,
-        do_files: (prev.do_files || []).filter(f => f.do_file_id !== doFileId)
-      }));
-      await loadBookingsData();
-    } catch (err) {
-      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
-    }
+  const handleDeleteDoFile = (file) => {
+    const fileId = typeof file === 'object' ? file.do_file_id : file;
+    const fileName = typeof file === 'object' ? (decodeAttachmentName(file.original_name) || file.file_name) : 'ไฟล์ DO';
+
+    confirmDelete({
+      title: 'ยืนยันการลบไฟล์ DO ปิดงานนี้?',
+      itemName: fileName,
+      itemSubtitle: selectedBookingForDo?.booking_no ? `Booking ${selectedBookingForDo.booking_no}` : '',
+      warningText: 'ไฟล์ DO / POD นี้จะถูกลบออกจากระบบอย่างถาวร',
+      confirmText: 'ลบไฟล์ DO',
+      onConfirm: async () => {
+        try {
+          const resData = await deleteDoFile(fileId);
+          notify.delete('ลบไฟล์ DO สำเร็จ', resData.message || 'ลบไฟล์ DO เรียบร้อยแล้ว');
+          setSelectedBookingForDo(prev => ({
+            ...prev,
+            do_files: (prev.do_files || []).filter(f => f.do_file_id !== fileId)
+          }));
+          await loadBookingsData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // WIZARD FINAL SUBMIT
@@ -609,12 +647,16 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         await uploadCustomerAttachments(bookingId, wizardNewFiles);
       }
 
-      alert(editingBooking ? (lang === 'th' ? 'แก้ไข Booking สำเร็จ' : 'Booking updated successfully') : (lang === 'th' ? 'สร้าง Booking สำเร็จ' : 'Booking created successfully'));
+      if (editingBooking) {
+        notify.edit('แก้ไข Booking สำเร็จ', `อัปเดตรายการจองเลขที่ ${autoBookingNo || ''} เรียบร้อยแล้ว`);
+      } else {
+        notify.create('สร้าง Booking สำเร็จ', `สร้างรายการจองเลขที่ ${autoBookingNo || ''} เรียบร้อยแล้ว`);
+      }
       setViewMode('table');
       await loadBookingsData();
       if (fetchData) fetchData();
     } catch (err) {
-      alert((lang === 'th' ? 'เกิดข้อผิดพลาด: ' : 'Error: ') + err.message);
+      notify.error('เกิดข้อผิดพลาด', err.message);
     } finally {
       setSaving(false);
     }
@@ -677,7 +719,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   key={step.num}
                   onClick={() => {
                     if (step.num > 1 && !selectedCustomer) {
-                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     setCurrentStep(step.num);
@@ -1522,7 +1564,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                   className="btn-primary"
                   onClick={() => {
                     if (currentStep === 1 && !selectedCustomer) {
-                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(6, prev + 1));
@@ -1925,7 +1967,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                               label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
-                              onClick: () => handleDeleteBooking(booking.booking_id)
+                              onClick: () => handleDeleteBooking(booking)
                             }
                           ]}
                         />
@@ -2057,7 +2099,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             <button
                               type="button"
                               className="att-action-btn delete"
-                              onClick={() => handleDeleteCustDoc(att.attachment_id)}
+                              onClick={() => handleDeleteCustDoc(att)}
                               title={tText('ลบไฟล์แนบ', 'Delete Attachment')}
                             >
                               <Trash2 size={16} />
@@ -2191,7 +2233,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             <button
                               type="button"
                               className="att-action-btn delete"
-                              onClick={() => handleDeleteDoFile(file.do_file_id)}
+                              onClick={() => handleDeleteDoFile(file)}
                               title={tText('ลบไฟล์ DO', 'Delete DO File')}
                             >
                               <Trash2 size={16} />

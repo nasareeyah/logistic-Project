@@ -21,9 +21,11 @@ import {
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] }) {
   const { lang, t, tText } = useLanguage();
+  const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -65,7 +67,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
   const handleCreateOrSave = (e) => {
     e.preventDefault();
     if (!formData.customer_name) {
-      alert('กรุณากรอกชื่อลูกค้า');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อลูกค้า');
       return;
     }
 

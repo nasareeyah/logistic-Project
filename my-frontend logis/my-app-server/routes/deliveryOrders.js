@@ -40,6 +40,7 @@ const DO_SELECT_QUERY = `
     SELECT 
         d.*,
         d.delivery_orders_id AS do_id,
+        bk.booking_no,
         -- Cargo details from booking_cargo
         COALESCE(bc.inv_no, '') AS invoice_no,
         bc.product_name,
@@ -78,18 +79,18 @@ const DO_SELECT_QUERY = `
         -- Dates synced with booking
         COALESCE(bk.pickup_date, d.date_of_load) AS date_of_load,
         COALESCE(bk.delivery_date, d.eta) AS eta,
-        -- Customer details from customers
-        cust.tax_id AS customer_tax_id,
-        COALESCE(d.customer_address, cust.address) AS customer_address,
-        cust.phone AS customer_phone,
-        cust.email AS customer_email,
-        cust.contact_person AS customer_contact_person,
+        -- Customer details from customers (only when customer_name is explicitly provided on DO)
+        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.tax_id ELSE NULL END AS customer_tax_id,
+        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN COALESCE(d.customer_address, cust.address) ELSE NULL END AS customer_address,
+        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.phone ELSE NULL END AS customer_phone,
+        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.email ELSE NULL END AS customer_email,
+        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.contact_person ELSE NULL END AS customer_contact_person,
         -- Driver details from driver
         dr.full_name AS driver_name,
         dr.phone AS driver_phone
     FROM delivery_orders d
     LEFT JOIN bookings bk ON d.booking_id = bk.booking_id
-    LEFT JOIN customers cust ON (bk.customer_id = cust.customer_id OR d.customer_name = cust.customer_name)
+    LEFT JOIN customers cust ON (d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' AND (d.customer_name = cust.customer_name OR bk.customer_id = cust.customer_id))
     LEFT JOIN booking_cargo bc ON d.cargo_id = bc.cargo_id
     LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
     LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id

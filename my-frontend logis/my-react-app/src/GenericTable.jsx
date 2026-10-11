@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNotification } from './context/NotificationContext';
 
 function GenericTable({ tableName, title, hiddenFields = [], labels = {} }) {
+  const { notify, confirmDelete } = useNotification();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -27,14 +29,14 @@ function GenericTable({ tableName, title, hiddenFields = [], labels = {} }) {
       const val = newRow[f];
       return val === undefined || val === '';
     });
-    if (empty) { alert('กรุณากรอกข้อมูลให้ครบทุกช่อง'); return; }
+    if (empty) { notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบทุกช่อง'); return; }
     fetch(`/api/${tableName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newRow)
     })
       .then(r => r.json())
-      .then(d => { alert(d.message); setNewRow({}); fetchData(); });
+      .then(d => { notify.create('เพิ่มข้อมูลสำเร็จ', d.message || 'เพิ่มข้อมูลเรียบร้อยแล้ว'); setNewRow({}); fetchData(); });
   };
 
   const handleSave = (id) => {
@@ -48,10 +50,17 @@ function GenericTable({ tableName, title, hiddenFields = [], labels = {} }) {
   };
 
   const handleDelete = (id) => {
-    if (!confirm('ยืนยันการลบ?')) return;
-    fetch(`/api/${tableName}/${id}`, { method: 'DELETE' })
-      .then(r => r.json())
-      .then(d => { alert(d.message); fetchData(); });
+    confirmDelete({
+      title: 'ยืนยันการลบข้อมูลนี้?',
+      itemName: `${tableName} #${id}`,
+      warningText: 'ข้อมูลรายการนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบข้อมูล',
+      onConfirm: () => {
+        fetch(`/api/${tableName}/${id}`, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(d => { notify.delete('ลบข้อมูลสำเร็จ', d.message || 'ลบข้อมูลเรียบร้อยแล้ว'); fetchData(); });
+      }
+    });
   };
 
   const renderCell = (val) => {

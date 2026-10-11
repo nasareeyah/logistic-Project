@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -31,6 +31,7 @@ import {
 import InvoicePreview from './InvoicePreview';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 // รันเลขที่ใบแจ้งหนี้ใหม่ทุกวัน โดยใช้วันที่เป็น prefix และเลขลำดับต่อท้าย (เช่น INV-20260928-0001)
 const generateInvoiceNo = (dateStr, invoicesList = []) => {
@@ -63,6 +64,7 @@ export default function InvoiceTable({
   fetchData
 }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [invoices, setInvoices] = useState([]);
   const [eligibleBookings, setEligibleBookings] = useState([]);
   const [accounts, setAccounts] = useState(propAccounts);
@@ -114,6 +116,21 @@ export default function InvoiceTable({
       }
     ]
   });
+
+  // กรองรายการ Booking ที่พร้อมออกใบแจ้งหนี้ (ซ่อนรายการที่เคยออกใบแจ้งหนี้ไปแล้ว)
+  const availableBookings = useMemo(() => {
+    return eligibleBookings.filter(bk => {
+      // หากอยู่ในโหมดแก้ไขใบแจ้งหนี้ ให้แสดงรายการของใบแจ้งหนี้นี้ได้
+      if (editingInvoiceId && formData.booking_id === bk.booking_id) return true;
+      // หากมีใบแจ้งหนี้แล้ว ให้คัดออก
+      if (bk.has_invoice) return false;
+      const alreadyInvoiced = invoices.some(inv => 
+        (inv.booking_id && String(inv.booking_id) === String(bk.booking_id)) ||
+        (inv.booking_no && bk.booking_no && String(inv.booking_no) === String(bk.booking_no))
+      );
+      return !alreadyInvoiced;
+    });
+  }, [eligibleBookings, editingInvoiceId, formData.booking_id, invoices]);
 
   const loadData = async () => {
     try {
@@ -342,7 +359,7 @@ export default function InvoiceTable({
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!formData.customer_id) {
-      alert('กรุณาเลือกลูกค้าในขั้นตอนที่ 2 (Customer & Terms)');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกลูกค้าในขั้นตอนที่ 2 (Customer & Terms)');
       setCurrentStep(2);
       return;
     }
@@ -351,16 +368,16 @@ export default function InvoiceTable({
       setIsSubmitting(true);
       if (editingInvoiceId) {
         await updateInvoice(editingInvoiceId, formData);
-        alert('แก้ไขใบแจ้งหนี้สำเร็จ');
+        notify.edit('แก้ไขใบแจ้งหนี้สำเร็จ', `อัปเดตใบแจ้งหนี้เลขที่ ${formData.invoice_no || ''} เรียบร้อยแล้ว`);
       } else {
         await createInvoice(formData);
-        alert('สร้างใบแจ้งหนี้สำเร็จ');
+        notify.create('สร้างใบแจ้งหนี้สำเร็จ', `สร้างใบแจ้งหนี้เลขที่ ${formData.invoice_no || ''} เรียบร้อยแล้ว`);
       }
       setViewMode('list');
       await loadData();
       if (fetchData) fetchData();
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      notify.error('เกิดข้อผิดพลาด', err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -398,7 +415,7 @@ export default function InvoiceTable({
       });
       setViewMode('wizard');
     } catch (err) {
-      alert('ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้: ' + err.message);
+      notify.error('ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้', err.message);
     }
   };
 
@@ -407,20 +424,29 @@ export default function InvoiceTable({
       const detail = await fetchInvoiceById(inv.invoice_id);
       setPreviewInvoice(detail);
     } catch (err) {
-      alert('ไม่สามารถเปิดดูตัวอย่างได้: ' + err.message);
+      notify.error('ไม่สามารถเปิดดูตัวอย่างได้', err.message);
     }
   };
 
-  const handleDelete = async (inv) => {
-    if (!window.confirm(`ยืนยันการลบใบแจ้งหนี้เลขที่ ${inv.invoice_no}?`)) return;
-    try {
-      await deleteInvoice(inv.invoice_id);
-      alert('ลบใบแจ้งหนี้สำเร็จ');
-      await loadData();
-      if (fetchData) fetchData();
-    } catch (err) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
-    }
+  const handleDelete = (inv) => {
+    confirmDelete({
+      title: 'ยืนยันการลบใบแจ้งหนี้นี้?',
+      itemName: inv.invoice_no || 'ใบแจ้งหนี้',
+      itemSubtitle: inv.customer_name || 'ลูกค้าทั่วไป',
+      itemCode: inv.booking_no ? `อ้างอิงใบงาน ${inv.booking_no}` : (inv.do_no ? `อ้างอิงใบส่งสินค้า ${inv.do_no}` : ''),
+      warningText: 'ข้อมูลใบแจ้งหนี้และรายการบริการทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบใบแจ้งหนี้',
+      onConfirm: async () => {
+        try {
+          await deleteInvoice(inv.invoice_id);
+          notify.delete('ลบใบแจ้งหนี้สำเร็จ', `นำใบแจ้งหนี้เลขที่ ${inv.invoice_no || ''} ออกจากระบบเรียบร้อยแล้ว`);
+          await loadData();
+          if (fetchData) fetchData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // Filter Invoices
@@ -577,8 +603,13 @@ export default function InvoiceTable({
                     value={formData.booking_id}
                     onChange={(e) => handleSelectBookingToInvoice(e.target.value)}
                   >
-                    <option value="">{tText('— เลือกรอบการส่งสินค้า เพื่อดึงข้อมูลบริการ ราคา และ DO อัตโนมัติ —', '— Select a completed booking to auto-import service, price, and DO —')}</option>
-                    {eligibleBookings.map((bk) => (
+                    <option value="">
+                      {availableBookings.length === 0
+                        ? tText('— ไม่มีงานค้างที่รอออกใบแจ้งหนี้ (ออกครบทั้งหมดแล้ว) —', '— No pending bookings to invoice (All invoiced) —')
+                        : tText('— เลือกรอบการส่งสินค้า เพื่อดึงข้อมูลบริการ ราคา และ DO อัตโนมัติ —', '— Select a completed booking to auto-import service, price, and DO —')
+                      }
+                    </option>
+                    {availableBookings.map((bk) => (
                       <option key={bk.booking_id} value={bk.booking_id}>
                         {bk.booking_no} — {bk.customer_name} | DO: {bk.do_no || (lang === 'th' ? 'มีไฟล์แนบ' : 'Attached')} | {lang === 'th' ? 'สินค้า:' : 'Goods:'} {bk.cargo_product_names || (lang === 'th' ? 'สินค้าทั่วไป' : 'General Cargo')} | {lang === 'th' ? 'ราคา:' : 'Price:'} {Number(bk.default_price || 0).toLocaleString()} {lang === 'th' ? 'บ.' : 'THB'}
                       </option>
@@ -1099,11 +1130,11 @@ export default function InvoiceTable({
                   className="btn-primary"
                   onClick={() => {
                     if (currentStep === 2 && !formData.customer_id) {
-                      alert(lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกลูกค้าก่อนดำเนินการต่อ' : 'Please select a customer before continuing');
                       return;
                     }
                     if (currentStep === 4 && !formData.account_no) {
-                      alert(lang === 'th' ? 'กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ' : 'Please select a bank account before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ' : 'Please select a bank account before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(5, prev + 1));

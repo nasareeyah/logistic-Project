@@ -14,9 +14,11 @@ import {
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   const { lang, t, tText } = useLanguage();
+  const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -35,7 +37,7 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   const handleCreateOrSave = (e) => {
     e.preventDefault();
     if (!formData.car_number) {
-      alert('กรุณากรอกทะเบียนรถ');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกทะเบียนรถ');
       return;
     }
 

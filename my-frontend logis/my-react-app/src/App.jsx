@@ -14,9 +14,11 @@ import InvoiceTable from './components/Invoice/InvoiceTable';
 import ReceiptTable from './components/Receipt/ReceiptTable';
 import LoadingScreen from './components/Common/LoadingScreen';
 import { useLanguage } from './context/LanguageContext';
+import { useNotification } from './context/NotificationContext';
 
 function App() {
   const { tText } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('isLoggedIn') === 'true');
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -100,14 +102,18 @@ function App() {
     }
   }, [currentUser, activeTab]);
 
-  const fetchData = () => {
-    setLoading(true);
+  const fetchData = (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     setError(null);
     const roleHeaders = currentUser?.role ? { 'x-user-role': currentUser.role } : {};
     const isEmployee = currentUser?.role === 'employee';
 
-    // หน่วงเวลาขั้นต่ำอย่างน้อย 1.2 วินาที เพื่อให้โมชั่นแอนิเมชันรถขนส่งเล่นอย่างสมูทและเห็นชัดเจน
-    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 1500));
+    // หน่วงเวลาขั้นต่ำอย่างน้อย 1.2 วินาที เฉพาะตอนเข้าสู่ระบบหรือรีเฟรชหน้าเว็บ เพื่อให้โมชั่นแอนิเมชันรถขนส่งเล่นอย่างสมูท
+    const minLoadingTime = showLoading
+      ? new Promise(resolve => setTimeout(resolve, 1500))
+      : Promise.resolve();
 
     Promise.all([
       fetch('http://localhost:3000/api/customers').then(r => r.json()),     // [0] ลูกค้า
@@ -157,14 +163,14 @@ function App() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      fetchData();
+      fetchData(true);
     }
   }, [isLoggedIn, currentUser?.role]);
 
   // ==========================================
   // CUSTOMER ACTIONS
   // ==========================================
-  //เพิ่มลูกค้าใหม่
+  // เพิ่มลูกค้าใหม่
   const handleAddCustomer = (newCustomerData, resetForm) => {
     const dataToSend = { ...newCustomerData };
 
@@ -174,56 +180,78 @@ function App() {
       body: JSON.stringify(dataToSend)
     })
       .then(async (res) => {
-        // เช็คว่า response ที่ตอบกลับมาเป็นสถานะ OK (200-299) หรือไม่
         if (!res.ok) {
-          const errorText = await res.text(); // อ่านข้อความจาก HTML หรือ Text Error ที่ส่งกลับมา
+          const errorText = await res.text();
           throw new Error(`Server ตอบกลับสถานะ ${res.status}: ${errorText.slice(0, 100)}...`);
         }
         return res.json();
       })
       .then(data => {
         if (data.error) {
-          alert('บันทึกไม่สำเร็จ: ' + data.error);
+          notify.error('บันทึกไม่สำเร็จ', data.error);
         } else {
-          alert(data.message || 'บันทึกสำเร็จ');
+          notify.create('สร้างข้อมูลลูกค้าสำเร็จ', data.message || 'บันทึกข้อมูลลูกค้าใหม่เรียบร้อยแล้ว');
           resetForm();
           fetchData();
         }
       })
       .catch(err => {
         console.error('Add Customer Error:', err);
-        alert('เกิดข้อผิดพลาด: ' + err.message);
+        notify.error('เกิดข้อผิดพลาด', err.message);
       });
   };
-  //บันทึกการเเก้ไขข้อมูลลูกค้า
 
+  // บันทึกการเเก้ไขข้อมูลลูกค้า
   const handleSaveCustomerEdit = (id, editCustomerData, successCallback) => {
     fetch(`http://localhost:3000/api/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editCustomerData)
-    }).then(() => {
-      successCallback();
-      fetchData();
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json().catch(() => ({}));
+      })
+      .then(data => {
+        if (data.error) {
+          notify.error('แก้ไขไม่สำเร็จ', data.error);
+        } else {
+          notify.edit('แก้ไขข้อมูลลูกค้าสำเร็จ', data.message || 'อัปเดตข้อมูลลูกค้าเรียบร้อยแล้ว');
+          if (successCallback) successCallback();
+          fetchData();
+        }
+      })
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
+  };
+
+  // ลบข้อมูลลูกค้า
+  const handleDeleteCustomer = (id) => {
+    const target = customers.find(c => c.customer_id === id);
+    confirmDelete({
+      title: 'ยืนยันการลบลูกค้านี้?',
+      itemName: target?.customer_name || 'ลูกค้า',
+      itemSubtitle: target?.phone || 'โทรศัพท์ไม่ระบุ',
+      itemCode: target?.customer_id ? `รหัส ${target.customer_id}` : '',
+      warningText: 'ข้อมูลและประวัติเอกสารของลูกค้ารายนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้',
+      confirmText: 'ลบลูกค้า',
+      onConfirm: () => {
+        fetch(`http://localhost:3000/api/customers/${id}`, {
+          method: 'DELETE'
+        })
+          .then(res => res.json())
+          .then(data => {
+            notify.delete('ลบลูกค้าสำเร็จ', data.message || 'ลบข้อมูลลูกค้าเรียบร้อยแล้ว');
+            fetchData();
+          })
+          .catch(err => notify.error('ลบไม่สำเร็จ', err.message));
+      }
     });
   };
-  //ลบข้อมูลลูกค้า
-
-  const handleDeleteCustomer = (id) => {
-    if (!confirm('ยืนยันการลบลูกค้านี้?')) return;
-    fetch(`http://localhost:3000/api/customers/${id}`, {
-      method: 'DELETE'
-    })
-      .then(res => res.json())
-      .then(data => { alert(data.message); fetchData(); })
-      .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
-  };
-
 
   // ==========================================
   // CAR ACTIONS
   // ==========================================
-  //เพิ่มข้อมูลรถใหม่
+  // เพิ่มข้อมูลรถใหม่
   const handleAddCar = (newCarData, resetForm) => {
     const dataToSend = { ...newCarData };
 
@@ -234,33 +262,52 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
+        if (data.error) notify.error('บันทึกไม่สำเร็จ', data.error);
         else {
-          alert(data.message);
+          notify.create('เพิ่มข้อมูลรถสำเร็จ', data.message || 'บันทึกข้อมูลรถใหม่เรียบร้อยแล้ว');
           resetForm();
           fetchData();
         }
-      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
-  };
-  //บันทึกการเเก้ไขข้อมูลรถ
-  const handleSaveCarEdit = (id, editCarData, successCallback) => {
-    fetch(`http://localhost:3000/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
-      .then(() => { successCallback(); fetchData(); });
+      }).catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
 
-  //ลบข้อมูลรถ
+  // บันทึกการเเก้ไขข้อมูลรถ
+  const handleSaveCarEdit = (id, editCarData, successCallback) => {
+    fetch(`http://localhost:3000/api/cars/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editCarData) })
+      .then(() => {
+        notify.edit('แก้ไขข้อมูลรถสำเร็จ', 'อัปเดตข้อมูลรถเรียบร้อยแล้ว');
+        if (successCallback) successCallback();
+        fetchData();
+      })
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
+  };
+
+  // ลบข้อมูลรถ
   const handleDeleteCar = (id) => {
-    if (!confirm('ยืนยันการลบรถคันนี้?')) return;
-    fetch(`http://localhost:3000/api/cars/${id}`, { method: 'DELETE' })
-      .then(res => res.json())
-      .then(data => { alert(data.message); fetchData(); })
-      .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
+    const target = cars.find(c => c.car_id === id);
+    confirmDelete({
+      title: 'ยืนยันการลบรถคันนี้?',
+      itemName: target?.car_number || 'รถขนส่ง',
+      itemSubtitle: target?.car_type || 'ประเภทยานพาหนะ',
+      itemCode: target?.car_id ? `รหัส ${target.car_id}` : '',
+      warningText: 'ข้อมูลและประวัติการใช้งานรถคันนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้',
+      confirmText: 'ลบข้อมูลรถ',
+      onConfirm: () => {
+        fetch(`http://localhost:3000/api/cars/${id}`, { method: 'DELETE' })
+          .then(res => res.json())
+          .then(data => {
+            notify.delete('ลบข้อมูลรถสำเร็จ', data.message || 'ลบข้อมูลรถเรียบร้อยแล้ว');
+            fetchData();
+          })
+          .catch(err => notify.error('ลบไม่สำเร็จ', err.message));
+      }
+    });
   };
 
   // ==========================================
   // DRIVER ACTIONS
   // ==========================================
-  //เพิ่มข้อมูลคนขับใหม่
+  // เพิ่มข้อมูลคนขับใหม่
   const handleAddDriver = (newDriverData, resetForm) => {
     const dataToSend = { ...newDriverData };
 
@@ -271,27 +318,46 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
+        if (data.error) notify.error('บันทึกไม่สำเร็จ', data.error);
         else {
-          alert(data.message);
+          notify.create('เพิ่มพนักงานขับรถสำเร็จ', data.message || 'บันทึกข้อมูลพนักงานขับรถเรียบร้อยแล้ว');
           resetForm();
           fetchData();
         }
-      }).catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+      }).catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
-  //บันทึกการเเก้ไขข้อมูลคนขับ
 
+  // บันทึกการเเก้ไขข้อมูลคนขับ
   const handleSaveDriverEdit = (id, editDriverData, successCallback) => {
     fetch(`http://localhost:3000/api/driver/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editDriverData) })
-      .then(() => { successCallback(); fetchData(); });
+      .then(() => {
+        notify.edit('แก้ไขข้อมูลคนขับสำเร็จ', 'อัปเดตข้อมูลพนักงานขับรถเรียบร้อยแล้ว');
+        if (successCallback) successCallback();
+        fetchData();
+      })
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
-  //ลบข้อมูลคนขับ
+
+  // ลบข้อมูลคนขับ
   const handleDeleteDriver = (id) => {
-    if (!confirm('ยืนยันการลบคนขับคนนี้?')) return;
-    fetch(`http://localhost:3000/api/driver/${id}`, { method: 'DELETE' })
-      .then(res => res.json())
-      .then(data => { alert(data.message); fetchData(); })
-      .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
+    const target = drivers.find(d => d.driver_id === id);
+    confirmDelete({
+      title: 'ยืนยันการลบคนขับคนนี้?',
+      itemName: target?.full_name || 'พนักงานขับรถ',
+      itemSubtitle: target?.phone || 'โทรศัพท์ไม่ระบุ',
+      itemCode: target?.driver_id ? `รหัส ${target.driver_id}` : '',
+      warningText: 'ข้อมูลและประวัติการขับรถของพนักงานรายนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้',
+      confirmText: 'ลบคนขับ',
+      onConfirm: () => {
+        fetch(`http://localhost:3000/api/driver/${id}`, { method: 'DELETE' })
+          .then(res => res.json())
+          .then(data => {
+            notify.delete('ลบคนขับสำเร็จ', data.message || 'ลบข้อมูลพนักงานขับรถเรียบร้อยแล้ว');
+            fetchData();
+          })
+          .catch(err => notify.error('ลบไม่สำเร็จ', err.message));
+      }
+    });
   };
 
   // ==========================================
@@ -305,14 +371,14 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.error) alert('บันทึกไม่สำเร็จ: ' + data.error);
+        if (data.error) notify.error('บันทึกไม่สำเร็จ', data.error);
         else {
-          alert(data.message || 'เพิ่มบัญชีธนาคารสำเร็จ');
+          notify.create('เพิ่มบัญชีธนาคารสำเร็จ', data.message || 'เพิ่มบัญชีธนาคารเรียบร้อยแล้ว');
           if (successCallback) successCallback();
           fetchData();
         }
       })
-      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
 
   const handleSaveAccountEdit = (accountNo, editAccountData, successCallback) => {
@@ -323,35 +389,46 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.error) alert('แก้ไขไม่สำเร็จ: ' + data.error);
+        if (data.error) notify.error('แก้ไขไม่สำเร็จ', data.error);
         else {
-          alert(data.message || 'แก้ไขข้อมูลสำเร็จ');
+          notify.edit('แก้ไขบัญชีสำเร็จ', data.message || 'แก้ไขข้อมูลบัญชีธนาคารเรียบร้อยแล้ว');
           if (successCallback) successCallback();
           fetchData();
         }
       })
-      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
 
   const handleDeleteAccount = (accountNo) => {
-    fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(accountNo)}`, {
-      method: 'DELETE'
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) alert(data.error);
-        else {
-          alert(data.message || 'ลบบัญชีสำเร็จ');
-          fetchData();
-        }
-      })
-      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+    const target = accounts.find(a => a.account_no === accountNo);
+    confirmDelete({
+      title: 'ยืนยันการลบบัญชีธนาคารนี้?',
+      itemName: target?.account_name || 'บัญชีธนาคาร',
+      itemSubtitle: target?.bank_name || 'ธนาคาร',
+      itemCode: target?.account_no ? `เลขที่ ${target.account_no}` : '',
+      warningText: 'บัญชีธนาคารนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบบัญชี',
+      onConfirm: () => {
+        fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(accountNo)}`, {
+          method: 'DELETE'
+        })
+          .then(res => res.json())
+          .then(data => {
+            if (data.error) notify.error('ลบไม่สำเร็จ', data.error);
+            else {
+              notify.delete('ลบบัญชีสำเร็จ', data.message || 'ลบบัญชีธนาคารเรียบร้อยแล้ว');
+              fetchData();
+            }
+          })
+          .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
+      }
+    });
   };
 
   // ==========================================
   // DOCUMENT ACTIONS
   // ==========================================
-  //เพิ่มเอกสารใหม่
+  // เพิ่มเอกสารใหม่
   const handleAddDocument = (docType, newDocData, resetForm) => {
     const dataToSend = {
       ...newDocData,
@@ -366,14 +443,14 @@ function App() {
       .then(res => res.json())
       .then(data => {
         if (data.error) {
-          alert('บันทึกไม่สำเร็จ: ' + data.error);
+          notify.error('บันทึกไม่สำเร็จ', data.error);
         } else {
-          alert(data.message);
+          notify.create('สร้างเอกสารสำเร็จ', data.message || 'สร้างเอกสารเรียบร้อยแล้ว');
           resetForm();
           fetchData();
         }
       })
-      .catch(err => alert('เกิดข้อผิดพลาด: ' + err.message));
+      .catch(err => notify.error('เกิดข้อผิดพลาด', err.message));
   };
 
   const handleSaveDocumentEdit = (id, editDocData, successCallback) => {
@@ -384,18 +461,30 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        alert(data.message || 'แก้ไขสำเร็จ');
-        successCallback();
+        notify.edit('แก้ไขเอกสารสำเร็จ', data.message || 'แก้ไขเอกสารเรียบร้อยแล้ว');
+        if (successCallback) successCallback();
         fetchData();
-      }).catch(err => alert('แก้ไขไม่สำเร็จ: ' + err.message));
+      }).catch(err => notify.error('แก้ไขไม่สำเร็จ', err.message));
   };
 
   const handleDeleteDocument = (id) => {
-    if (!confirm('ยืนยันการลบเอกสารนี้?')) return;
-    fetch(`http://localhost:3000/api/document/${id}`, { method: 'DELETE' })
-      .then(res => res.json())
-      .then(data => { alert(data.message); fetchData(); })
-      .catch(err => alert('ลบไม่สำเร็จ: ' + err.message));
+    const target = documents.find(d => d.document_id === id);
+    confirmDelete({
+      title: 'ยืนยันการลบเอกสารนี้?',
+      itemName: target?.document_no || 'เอกสาร',
+      itemSubtitle: target?.document_type || 'ประเภทเอกสาร',
+      warningText: 'เอกสารนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบเอกสาร',
+      onConfirm: () => {
+        fetch(`http://localhost:3000/api/document/${id}`, { method: 'DELETE' })
+          .then(res => res.json())
+          .then(data => {
+            notify.delete('ลบเอกสารสำเร็จ', data.message || 'ลบเอกสารเรียบร้อยแล้ว');
+            fetchData();
+          })
+          .catch(err => notify.error('ลบไม่สำเร็จ', err.message));
+      }
+    });
   };
 
   // ==========================================

@@ -19,6 +19,7 @@ import { createQuotation, updateQuotation, deleteQuotation, fetchCustomerList } 
 import QuotationPreview from './QuotationPreview';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 // =========================================================================
 // 🛠️ HELPER FUNCTIONS
@@ -73,6 +74,7 @@ const generateQuotationNo = (dateStr, documents = []) => {
 
 export default function QuotationForm({ customers: propCustomers = [], documents: propDocuments = [], fetchData, consigners = [], consignees = [], serviceTypes = [] }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
@@ -292,15 +294,29 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   };
 
   // Delete Handler
-  const handleDeleteQuotation = async (docId) => {
-    if (!confirm(lang === 'th' ? 'ยืนยันการลบเอกสารนี้?' : 'Are you sure you want to delete this document?')) return;
-    try {
-      await deleteQuotation(docId);
-      alert(lang === 'th' ? 'ลบเอกสารสำเร็จ' : 'Document deleted successfully');
-      if (fetchData) fetchData();
-    } catch (err) {
-      alert((lang === 'th' ? 'ลบไม่สำเร็จ: ' : 'Failed to delete: ') + err.message);
-    }
+  const handleDeleteQuotation = (doc) => {
+    const docId = typeof doc === 'object' ? doc.document_id : doc;
+    const docNo = typeof doc === 'object' ? doc.document_no : 'ใบเสนอราคา';
+    const custName = typeof doc === 'object' ? getCustomerName(doc.customer_id) : 'ลูกค้าทั่วไป';
+    const jobName = typeof doc === 'object' ? (doc.job_name || doc.project || '') : '';
+
+    confirmDelete({
+      title: 'ยืนยันการลบใบเสนอราคานี้?',
+      itemName: docNo || 'ใบเสนอราคา',
+      itemSubtitle: custName,
+      itemCode: jobName ? `โครงการ: ${jobName}` : '',
+      warningText: 'ข้อมูลใบเสนอราคาและรายการสินค้าทั้งหมดจะถูกลบและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบใบเสนอราคา',
+      onConfirm: async () => {
+        try {
+          await deleteQuotation(docId);
+          notify.delete('ลบใบเสนอราคาสำเร็จ', `นำใบเสนอราคาเลขที่ ${docNo || ''} ออกจากระบบเรียบร้อยแล้ว`);
+          if (fetchData) fetchData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // Preview Handler
@@ -311,7 +327,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
       setPreviewData({ doc, items: Array.isArray(items) ? items : [] });
     } catch (err) {
       console.error('Preview load error:', err);
-      alert((lang === 'th' ? 'โหลดข้อมูลพรีวิวไม่สำเร็จ: ' : 'Failed to load preview: ') + err.message);
+      notify.error('โหลดข้อมูลพรีวิวไม่สำเร็จ', err.message);
     }
   };
 
@@ -322,17 +338,17 @@ export default function QuotationForm({ customers: propCustomers = [], documents
     try {
       if (editingDocId) {
         await updateQuotation(editingDocId, { formData, routes, items, grandTotal });
-        alert(lang === 'th' ? 'แก้ไขใบเสนอราคาเรียบร้อยแล้ว!' : 'Quotation updated successfully!');
+        notify.edit('แก้ไขใบเสนอราคาสำเร็จ', `อัปเดตใบเสนอราคาเลขที่ ${formData.documentNo || ''} เรียบร้อยแล้ว`);
         setEditingDocId(null);
       } else {
         await createQuotation({ formData, routes, items, grandTotal });
-        alert(lang === 'th' ? 'สร้างใบเสนอราคาเรียบร้อยแล้ว!' : 'Quotation created successfully!');
+        notify.create('สร้างใบเสนอราคาสำเร็จ', `สร้างใบเสนอราคาเลขที่ ${formData.documentNo || ''} เรียบร้อยแล้ว`);
       }
       if (fetchData) fetchData();
       setViewMode('list');
     } catch (err) {
       console.error('Submit Quotation Error:', err);
-      alert((lang === 'th' ? 'เกิดข้อผิดพลาดในการบันทึก: ' : 'Error saving quotation: ') + err.message);
+      notify.error('เกิดข้อผิดพลาดในการบันทึก', err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -452,7 +468,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                               label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
-                              onClick: () => handleDeleteQuotation(doc.document_id)
+                              onClick: () => handleDeleteQuotation(doc)
                             }
                           ]}
                         />

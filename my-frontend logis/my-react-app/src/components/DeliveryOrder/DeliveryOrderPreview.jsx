@@ -122,6 +122,11 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
   const loadDateDisplay = lang === 'th' ? formatThaiDate(doc.date_of_load) : formatDate(doc.date_of_load);
   const etaDisplay = lang === 'th' ? formatThaiDate(doc.eta) : formatDate(doc.eta);
 
+  const hasCustomer = Boolean(
+    (doc.customer_name && doc.customer_name.trim() !== '' && doc.customer_name !== '-') ||
+    (doc.customer_address && doc.customer_address.trim() !== '' && doc.customer_address !== '-')
+  );
+
   return (
     <>
       {/* Dynamic print and preview helper styles */}
@@ -435,39 +440,43 @@ export default function DeliveryOrderPreview({ doc, onClose }) {
                   minHeight: '115px',
                   boxSizing: 'border-box'
                 }}>
-                  <div style={{
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    color: '#0f172a',
-                    marginBottom: '5px'
-                  }}>
-                    {t.box4Header}
-                  </div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
-                    {doc.customer_name || '-'}
-                  </div>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', color: '#475569' }}>
-                    <tbody>
-                      <tr>
-                        <td style={{ width: '65px', padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustTax}</td>
-                        <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#0f172a', fontWeight: '500' }}>
-                          {doc.customer_tax_id || doc.tax_id || '-'}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustAddress}</td>
-                        <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#334155', lineHeight: '1.4' }}>
-                          {customerAddress || '-'}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustContact}</td>
-                        <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#334155' }}>
-                          {[doc.customer_contact_person, doc.customer_phone].filter(Boolean).join(' · ') || doc.customer_phone || '-'}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {hasCustomer && (
+                    <>
+                      <div style={{
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: '#0f172a',
+                        marginBottom: '5px'
+                      }}>
+                        {t.box4Header}
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', marginBottom: '4px' }}>
+                        {doc.customer_name || '-'}
+                      </div>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10.5px', color: '#475569' }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ width: '65px', padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustTax}</td>
+                            <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#0f172a', fontWeight: '500' }}>
+                              {doc.customer_tax_id || doc.tax_id || '-'}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustAddress}</td>
+                            <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#334155', lineHeight: '1.4' }}>
+                              {customerAddress || '-'}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#64748b' }}>{t.labelCustContact}</td>
+                            <td style={{ padding: '1.5px 0', verticalAlign: 'top', color: '#334155' }}>
+                              {[doc.customer_contact_person, doc.customer_phone].filter(Boolean).join(' · ') || doc.customer_phone || '-'}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </>
+                  )}
                 </div>
               </div>
 

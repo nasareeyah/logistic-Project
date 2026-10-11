@@ -22,6 +22,7 @@ import {
 import ActionDropdown from '../Common/ActionDropdown';
 import DeliveryOrderPreview from './DeliveryOrderPreview';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 export default function DeliveryOrderTable({
   customers = [],
@@ -30,6 +31,7 @@ export default function DeliveryOrderTable({
   bookings = []
 }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
 
   // viewMode: 'table' | 'wizard' | 'summary'
   const [viewMode, setViewMode] = useState('table');
@@ -224,6 +226,7 @@ export default function DeliveryOrderTable({
   // Open Create Wizard
   const handleOpenCreateWizard = async () => {
     fetchBookingsList();
+    fetchDeliveryOrders();
     setEditingDoId(null);
     setSelectedBooking(null);
     setBookingSearchQuery('');
@@ -516,7 +519,7 @@ export default function DeliveryOrderTable({
         );
         setDeliveryOrders(updatedList);
         localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
-        alert('แก้ไข Delivery Order สำเร็จ');
+        notify.edit('แก้ไข Delivery Order สำเร็จ', `อัปเดตเอกสาร ${payload.do_no || ''} เรียบร้อยแล้ว`);
       } else {
         // Create
         let savedDo = null;
@@ -546,34 +549,46 @@ export default function DeliveryOrderTable({
         const updatedList = [savedDo, ...deliveryOrders.filter(d => (d.do_id || d.delivery_orders_id) !== (savedDo.do_id || savedDo.delivery_orders_id))];
         setDeliveryOrders(updatedList);
         localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
-        alert('สร้างเอกสาร Delivery Order สำเร็จ');
+        notify.create('สร้างเอกสาร Delivery Order สำเร็จ', `สร้างเอกสาร ${savedDo.do_no || ''} เรียบร้อยแล้ว`);
       }
 
       setViewMode('table');
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      notify.error('เกิดข้อผิดพลาด', err.message);
     } finally {
       setSaving(false);
     }
   };
 
   // Delete DO
-  const handleDeleteDo = async (id, doNo) => {
-    if (!confirm(`ยืนยันการลบ Delivery Order เลขที่ ${doNo}?`)) return;
+  const handleDeleteDo = (orderOrId, doNoFallback) => {
+    const id = typeof orderOrId === 'object' ? (orderOrId.do_id || orderOrId.delivery_orders_id) : orderOrId;
+    const doNo = typeof orderOrId === 'object' ? orderOrId.do_no : doNoFallback;
+    const target = typeof orderOrId === 'object' ? orderOrId : deliveryOrders.find(d => d.do_id === id || d.delivery_orders_id === id || d.do_no === doNo);
 
-    try {
-      await fetch(`http://localhost:3000/api/delivery-orders/${id || doNo}`, {
-        method: 'DELETE'
-      });
-      await fetchDeliveryOrders();
-    } catch {
-      // ignore
-    }
+    confirmDelete({
+      title: 'ยืนยันการลบ Delivery Order นี้?',
+      itemName: doNo || 'Delivery Order',
+      itemSubtitle: target?.customer_name || 'เอกสารใบสั่งจัดส่งสินค้า',
+      itemCode: target?.truck_number ? `ทะเบียน ${target.truck_number}` : '',
+      warningText: 'เอกสารใบสั่งจัดส่งสินค้าและประวัติการขนส่งนี้จะถูกลบทั้งหมดและไม่สามารถกู้คืนได้',
+      confirmText: 'ลบเอกสาร DO',
+      onConfirm: async () => {
+        try {
+          await fetch(`http://localhost:3000/api/delivery-orders/${id || doNo}`, {
+            method: 'DELETE'
+          });
+          await fetchDeliveryOrders();
+        } catch {
+          // ignore
+        }
 
-    const updatedList = deliveryOrders.filter((d) => d.do_id !== id && d.delivery_orders_id !== id && d.do_no !== doNo);
-    setDeliveryOrders(updatedList);
-    localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
-    setOpenMenuId(null);
+        const updatedList = deliveryOrders.filter((d) => d.do_id !== id && d.delivery_orders_id !== id && d.do_no !== doNo);
+        setDeliveryOrders(updatedList);
+        localStorage.setItem('local_delivery_orders_v2', JSON.stringify(updatedList));
+        notify.delete('ลบ Delivery Order สำเร็จ', `นำเอกสาร ${doNo || ''} ออกจากระบบเรียบร้อยแล้ว`);
+      }
+    });
   };
 
   // View Summary / Preview
@@ -588,7 +603,28 @@ export default function DeliveryOrderTable({
 
   // Filter Bookings in Step 1
   const effectiveBookings = bookingsList.length > 0 ? bookingsList : bookings;
-  const filteredBookings = effectiveBookings.filter((b) => {
+
+  // Filter out bookings that already have a delivery order created
+  const availableBookings = effectiveBookings.filter((b) => {
+    // If editing a DO, allow keeping the booking already linked to this DO
+    if (editingDoId && (formData.booking_id === b.booking_id || formData.booking_no === b.booking_no)) {
+      return true;
+    }
+
+    // Check if any DO in deliveryOrders is already linked to this booking
+    const alreadyHasDo = (Array.isArray(deliveryOrders) ? deliveryOrders : []).some((order) => {
+      if (editingDoId && (order.do_id === editingDoId || order.delivery_orders_id === editingDoId)) {
+        return false;
+      }
+      const matchId = order.booking_id && b.booking_id && String(order.booking_id) === String(b.booking_id);
+      const matchNo = order.booking_no && b.booking_no && String(order.booking_no).trim().toLowerCase() === String(b.booking_no).trim().toLowerCase();
+      return matchId || matchNo;
+    });
+
+    return !alreadyHasDo;
+  });
+
+  const filteredBookings = availableBookings.filter((b) => {
     const q = bookingSearchQuery.toLowerCase().trim();
     if (!q) return true;
     const no = (b.booking_no || '').toLowerCase();
@@ -1815,18 +1851,17 @@ export default function DeliveryOrderTable({
           <table className="custom-clean-table">
             <thead>
               <tr>
-                <th style={{ width: '18%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('doColNo', 'DO #')}</th>
-                <th style={{ width: '26%', whiteSpace: 'nowrap' }}>{t('doColCustomer', 'ลูกค้า (Customer)')}</th>
-                <th style={{ width: '22%', whiteSpace: 'nowrap' }}>{t('doColTruckDriver', 'รถ / พนักงานขับรถ')}</th>
-                <th style={{ width: '14%', whiteSpace: 'nowrap' }}>{t('doColLoadDate', 'วันที่รับสินค้า')}</th>
-                <th style={{ width: '12%', whiteSpace: 'nowrap' }}>{t('doColEta', 'กำหนดส่ง (ETA)')}</th>
-                <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('doColAction', 'จัดการ')}</th>
+                <th style={{ width: '22%', paddingLeft: '24px', whiteSpace: 'nowrap' }}>{t('doColNo', 'DO #')}</th>
+                <th style={{ width: '32%', whiteSpace: 'nowrap' }}>{t('doColTruckDriver', 'รถ / พนักงานขับรถ')}</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>{t('doColLoadDate', 'วันที่รับสินค้า')}</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>{t('doColEta', 'กำหนดส่ง (ETA)')}</th>
+                <th style={{ width: '10%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('doColAction', 'จัดการ')}</th>
               </tr>
             </thead>
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '32px', color: '#94a3b8' }}>
                     {t('doEmptyList', 'ยังไม่มีข้อมูลใบสั่งจัดส่งสินค้า (DO) คลิก "สร้างใบ DO ใหม่" เพื่อเริ่มต้น')}
                   </td>
                 </tr>
@@ -1851,11 +1886,6 @@ export default function DeliveryOrderTable({
                           <FileText size={15} />
                           {order.do_no}
                         </span>
-                      </td>
-
-                      {/* Customer */}
-                      <td style={{ color: '#1e293b', fontWeight: '500', whiteSpace: 'nowrap' }}>
-                        {order.customer_name || '-'}
                       </td>
 
                       {/* Truck (Plate on top, Driver underneath) */}
@@ -1894,7 +1924,7 @@ export default function DeliveryOrderTable({
                               label: t('actionDelete', 'ลบ'),
                               icon: <Trash2 size={16} className="menu-icon danger" />,
                               danger: true,
-                              onClick: () => handleDeleteDo(order.do_id, order.do_no)
+                              onClick: () => handleDeleteDo(order)
                             }
                           ]}
                         />

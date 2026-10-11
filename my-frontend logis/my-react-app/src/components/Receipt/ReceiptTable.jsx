@@ -29,6 +29,7 @@ import ReceiptPreview from './ReceiptPreview';
 import ActionDropdown from '../Common/ActionDropdown';
 import './ReceiptWizard.css';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const generateReceiptNo = (dateStr, receiptsList = []) => {
   let d = new Date();
@@ -53,6 +54,7 @@ const generateReceiptNo = (dateStr, receiptsList = []) => {
 
 export default function ReceiptTable({ customers = [], documents = [], fetchData }) {
   const { lang, t, tText, formatDateLocale } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [receipts, setReceipts] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [accounts, setAccounts] = useState([]);
@@ -331,7 +333,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!formData.customer_name && !formData.customer_id) {
-      alert('กรุณาระบุข้อมูลลูกค้าในขั้นตอนที่ 2 (Receipt Info)');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุข้อมูลลูกค้าในขั้นตอนที่ 2 (Receipt Info)');
       setCurrentStep(2);
       return;
     }
@@ -351,16 +353,16 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
       if (editingReceiptId) {
         await updateReceipt(editingReceiptId, payload);
-        alert('แก้ไขใบเสร็จรับเงินสำเร็จ');
+        notify.edit('แก้ไขใบเสร็จรับเงินสำเร็จ', `อัปเดตใบเสร็จรับเงินเลขที่ ${payload.receipt_no || ''} เรียบร้อยแล้ว`);
       } else {
         await createReceipt(payload);
-        alert('สร้างใบเสร็จรับเงินสำเร็จ');
+        notify.create('สร้างใบเสร็จรับเงินสำเร็จ', `สร้างใบเสร็จรับเงินเลขที่ ${payload.receipt_no || ''} เรียบร้อยแล้ว`);
       }
       setViewMode('list');
       await loadData();
       if (fetchData) fetchData();
     } catch (err) {
-      alert('เกิดข้อผิดพลาด: ' + err.message);
+      notify.error('เกิดข้อผิดพลาด', err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -415,7 +417,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
 
       setViewMode('wizard');
     } catch (err) {
-      alert('ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้: ' + err.message);
+      notify.error('ไม่สามารถดึงข้อมูลสำหรับแก้ไขได้', err.message);
     }
   };
 
@@ -430,16 +432,25 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
   };
 
   // Delete Receipt
-  const handleDelete = async (rc) => {
-    if (!window.confirm(`ยืนยันการลบใบเสร็จรับเงินเลขที่ ${rc.receipt_no}?`)) return;
-    try {
-      await deleteReceipt(rc.receipt_id);
-      alert('ลบใบเสร็จรับเงินสำเร็จ');
-      await loadData();
-      if (fetchData) fetchData();
-    } catch (err) {
-      alert('เกิดข้อผิดพลาดในการลบ: ' + err.message);
-    }
+  const handleDelete = (rc) => {
+    confirmDelete({
+      title: 'ยืนยันการลบใบเสร็จรับเงินนี้?',
+      itemName: rc.receipt_no || 'ใบเสร็จรับเงิน',
+      itemSubtitle: rc.customer_name || 'ลูกค้าทั่วไป',
+      itemCode: rc.invoice_no ? `อ้างอิงใบแจ้งหนี้ ${rc.invoice_no}` : '',
+      warningText: 'ข้อมูลใบเสร็จรับเงินและการบันทึกชำระเงินนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้',
+      confirmText: 'ลบใบเสร็จ',
+      onConfirm: async () => {
+        try {
+          await deleteReceipt(rc.receipt_id);
+          notify.delete('ลบใบเสร็จรับเงินสำเร็จ', `นำใบเสร็จเลขที่ ${rc.receipt_no || ''} ออกจากระบบเรียบร้อยแล้ว`);
+          await loadData();
+          if (fetchData) fetchData();
+        } catch (err) {
+          notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+        }
+      }
+    });
   };
 
   // Filter Receipts for List View
@@ -452,8 +463,26 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
     return rcNo.includes(q) || cust.includes(q) || invNo.includes(q);
   });
 
+  // Filter Invoices that don't have a receipt yet
+  const availableInvoices = invoices.filter(inv => {
+    // If currently editing a receipt, allow keeping the invoice that is already attached to this receipt
+    if (editingReceiptId && (formData.invoice_id === inv.invoice_id || formData.invoice_no === inv.invoice_no)) {
+      return true;
+    }
+
+    // Check if any receipt already links to this invoice
+    const isAlreadyReceipted = receipts.some(rc => {
+      if (editingReceiptId && rc.receipt_id === editingReceiptId) return false;
+      const matchId = rc.invoice_id && inv.invoice_id && String(rc.invoice_id) === String(inv.invoice_id);
+      const matchNo = rc.invoice_no && inv.invoice_no && String(rc.invoice_no).trim().toLowerCase() === String(inv.invoice_no).trim().toLowerCase();
+      return matchId || matchNo;
+    });
+
+    return !isAlreadyReceipted;
+  });
+
   // Filter Invoices for Step 1
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = availableInvoices.filter(inv => {
     const q = invoiceSearchQuery.toLowerCase().trim();
     if (!q) return true;
     const invNo = (inv.invoice_no || '').toLowerCase();
@@ -1033,7 +1062,7 @@ export default function ReceiptTable({ customers = [], documents = [], fetchData
                   className="receipt-btn-primary"
                   onClick={() => {
                     if (currentStep === 2 && !formData.customer_name) {
-                      alert(lang === 'th' ? 'กรุณากรอกชื่อบริษัทลูกค้าก่อนดำเนินการต่อ' : 'Please enter customer company name before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณากรอกชื่อบริษัทลูกค้าก่อนดำเนินการต่อ' : 'Please enter customer company name before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(4, prev + 1));

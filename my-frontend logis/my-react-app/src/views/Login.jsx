@@ -2,6 +2,7 @@ import { useState } from 'react';
 import backgroundImage from '../assets/background.jpg';
 import logoWhite from '../assets/logo-white.png';
 import { useLanguage } from '../context/LanguageContext';
+import { useNotification } from '../context/NotificationContext';
 import {
   Mail,
   Lock,
@@ -9,9 +10,6 @@ import {
   EyeOff,
   ArrowRight,
   Globe,
-  Truck,
-  Briefcase,
-  User,
   AlertCircle,
   CheckCircle2,
   Sparkles
@@ -19,11 +17,11 @@ import {
 
 function Login({ onLogin, loginError }) {
   const { lang, setLang, tText } = useLanguage();
+  const { notify } = useNotification();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [activeRole, setActiveRole] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
@@ -31,20 +29,6 @@ function Login({ onLogin, loginError }) {
     setIsSubmitting(true);
     onLogin(email, password);
     setTimeout(() => setIsSubmitting(false), 500);
-  };
-
-  const handleSelectRole = (roleKey) => {
-    setActiveRole(roleKey);
-    if (roleKey === 'operator') {
-      setEmail('operator@st-tran.com');
-      setPassword('St@2026!');
-    } else if (roleKey === 'accounting') {
-      setEmail('account@st-tran.com');
-      setPassword('St@2026!');
-    } else if (roleKey === 'employee') {
-      setEmail('employee@st-tran.com');
-      setPassword('St@2026!');
-    }
   };
 
   return (
@@ -143,40 +127,6 @@ function Login({ onLogin, loginError }) {
             </p>
           </div>
 
-          {/* Quick Demo Role Selector (Clean Compact Pills) */}
-          <div className="login-demo-section">
-            <span className="login-demo-title">
-              {tText('ทดสอบเข้าใช้งาน (Quick Demo):', 'Quick Demo Access:')}
-            </span>
-            <div className="login-demo-pills">
-              <button
-                type="button"
-                className={`login-demo-pill ${activeRole === 'operator' ? 'active' : ''}`}
-                onClick={() => handleSelectRole('operator')}
-              >
-                <Truck size={14} />
-                <span>Operator</span>
-              </button>
-
-              <button
-                type="button"
-                className={`login-demo-pill ${activeRole === 'accounting' ? 'active' : ''}`}
-                onClick={() => handleSelectRole('accounting')}
-              >
-                <Briefcase size={14} />
-                <span>Accounting</span>
-              </button>
-
-              <button
-                type="button"
-                className={`login-demo-pill ${activeRole === 'employee' ? 'active' : ''}`}
-                onClick={() => handleSelectRole('employee')}
-              >
-                <User size={14} />
-                <span>Employee</span>
-              </button>
-            </div>
-          </div>
 
           {/* Login Error Notification */}
           {loginError && (
@@ -257,7 +207,8 @@ function Login({ onLogin, loginError }) {
                 className="login-forgot-link"
                 onClick={(e) => {
                   e.preventDefault();
-                  alert(
+                  notify.info(
+                    tText('ลืมรหัสผ่าน', 'Forgot Password'),
                     tText(
                       'กรุณาติดต่อผู้ดูแลระบบเพื่อรีเซ็ตรหัสผ่าน (support@st-tran.com)',
                       'Please contact system administrator to reset password (support@st-tran.com)'

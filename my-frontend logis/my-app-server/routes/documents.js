@@ -42,12 +42,8 @@ router.post('/document', checkFinancialPermission, async (req, res) => {
         document_type,
         document_no,
         document_date,
-        account_no,
         customer_id,
-        st_no, st_date,
-        re_no, re_date,
-        withholding_percent, withholding_amount,
-        grand_total, net_total, total_amount,
+        grand_total, total_amount,
         remark,
         consigner_id, consignee_id,
         service_id,
@@ -92,20 +88,14 @@ router.post('/document', checkFinancialPermission, async (req, res) => {
         const sql = `
             INSERT INTO document (
                 document_id, document_type, document_no, document_date,
-                account_no, customer_id,
-                st_no, st_date, re_no, re_date,
-                withholding_percent, withholding_amount,
-                grand_total, net_total, remark,
+                customer_id, grand_total, remark,
                 consigner_id, consignee_id, service_id,
                 sale_name, job_name, valid_until, currency
             ) VALUES (
                 $1, $2, $3, $4,
-                $5, $6,
-                $7, $8, $9, $10,
-                $11, $12,
-                $13, $14, $15,
-                $16, $17, $18,
-                $19, $20, $21, $22
+                $5, $6, $7,
+                $8, $9, $10,
+                $11, $12, $13, $14
             )
         `;
         await db.query(sql, [
@@ -113,17 +103,16 @@ router.post('/document', checkFinancialPermission, async (req, res) => {
             document_type || null,
             document_no || null,
             document_date || null,
-            account_no || null,
             customer_id || null,
-            st_no || null, st_date || null,
-            re_no || null, re_date || null,
-            withholding_percent || null, withholding_amount || null,
-            finalGrandTotal, net_total || null,
+            finalGrandTotal,
             remark || null,
-            consigner_id || null, consignee_id || null,
+            consigner_id || null,
+            consignee_id || null,
             resolvedServiceId,
-            sale_name || null, job_name || null,
-            valid_until || null, currency || 'THB'
+            sale_name || null,
+            job_name || null,
+            valid_until || null,
+            currency || 'THB'
         ]);
 
         res.json({ message: 'บันทึกเอกสารสำเร็จ', data: { document_id: finalDocId } });
@@ -137,33 +126,25 @@ router.put('/document/:id', checkFinancialPermission, async (req, res) => {
     try {
         const {
             document_type, document_no, document_date,
-            account_no, customer_id,
-            st_no, st_date, re_no, re_date,
-            withholding_percent, withholding_amount,
-            grand_total, net_total, remark,
+            customer_id, grand_total, total_amount, remark,
             consigner_id, consignee_id, service_id,
             sale_name, job_name, valid_until, currency
         } = req.body;
 
+        const finalGrandTotal = grand_total || total_amount || null;
         const sql = `
             UPDATE document SET
                 document_type=$1, document_no=$2, document_date=$3,
-                account_no=$4, customer_id=$5,
-                st_no=$6, st_date=$7, re_no=$8, re_date=$9,
-                withholding_percent=$10, withholding_amount=$11,
-                grand_total=$12, net_total=$13, remark=$14,
-                consigner_id=$15, consignee_id=$16, service_id=$17,
-                sale_name=$18, job_name=$19, valid_until=$20, currency=$21
-            WHERE document_id=$22
+                customer_id=$4, grand_total=$5, remark=$6,
+                consigner_id=$7, consignee_id=$8, service_id=$9,
+                sale_name=$10, job_name=$11, valid_until=$12, currency=$13
+            WHERE document_id=$14
         `;
         await db.query(sql, [
             document_type, document_no, document_date,
-            account_no, customer_id,
-            st_no, st_date, re_no, re_date,
-            withholding_percent, withholding_amount,
-            grand_total, net_total, remark,
+            customer_id, finalGrandTotal, remark,
             consigner_id, consignee_id, service_id,
-            sale_name, job_name, valid_until, currency,
+            sale_name, job_name, valid_until, currency || 'THB',
             req.params.id
         ]);
         res.json({ message: 'แก้ไขเอกสารสำเร็จ' });

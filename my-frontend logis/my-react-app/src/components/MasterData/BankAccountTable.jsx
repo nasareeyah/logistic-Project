@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 const COMMON_BANKS = [
   'ธนาคารกสิกรไทย (Kasikornbank)',
@@ -25,6 +26,7 @@ const COMMON_BANKS = [
 
 function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete, fetchData }) {
   const { lang, t, tText } = useLanguage();
+  const { notify, confirmDelete } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -70,15 +72,15 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.bank_name.trim()) {
-      alert('กรุณาระบุชื่อธนาคาร');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุชื่อธนาคาร');
       return;
     }
     if (!formData.account_no.trim()) {
-      alert('กรุณากรอกเลขที่บัญชี');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกเลขที่บัญชี');
       return;
     }
     if (!formData.account_name.trim()) {
-      alert('กรุณากรอกชื่อบัญชี');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อบัญชี');
       return;
     }
 
@@ -98,7 +100,7 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'เพิ่มบัญชีไม่สำเร็จ');
-          alert('เพิ่มบัญชีธนาคารสำเร็จ');
+          notify.create('เพิ่มบัญชีธนาคารสำเร็จ', 'บันทึกข้อมูลบัญชีธนาคารใหม่เรียบร้อยแล้ว');
           closeModal();
           if (fetchData) fetchData();
         }
@@ -116,37 +118,43 @@ function BankAccountTable({ accounts = [], banks = [], onAdd, onUpdate, onDelete
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'แก้ไขบัญชีไม่สำเร็จ');
-          alert('แก้ไขบัญชีธนาคารสำเร็จ');
+          notify.edit('แก้ไขบัญชีสำเร็จ', 'อัปเดตข้อมูลบัญชีธนาคารเรียบร้อยแล้ว');
           closeModal();
           if (fetchData) fetchData();
         }
       }
     } catch (err) {
-      alert(err.message);
+      notify.error('เกิดข้อผิดพลาด', err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (acc) => {
-    if (!window.confirm(`ยืนยันการลบบัญชีเลขที่ ${acc.account_no} (${acc.bank_name || 'ธนาคาร'}) ใช่หรือไม่?`)) {
-      return;
-    }
-
+  const handleDelete = (acc) => {
     if (onDelete) {
       onDelete(acc.account_no);
     } else {
-      try {
-        const res = await fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(acc.account_no)}`, {
-          method: 'DELETE'
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'ลบไม่สำเร็จ');
-        alert('ลบบัญชีสำเร็จ');
-        if (fetchData) fetchData();
-      } catch (err) {
-        alert(err.message);
-      }
+      confirmDelete({
+        title: 'ยืนยันการลบบัญชีธนาคารนี้?',
+        itemName: acc.account_name || 'บัญชีธนาคาร',
+        itemSubtitle: acc.bank_name || 'ธนาคาร',
+        itemCode: acc.account_no ? `เลขที่ ${acc.account_no}` : '',
+        warningText: 'บัญชีธนาคารนี้จะถูกลบออกจากระบบและไม่สามารถกู้คืนได้',
+        confirmText: 'ลบบัญชี',
+        onConfirm: async () => {
+          try {
+            const res = await fetch(`http://localhost:3000/api/accounts/${encodeURIComponent(acc.account_no)}`, {
+              method: 'DELETE'
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'ลบไม่สำเร็จ');
+            notify.delete('ลบบัญชีสำเร็จ', 'ลบบัญชีธนาคารเรียบร้อยแล้ว');
+            if (fetchData) fetchData();
+          } catch (err) {
+            notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
+          }
+        }
+      });
     }
   };
 

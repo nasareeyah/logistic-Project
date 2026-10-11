@@ -12,9 +12,11 @@ import {
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
+import { useNotification } from '../../context/NotificationContext';
 
 function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
   const { lang, t, tText } = useLanguage();
+  const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
@@ -32,7 +34,7 @@ function DriverTable({ drivers, cars, onAdd, onUpdate, onDelete }) {
   const handleCreateOrSave = (e) => {
     e.preventDefault();
     if (!formData.full_name) {
-      alert('กรุณากรอกชื่อคนขับ');
+      notify.error('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อคนขับ');
       return;
     }
 
