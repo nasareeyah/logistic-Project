@@ -17,13 +17,14 @@ import {
   File,
   MoreVertical,
   Edit,
-  Inbox
+  Inbox,
+  Truck
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
 import { useNotification } from '../../context/NotificationContext';
 
-function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] }) {
+function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [], bookings = [], deliveryOrders = [] }) {
   const { lang, t, tText } = useLanguage();
   const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,6 +243,26 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
     ? customers.find(c => String(c.customer_id) === String(selectedCustomerId))
     : null;
 
+  const customerBookings = selectedCustomer && Array.isArray(bookings)
+    ? bookings.filter(b => {
+        const cId = selectedCustomer.customer_id ? String(selectedCustomer.customer_id).trim() : '';
+        const cName = selectedCustomer.customer_name ? String(selectedCustomer.customer_name).trim().toLowerCase() : '';
+        const matchId = cId && b.customer_id && String(b.customer_id).trim() === cId;
+        const matchName = cName && b.customer_name && String(b.customer_name).trim().toLowerCase() === cName;
+        return matchId || matchName;
+      })
+    : [];
+
+  const customerDos = selectedCustomer && Array.isArray(deliveryOrders)
+    ? deliveryOrders.filter(d => {
+        const cId = selectedCustomer.customer_id ? String(selectedCustomer.customer_id).trim() : '';
+        const cName = selectedCustomer.customer_name ? String(selectedCustomer.customer_name).trim().toLowerCase() : '';
+        const matchId = cId && d.customer_id && String(d.customer_id).trim() === cId;
+        const matchName = cName && d.customer_name && String(d.customer_name).trim().toLowerCase() === cName;
+        return matchId || matchName;
+      })
+    : [];
+
   const quotationsCount = selectedCustomer && Array.isArray(documents)
     ? documents.filter(doc => String(doc.customer_id) === String(selectedCustomer.customer_id) && doc.document_type === 'Quotation').length
     : 0;
@@ -356,20 +377,116 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
             <div style={{ backgroundColor: '#eff6ff', color: '#3b82f6', borderRadius: '50%', padding: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FileText size={24} />
             </div>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#1e3a8a', lineHeight: '1' }}>0</div>
-            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '500', marginTop: '8px' }}>{tText('รายการจองรถ (Bookings)', 'Bookings')}</div>
+            <div style={{ fontSize: '36px', fontWeight: '800', color: '#1e3a8a', lineHeight: '1' }}>{customerBookings.length}</div>
+            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginTop: '8px' }}>{tText('รายการจองรถ (Bookings)', 'Bookings')}</div>
+            {customerDos.length > 0 && (
+              <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500', marginTop: '6px', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>
+                {customerDos.length} {tText('ใบส่งสินค้า (DO)', 'Delivery Orders')}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Booking History Panel */}
         <div className="dashboard-card-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>{tText('ประวัติการจองรถ', 'Booking History')}</h3>
-            <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>0 {tText('รายการ', 'records')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Truck size={18} color="#0284c7" />
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>{tText('ประวัติการจองรถ', 'Booking History')}</h3>
+            </div>
+            <span style={{ fontSize: '13px', color: '#0284c7', fontWeight: '600', backgroundColor: '#f0f9ff', padding: '4px 12px', borderRadius: '20px' }}>
+              {customerBookings.length} {tText('รายการ', 'records')}
+            </span>
           </div>
-          <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
-            {tText('ยังไม่มีประวัติการจองสำหรับลูกค้ารายนี้', 'No bookings for this customer yet.')}
-          </div>
+
+          {customerBookings.length === 0 ? (
+            <div style={{ padding: '40px 0', textAlign: 'center', color: '#94a3b8', fontSize: '14px' }}>
+              <Inbox size={36} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
+              <div>{tText('ยังไม่มีประวัติการจองสำหรับลูกค้ารายนี้', 'No bookings for this customer yet.')}</div>
+            </div>
+          ) : (
+            <div className="table-responsive-wrapper" style={{ marginTop: '8px' }}>
+              <table className="custom-clean-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '16%', paddingLeft: '20px', whiteSpace: 'nowrap' }}>{tText('เลขที่ Booking', 'Booking #')}</th>
+                    <th style={{ width: '22%', whiteSpace: 'nowrap' }}>{tText('บริการขนส่ง', 'Service')}</th>
+                    <th style={{ width: '22%', whiteSpace: 'nowrap' }}>{tText('เส้นทาง (ต้นทาง - ปลายทาง)', 'Route')}</th>
+                    <th style={{ width: '16%', whiteSpace: 'nowrap' }}>{tText('วันรับ - ส่งของ', 'Pickup - Delivery')}</th>
+                    <th style={{ width: '14%', whiteSpace: 'nowrap' }}>{tText('รถขนส่ง', 'Truck')}</th>
+                    <th style={{ width: '10%', textAlign: 'center', paddingRight: '20px', whiteSpace: 'nowrap' }}>{tText('เอกสาร DO', 'DO File')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customerBookings.map((b) => {
+                    const origin = b.consigner_province || b.consigner_city || b.origin || '-';
+                    const destination = b.consignee_province || b.consignee_city || b.destination || '-';
+                    const serviceName = b.service_name || b.service_typename || b.service_items?.[0]?.description || '-';
+                    const truckDisplay = b.car_number || b.truck_name || '-';
+                    const doCount = (b.do_files?.length || 0);
+
+                    const formatDate = (d) => {
+                      if (!d) return '-';
+                      try {
+                        const date = new Date(d);
+                        return date.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: '2-digit'
+                        });
+                      } catch (e) {
+                        return String(d).slice(0, 10);
+                      }
+                    };
+
+                    return (
+                      <tr key={b.booking_id}>
+                        <td style={{ paddingLeft: '20px', fontWeight: '700', color: '#0284c7', whiteSpace: 'nowrap' }}>
+                          {b.booking_no || b.booking_id}
+                        </td>
+                        <td style={{ color: '#1e293b', fontWeight: '500' }}>
+                          {serviceName}
+                        </td>
+                        <td style={{ color: '#475569', fontSize: '13px' }}>
+                          <span style={{ fontWeight: '500', color: '#1e293b' }}>{origin}</span>
+                          <span style={{ margin: '0 6px', color: '#94a3b8' }}>➔</span>
+                          <span style={{ fontWeight: '500', color: '#1e293b' }}>{destination}</span>
+                        </td>
+                        <td style={{ color: '#64748b', fontSize: '13px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span style={{ color: '#334155' }}>รับ: {formatDate(b.pickup_date)}</span>
+                            <span style={{ color: '#64748b', fontSize: '12px' }}>ส่ง: {formatDate(b.delivery_date)}</span>
+                          </div>
+                        </td>
+                        <td style={{ color: '#334155', fontSize: '13px' }}>
+                          {truckDisplay}
+                        </td>
+                        <td style={{ textAlign: 'center', paddingRight: '20px' }}>
+                          {doCount > 0 ? (
+                            <span style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              backgroundColor: '#ecfdf5',
+                              color: '#059669',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              padding: '2px 8px',
+                              borderRadius: '9999px'
+                            }}>
+                              ✓ {doCount} {tText('ไฟล์', 'files')}
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Modal Dialog inside detail view so Edit modal still works */}

@@ -10,13 +10,16 @@ import {
   Package,
   MoreVertical,
   Edit,
-  ArrowLeft
+  ArrowLeft,
+  Calendar,
+  MapPin,
+  User
 } from 'lucide-react';
 import ActionDropdown from '../Common/ActionDropdown';
 import { useLanguage } from '../../context/LanguageContext';
 import { useNotification } from '../../context/NotificationContext';
 
-function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
+function CarTable({ cars, drivers, onAdd, onUpdate, onDelete, bookings = [] }) {
   const { lang, t, tText } = useLanguage();
   const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState('');
@@ -114,6 +117,19 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
   };
 
   const selectedCar = Array.isArray(cars) ? cars.find(c => c.car_id === selectedCarId) : null;
+
+  const truckJobs = selectedCar && Array.isArray(bookings)
+    ? bookings.filter(b => {
+        const cId = selectedCar.car_id ? String(selectedCar.car_id).trim() : '';
+        const cNum = selectedCar.car_number ? String(selectedCar.car_number).trim().toLowerCase() : '';
+        const matchId = cId && b.car_id && String(b.car_id).trim() === cId;
+        const matchNum = cNum && (
+          (b.car_number && String(b.car_number).trim().toLowerCase() === cNum) ||
+          (b.truck_name && String(b.truck_name).toLowerCase().includes(cNum))
+        );
+        return matchId || matchNum;
+      })
+    : [];
 
   // ============================================================
   // RENDER DETAIL VIEW
@@ -243,26 +259,110 @@ function CarTable({ cars, drivers, onAdd, onUpdate, onDelete }) {
             display: 'flex',
             flexDirection: 'column'
           }}>
-            <div style={{ paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#0f172a', textAlign: 'left' }}>
-                {tText('ประวัติการวิ่งงาน', 'Job History')} (0)
+                {tText('ประวัติการวิ่งงาน', 'Job History')} ({truckJobs.length})
               </h3>
+              {truckJobs.length > 0 && (
+                <span style={{ fontSize: '12px', color: '#0284c7', fontWeight: '600', backgroundColor: '#f0f9ff', padding: '3px 10px', borderRadius: '12px' }}>
+                  {truckJobs.length} {tText('งาน', 'jobs')}
+                </span>
+              )}
             </div>
 
-            <div style={{
-              textAlign: 'center',
-              padding: '20px 24px 40px 24px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flex: 1
-            }}>
-              <Package size={48} strokeWidth={1.4} color="#cbd5e1" style={{ marginBottom: '14px' }} />
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '400' }}>
-                {tText('ยังไม่มีประวัติการวิ่งงานสำหรับรถคันนี้', 'No jobs assigned to this truck yet.')}
-              </p>
-            </div>
+            {truckJobs.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '20px 24px 40px 24px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1
+              }}>
+                <Package size={48} strokeWidth={1.4} color="#cbd5e1" style={{ marginBottom: '14px' }} />
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b', fontWeight: '400' }}>
+                  {tText('ยังไม่มีประวัติการวิ่งงานสำหรับรถคันนี้', 'No jobs assigned to this truck yet.')}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '520px', overflowY: 'auto', paddingRight: '4px' }}>
+                {truckJobs.map((job) => {
+                  const serviceName = job.service_name || job.service_typename || job.service_items?.[0]?.description || tText('บริการขนส่ง', 'Freight Transport');
+                  const origin = job.consigner_province || job.consigner_city || job.origin || '-';
+                  const destination = job.consignee_province || job.consignee_city || job.destination || '-';
+
+                  const formatDate = (d) => {
+                    if (!d) return '-';
+                    try {
+                      return new Date(d).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: '2-digit'
+                      });
+                    } catch (e) {
+                      return String(d).slice(0, 10);
+                    }
+                  };
+
+                  const pickupDate = formatDate(job.pickup_date);
+                  const deliveryDate = formatDate(job.delivery_date);
+                  const dateText = pickupDate !== '-' && deliveryDate !== '-'
+                    ? `${pickupDate} – ${deliveryDate}`
+                    : (pickupDate !== '-' ? pickupDate : deliveryDate);
+
+                  return (
+                    <div
+                      key={job.booking_id}
+                      style={{
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        border: '1px solid #e2e8f0',
+                        padding: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {/* Booking # & Date Badge */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontWeight: '700', fontSize: '0.95rem', color: '#0284c7' }}>
+                          {job.booking_no || job.booking_id}
+                        </span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#475569', backgroundColor: '#ffffff', padding: '4px 10px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                          <Calendar size={13} color="#64748b" />
+                          <span>{dateText}</span>
+                        </div>
+                      </div>
+
+                      {/* Job Description & Customer */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ fontSize: '0.9rem', fontWeight: '600', color: '#1e293b' }}>
+                          {serviceName}
+                        </div>
+                        {job.customer_name && (
+                          <div style={{ fontSize: '0.825rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <User size={13} color="#94a3b8" />
+                            <span>{job.customer_name}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Route */}
+                      {(origin !== '-' || destination !== '-') && (
+                        <div style={{ fontSize: '0.825rem', color: '#475569', backgroundColor: '#ffffff', padding: '6px 10px', borderRadius: '6px', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <MapPin size={13} color="#0284c7" />
+                          <span>{origin}</span>
+                          <span style={{ color: '#94a3b8' }}>➔</span>
+                          <span>{destination}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

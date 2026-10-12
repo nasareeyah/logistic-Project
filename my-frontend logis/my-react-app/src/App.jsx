@@ -527,7 +527,17 @@ function App() {
               setActiveTab={setActiveTab}
             />
           )}
-          {activeTab === 'customers' && <CustomerTable customers={customers} onAdd={handleAddCustomer} onUpdate={handleSaveCustomerEdit} onDelete={handleDeleteCustomer} documents={documents} />}
+          {activeTab === 'customers' && (
+            <CustomerTable
+              customers={customers}
+              onAdd={handleAddCustomer}
+              onUpdate={handleSaveCustomerEdit}
+              onDelete={handleDeleteCustomer}
+              documents={documents}
+              bookings={bookings}
+              deliveryOrders={deliveryOrders}
+            />
+          )}
           {activeTab === 'trucks' && (
             <CarTable
               cars={cars}
@@ -535,6 +545,7 @@ function App() {
               onAdd={handleAddCar}
               onUpdate={handleSaveCarEdit}
               onDelete={handleDeleteCar}
+              bookings={bookings}
             />
           )}
           {activeTab === 'driver' && (
