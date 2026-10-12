@@ -19,7 +19,7 @@ export const globalTranslations = {
 
     // Sidebar Items
     menuDashboard: 'แดชบอร์ด',
-    menuBooking: 'การจองรถ (Booking)',
+    menuBooking: 'การจอง',
     menuDocCenter: 'ศูนย์รวมเอกสาร',
     menuQuotation: 'ใบเสนอราคา (Quotation)',
     menuInvoice: 'ใบแจ้งหนี้ (Invoice)',
@@ -100,7 +100,7 @@ export const globalTranslations = {
     doEditSuccess: 'แก้ไข Delivery Order สำเร็จ',
 
     // Booking Module
-    bookingPageTitle: 'การจองรถขนส่ง (Booking)',
+    bookingPageTitle: 'การจอง',
     bookingPageSubtitle: 'จัดการรายการจองรถขนส่ง ตารางงาน และสถานะการจัดส่ง',
     bookingCreateBtn: 'สร้าง Booking ใหม่',
     bookingSearchPlaceholder: 'ค้นหาตามเลขที่ Booking, ลูกค้า, พนักงานขับรถ...',

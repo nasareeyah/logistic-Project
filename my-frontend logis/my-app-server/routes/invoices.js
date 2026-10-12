@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
+const { syncDocumentRegistry, removeDocumentRegistry } = require('../utils/documentRegistry');
 
 // GET all invoices
 router.get('/invoices', async (req, res) => {
@@ -13,7 +14,7 @@ router.get('/invoices', async (req, res) => {
                 c.address AS customer_address,
                 c.phone AS customer_phone,
                 b.booking_no,
-                qd.document_no AS quotation_no,
+                qd.quotation_no,
                 a.account_name,
                 a.bank_branch,
                 bnk.bank_name,
@@ -21,11 +22,11 @@ router.get('/invoices', async (req, res) => {
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
             LEFT JOIN bookings b ON i.booking_id = b.booking_id
-            LEFT JOIN document qd ON i.quotation_id = qd.document_id
+            LEFT JOIN quotations qd ON (i.quotation_id = qd.quotation_id OR i.quotation_id = qd.quotation_no)
             LEFT JOIN account a ON i.account_no = a.account_no
             LEFT JOIN bank bnk ON a.bank_id = bnk.bank_id
             LEFT JOIN invoice_items ii ON i.invoice_id = ii.invoice_id
-            GROUP BY i.invoice_id, c.customer_name, c.address, c.phone, b.booking_no, qd.document_no, a.account_name, a.bank_branch, bnk.bank_name
+            GROUP BY i.invoice_id, c.customer_name, c.address, c.phone, b.booking_no, qd.quotation_no, a.account_name, a.bank_branch, bnk.bank_name
             ORDER BY i.created_at DESC, i.invoice_no DESC;
         `;
         const result = await db.query(sql);
@@ -37,7 +38,7 @@ router.get('/invoices', async (req, res) => {
 });
 
 // GET bookings eligible for invoice (have DO attached or DO created)
-router.get('/invoices-eligible-bookings', async (req, res) => {
+router.get(['/invoices-eligible-bookings', '/invoices/eligible-bookings'], async (req, res) => {
     try {
         const sql = `
             SELECT 
@@ -55,8 +56,8 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
                 COALESCE(s.quantity, qs.quantity, cust_qs.quantity, 1) AS service_qty,
                 COALESCE(s.unit_quantity, qs.unit_quantity, cust_qs.unit_quantity, 'คันรถ') AS unit_quantity,
                 COALESCE(b.quotation_id, cust_qd.document_id) AS quotation_id,
-                COALESCE(qd.document_no, cust_qd.document_no) AS quotation_no,
-                COALESCE(d.do_no, (SELECT bdf.file_name FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id LIMIT 1), (SELECT ba.file_name FROM booking_attachments ba WHERE ba.booking_id = b.booking_id LIMIT 1)) AS do_no,
+                COALESCE(qd.quotation_no, cust_qd.document_no) AS quotation_no,
+                COALESCE(d.do_no, (SELECT bdf.file_name FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id LIMIT 1)) AS do_no,
                 (
                     SELECT STRING_AGG(DISTINCT bc.product_name, ', ')
                     FROM booking_cargo bc
@@ -67,14 +68,14 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
             LEFT JOIN customers c ON b.customer_id = c.customer_id
             LEFT JOIN service s ON b.service_id = s.service_id
             LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
-            LEFT JOIN document qd ON b.quotation_id = qd.document_id
+            LEFT JOIN quotations qd ON (b.quotation_id = qd.quotation_id OR b.quotation_id = qd.quotation_no)
             LEFT JOIN service qs ON qd.service_id = qs.service_id
-            LEFT JOIN service_type qst ON qs.service_typeid = qst.service_typeid
+            LEFT JOIN service_type qst ON qst.service_typeid = qs.service_typeid
             LEFT JOIN LATERAL (
-                SELECT d2.document_id, d2.document_no, d2.service_id
-                FROM document d2
-                WHERE d2.customer_id = b.customer_id AND d2.document_type = 'Quotation'
-                ORDER BY d2.document_date DESC NULLS LAST
+                SELECT q2.quotation_id AS document_id, q2.quotation_no AS document_no, q2.service_id
+                FROM quotations q2
+                WHERE q2.customer_id = b.customer_id
+                ORDER BY q2.quotation_date DESC NULLS LAST
                 LIMIT 1
             ) cust_qd ON true
             LEFT JOIN service cust_qs ON cust_qd.service_id = cust_qs.service_id
@@ -82,8 +83,6 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
             LEFT JOIN delivery_orders d ON d.booking_id = b.booking_id
             WHERE EXISTS (
                 SELECT 1 FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id
-            ) OR EXISTS (
-                SELECT 1 FROM booking_attachments ba WHERE ba.booking_id = b.booking_id AND (ba.file_name ILIKE '%do%' OR ba.original_name ILIKE '%do%')
             ) OR d.do_no IS NOT NULL
             ORDER BY b.created_at DESC;
         `;
@@ -104,27 +103,29 @@ router.get('/invoices-eligible-bookings', async (req, res) => {
             });
         });
 
-        const docItemsRes = await db.query(`
-            SELECT di.*, d.document_id 
-            FROM document_items di 
-            JOIN document d ON di.document_id = d.document_id
+        const qItemsRes = await db.query(`
+            SELECT qi.*, q.quotation_id 
+            FROM quotation_items qi 
+            JOIN quotations q ON qi.quotation_id = q.quotation_id
         `);
-        const docItemsMap = {};
-        docItemsRes.rows.forEach(di => {
-            if (!docItemsMap[di.document_id]) docItemsMap[di.document_id] = [];
-            docItemsMap[di.document_id].push({
-                booking_service_id: di.document_items_id,
-                service_id: di.service_id,
-                description: di.description || 'บริการขนส่ง',
-                quantity: parseFloat(di.item_quantity) || 1,
-                unit: di.unit || 'คัน',
-                unit_price: parseFloat(di.unit_price) || 0,
-                total_amount: (parseFloat(di.item_quantity) || 1) * (parseFloat(di.unit_price) || 0)
+        const qItemsMap = {};
+        qItemsRes.rows.forEach(qi => {
+            if (!qItemsMap[qi.quotation_id]) qItemsMap[qi.quotation_id] = [];
+            qItemsMap[qi.quotation_id].push({
+                booking_service_id: qi.item_id,
+                service_id: null,
+                description: qi.description || qi.service_type || 'บริการขนส่ง',
+                quantity: parseFloat(qi.quantity) || 1,
+                unit: qi.unit_quantity || 'คัน',
+                unit_price: parseFloat(qi.unit_price) || 0,
+                total_amount: parseFloat(qi.total_amount) || ((parseFloat(qi.quantity) || 1) * (parseFloat(qi.unit_price) || 0))
             });
         });
 
         const rows = result.rows.map(b => {
-            const bServices = bsMap[b.booking_id] || (b.quotation_id ? docItemsMap[b.quotation_id] : []) || [];
+            const bServices = (bsMap[b.booking_id] && bsMap[b.booking_id].length > 0)
+                ? bsMap[b.booking_id]
+                : (b.quotation_id ? (qItemsMap[b.quotation_id] || []) : []);
             return {
                 ...b,
                 service_items: bServices
@@ -149,7 +150,7 @@ router.get('/invoices/:id', async (req, res) => {
                 c.phone AS customer_phone,
                 c.email AS customer_email,
                 b.booking_no,
-                qd.document_no AS quotation_no,
+                qd.quotation_no,
                 a.account_name,
                 a.bank_branch,
                 bnk.bank_id,
@@ -157,7 +158,7 @@ router.get('/invoices/:id', async (req, res) => {
             FROM invoices i
             LEFT JOIN customers c ON i.customer_id = c.customer_id
             LEFT JOIN bookings b ON i.booking_id = b.booking_id
-            LEFT JOIN document qd ON i.quotation_id = qd.document_id
+            LEFT JOIN quotations qd ON (i.quotation_id = qd.quotation_id OR i.quotation_id = qd.quotation_no)
             LEFT JOIN account a ON i.account_no = a.account_no
             LEFT JOIN bank bnk ON a.bank_id = bnk.bank_id
             WHERE i.invoice_id = $1 OR i.invoice_no = $1
@@ -335,6 +336,19 @@ router.post('/invoices', async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'Invoice',
+            refId: invId,
+            documentNo: finalInvoiceNo,
+            customerId: customer_id || null,
+            documentDate: invoice_date || new Date().toISOString().slice(0, 10),
+            grandTotal: totalAmount,
+            status: 'Active',
+            remark: remark || null
+        });
+
         res.json({
             message: 'สร้างใบแจ้งหนี้สำเร็จ',
             data: { invoice_id: invId, invoice_no: finalInvoiceNo, total_amount: totalAmount }
@@ -448,6 +462,19 @@ router.put('/invoices/:id', async (req, res) => {
         }
 
         await client.query('COMMIT');
+
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'Invoice',
+            refId: invId,
+            documentNo: invoice_no || invId,
+            customerId: customer_id || null,
+            documentDate: invoice_date || null,
+            grandTotal: totalAmount,
+            status: 'Active',
+            remark: remark || null
+        });
+
         res.json({ message: 'แก้ไขใบแจ้งหนี้สำเร็จ' });
     } catch (err) {
         await client.query('ROLLBACK');
@@ -466,6 +493,7 @@ router.delete('/invoices/:id', async (req, res) => {
         if (result.rowCount === 0) {
             return res.status(404).json({ error: 'ไม่พบใบแจ้งหนี้ที่ต้องการลบ' });
         }
+        await removeDocumentRegistry(req.params.id);
         res.json({ message: 'ลบใบแจ้งหนี้สำเร็จ' });
     } catch (err) {
         console.error('Error deleting invoice:', err);

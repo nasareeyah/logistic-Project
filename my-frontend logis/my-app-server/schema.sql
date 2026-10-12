@@ -30,13 +30,7 @@ CREATE TABLE cars (
 );
 
 
--- 5. status
-CREATE TABLE status (
-  status_id VARCHAR(10) PRIMARY KEY,
-  status_name VARCHAR(100)
-);
-
--- 6. driver
+-- 5. driver
 CREATE TABLE driver (
   driver_id VARCHAR(10) PRIMARY KEY,
   full_name VARCHAR(100),
@@ -113,35 +107,64 @@ CREATE TABLE service (
     FOREIGN KEY (service_typeID) REFERENCES service_type(service_typeID)
 );
 
--- 13. document
+-- 13. document (Central Document Registry / ทะเบียนเอกสารกลาง)
 CREATE TABLE document (
-  document_id VARCHAR(10) PRIMARY KEY,
-  document_type VARCHAR(50),
-  document_no VARCHAR(50),
+  document_id VARCHAR(50) PRIMARY KEY,
+  document_type VARCHAR(50) NOT NULL, -- Quotation, Invoice, Receipt, DeliveryOrder, Booking
+  ref_id VARCHAR(50) NOT NULL,        -- ID อ้างอิงของเอกสารในตารางจริง (e.g. quotation_id, invoice_id, etc.)
+  document_no VARCHAR(100),
+  customer_id VARCHAR(50),
+  customer_name VARCHAR(255),
   document_date DATE,
-  customer_id VARCHAR(10),
-  grand_total DECIMAL(12,2),
+  grand_total NUMERIC(12,2) DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'Active',
   remark TEXT,
-  consigner_id VARCHAR(10),
-  consignee_id VARCHAR(10),
-  service_id VARCHAR(10),
-  sale_name VARCHAR(100),
-  job_name VARCHAR(255),
-  valid_until DATE,
-  currency VARCHAR(10) DEFAULT 'THB',
-  FOREIGN KEY (customer_id) REFERENCES customers(customer_id), 
-  FOREIGN KEY (consigner_id) REFERENCES consigner(consigner_id),
-  FOREIGN KEY (consignee_id) REFERENCES consignee(consignee_id)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL
 );
 
--- 14. document_items
-DROP TABLE document_items CASCADE;
-CREATE TABLE document_items (
-  document_items_id VARCHAR(10) PRIMARY KEY,
-  document_id VARCHAR(10),
-  service_id VARCHAR(10),
-  FOREIGN KEY (document_id) REFERENCES document(document_id),
-  FOREIGN KEY (service_id) REFERENCES service(service_id)
+CREATE INDEX IF NOT EXISTS idx_document_ref_id ON document(ref_id);
+CREATE INDEX IF NOT EXISTS idx_document_type ON document(document_type);
+CREATE INDEX IF NOT EXISTS idx_document_customer ON document(customer_id);
+
+-- 14. quotations (ตารางข้อมูลใบเสนอราคาแยกเฉพาะ)
+CREATE TABLE quotations (
+  quotation_id VARCHAR(50) PRIMARY KEY,
+  quotation_no VARCHAR(50) NOT NULL UNIQUE,
+  customer_id VARCHAR(50),
+  quotation_date DATE,
+  valid_until DATE,
+  salesperson VARCHAR(100),
+  project_name VARCHAR(255),
+  consigner_id VARCHAR(50),
+  consignee_id VARCHAR(50),
+  service_id VARCHAR(50),
+  subtotal NUMERIC(12,2) DEFAULT 0,
+  grand_total NUMERIC(12,2) DEFAULT 0,
+  currency VARCHAR(10) DEFAULT 'THB',
+  status VARCHAR(50) DEFAULT 'Active',
+  remark TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL,
+  FOREIGN KEY (consigner_id) REFERENCES consigner(consigner_id) ON DELETE SET NULL,
+  FOREIGN KEY (consignee_id) REFERENCES consignee(consignee_id) ON DELETE SET NULL,
+  FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE SET NULL
+);
+
+-- 14.1 quotation_items (รายการบริการและราคาในใบเสนอราคา เชื่อมกับ quotations แบบ Cascade Delete)
+CREATE TABLE quotation_items (
+  item_id SERIAL PRIMARY KEY,
+  quotation_id VARCHAR(50) NOT NULL,
+  service_type VARCHAR(100),
+  description TEXT,
+  quantity NUMERIC(10,2) DEFAULT 1,
+  unit_quantity VARCHAR(50) DEFAULT 'คัน',
+  unit_price NUMERIC(12,2) DEFAULT 0,
+  total_amount NUMERIC(12,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (quotation_id) REFERENCES quotations(quotation_id) ON DELETE CASCADE
 );
 
 -- 15. delivery_orders
@@ -204,9 +227,20 @@ CREATE TABLE booking_cargo (
   country VARCHAR(100)
 );
 
--- 18. booking_attachments
-CREATE TABLE booking_attachments (
+-- 18. booking attachments (customer files & DO files)
+CREATE TABLE booking_customer_attachments (
   attachment_id VARCHAR(50) PRIMARY KEY,
+  booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+  file_name VARCHAR(255),
+  original_name VARCHAR(255),
+  file_path TEXT,
+  file_type VARCHAR(100),
+  file_size INT,
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE booking_do_files (
+  do_file_id VARCHAR(50) PRIMARY KEY,
   booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
   file_name VARCHAR(255),
   original_name VARCHAR(255),

@@ -263,8 +263,18 @@ export default function DeliveryOrderTable({
     setIncludeCustomer(Boolean(item.customer_name && item.customer_name !== 'Unassigned Customer'));
     
     // Check if matched booking exists
-    const matchedBooking = bookingsList.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id) || bookings.find(b => b.booking_id === item.booking_id || b.booking_no === item.booking_id);
-    setSelectedBooking(matchedBooking || null);
+    const matchedBooking = bookingsList.find(b => String(b.booking_id) === String(item.booking_id) || String(b.booking_no) === String(item.booking_id) || String(b.booking_no) === String(item.booking_no)) || bookings.find(b => String(b.booking_id) === String(item.booking_id) || String(b.booking_no) === String(item.booking_id) || String(b.booking_no) === String(item.booking_no));
+    const fallbackBooking = (item.booking_id || item.booking_no) ? {
+      booking_id: item.booking_id || '',
+      booking_no: item.booking_no || (item.booking_id ? String(item.booking_id) : ''),
+      customer_name: item.customer_name || 'SCG',
+      truck_name: item.truck_number || '',
+      pickup_date: item.date_of_load,
+      delivery_date: item.eta,
+      sender_details: [{ city: item.consignor_city || item.consignor_state, company_name: item.consignor_name }],
+      receiver_details: [{ city: item.consignee_city || item.consignee_state, company_name: item.consignee_name }]
+    } : null;
+    setSelectedBooking(matchedBooking || fallbackBooking || null);
 
     // Resolve goods_items for Edit mode:
     let editGoods = [];
@@ -786,7 +796,12 @@ export default function DeliveryOrderTable({
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                   {filteredBookings.map((bk) => {
-                    const isSelected = selectedBooking?.booking_id === bk.booking_id || formData.booking_id === bk.booking_id;
+                    const isSelected = Boolean(
+                      (selectedBooking?.booking_id && String(selectedBooking.booking_id) === String(bk.booking_id)) ||
+                      (formData.booking_id && String(formData.booking_id) === String(bk.booking_id)) ||
+                      (formData.booking_no && formData.booking_no === bk.booking_no) ||
+                      (selectedBooking?.booking_no && selectedBooking.booking_no === bk.booking_no)
+                    );
                     const origin = bk.sender_details?.[0]?.city || bk.sender_details?.[0]?.company_name || 'Origin';
                     const destination = bk.receiver_details?.[0]?.city || bk.receiver_details?.[0]?.company_name || 'Destination';
                     const displayDate = bk.pickup_date ? formatDate(bk.pickup_date) : '-';
@@ -811,18 +826,6 @@ export default function DeliveryOrderTable({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '15px', fontWeight: '700', color: '#0284c7' }}>
                             {bk.booking_no}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              backgroundColor: '#eff6ff',
-                              color: '#2563eb',
-                              padding: '2px 8px',
-                              borderRadius: '12px'
-                            }}
-                          >
-                            • {bk.status || 'Assigned'}
                           </span>
                         </div>
 

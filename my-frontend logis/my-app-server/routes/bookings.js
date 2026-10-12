@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
+const { syncDocumentRegistry, removeDocumentRegistry } = require('../utils/documentRegistry');
 const upload = require('../middlewares/upload');
 const path = require('path');
 const fs = require('fs');
@@ -22,6 +23,7 @@ const fixOriginalName = (name) => {
 
 async function saveConsignerFromBooking(sender) {
     if (!sender) return null;
+    const consigner_id = sender.consigner_id || null;
     const consigner_name = sender.company_name || null;
     const address_line = sender.address_line || null;
     const city = sender.city || null;
@@ -30,51 +32,45 @@ async function saveConsignerFromBooking(sender) {
     const postal_code = sender.postal_code || null;
     const country = sender.country || 'Thailand';
 
-    if (!address_line && !consigner_name) return null;
+    if (!address_line && !consigner_name && !province && !consigner_id) return null;
 
-    let existing;
-    if (address_line) {
-        existing = await db.query(
-            'SELECT consigner_id FROM consigner WHERE address_line = $1 AND (city = $2 OR city IS NULL) LIMIT 1',
-            [address_line, city]
-        );
-    } else if (consigner_name) {
-        existing = await db.query('SELECT consigner_id FROM consigner WHERE consigner_name = $1 LIMIT 1', [consigner_name]);
-    } else {
-        existing = { rows: [] };
+    let existId = null;
+    if (consigner_id) {
+        const cCheck = await db.query('SELECT consigner_id FROM consigner WHERE consigner_id = $1', [consigner_id]);
+        if (cCheck.rows.length > 0) existId = consigner_id;
     }
 
-    if (existing.rows.length > 0) {
-        const existId = existing.rows[0].consigner_id;
-        if (address_line || city || state || postal_code) {
-            await db.query(
-                `UPDATE consigner SET
-                    consigner_name = COALESCE(NULLIF($1, ''), consigner_name),
-                    address_line = COALESCE(NULLIF($2, ''), address_line),
-                    city = COALESCE(NULLIF($3, ''), city),
-                    state = COALESCE(NULLIF($4, ''), state),
-                    province = COALESCE(NULLIF($5, ''), province),
-                    postal_code = COALESCE(NULLIF($6, ''), postal_code),
-                    country = COALESCE(NULLIF($7, ''), country)
-                WHERE consigner_id = $8`,
-                [consigner_name, address_line, city, state, province, postal_code, country, existId]
-            );
-        }
+    // Only update if explicit consigner_id exists in DB (e.g. editing this existing record)
+    if (existId) {
+        await db.query(
+            `UPDATE consigner SET
+                consigner_name = COALESCE(NULLIF($1, ''), consigner_name),
+                address_line = COALESCE(NULLIF($2, ''), address_line),
+                city = COALESCE(NULLIF($3, ''), city),
+                state = COALESCE(NULLIF($4, ''), state),
+                province = COALESCE(NULLIF($5, ''), province),
+                postal_code = COALESCE(NULLIF($6, ''), postal_code),
+                country = COALESCE(NULLIF($7, ''), country)
+            WHERE consigner_id = $8`,
+            [consigner_name, address_line, city, state, province, postal_code, country, existId]
+        );
         return existId;
     }
 
+    // Newly keyed in -> Always insert a brand new consigner record
     const finalId = await nextId('seq_consigner', 'cgr-', 5);
     await db.query(
         `INSERT INTO consigner (
             consigner_id, consigner_name, address_line, city, state, province, postal_code, country
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [finalId, consigner_name, address_line, city, state, province, postal_code, country]
+        [finalId, consigner_name || province, address_line || province, city, state, province, postal_code, country]
     );
     return finalId;
 }
 
 async function saveConsigneeFromBooking(receiver) {
     if (!receiver) return null;
+    const consignee_id = receiver.consignee_id || null;
     const consignee_name = receiver.company_name || null;
     const address_line = receiver.address_line || null;
     const city = receiver.city || null;
@@ -83,45 +79,38 @@ async function saveConsigneeFromBooking(receiver) {
     const postal_code = receiver.postal_code || null;
     const country = receiver.country || 'Thailand';
 
-    if (!address_line && !consignee_name) return null;
+    if (!address_line && !consignee_name && !province && !consignee_id) return null;
 
-    let existing;
-    if (address_line) {
-        existing = await db.query(
-            'SELECT consignee_id FROM consignee WHERE address_line = $1 AND (city = $2 OR city IS NULL) LIMIT 1',
-            [address_line, city]
-        );
-    } else if (consignee_name) {
-        existing = await db.query('SELECT consignee_id FROM consignee WHERE consignee_name = $1 LIMIT 1', [consignee_name]);
-    } else {
-        existing = { rows: [] };
+    let existId = null;
+    if (consignee_id) {
+        const cCheck = await db.query('SELECT consignee_id FROM consignee WHERE consignee_id = $1', [consignee_id]);
+        if (cCheck.rows.length > 0) existId = consignee_id;
     }
 
-    if (existing.rows.length > 0) {
-        const existId = existing.rows[0].consignee_id;
-        if (address_line || city || state || postal_code) {
-            await db.query(
-                `UPDATE consignee SET
-                    consignee_name = COALESCE(NULLIF($1, ''), consignee_name),
-                    address_line = COALESCE(NULLIF($2, ''), address_line),
-                    city = COALESCE(NULLIF($3, ''), city),
-                    state = COALESCE(NULLIF($4, ''), state),
-                    province = COALESCE(NULLIF($5, ''), province),
-                    postal_code = COALESCE(NULLIF($6, ''), postal_code),
-                    country = COALESCE(NULLIF($7, ''), country)
-                WHERE consignee_id = $8`,
-                [consignee_name, address_line, city, state, province, postal_code, country, existId]
-            );
-        }
+    // Only update if explicit consignee_id exists in DB (e.g. editing this existing record)
+    if (existId) {
+        await db.query(
+            `UPDATE consignee SET
+                consignee_name = COALESCE(NULLIF($1, ''), consignee_name),
+                address_line = COALESCE(NULLIF($2, ''), address_line),
+                city = COALESCE(NULLIF($3, ''), city),
+                state = COALESCE(NULLIF($4, ''), state),
+                province = COALESCE(NULLIF($5, ''), province),
+                postal_code = COALESCE(NULLIF($6, ''), postal_code),
+                country = COALESCE(NULLIF($7, ''), country)
+            WHERE consignee_id = $8`,
+            [consignee_name, address_line, city, state, province, postal_code, country, existId]
+        );
         return existId;
     }
 
+    // Newly keyed in -> Always insert a brand new consignee record
     const finalId = await nextId('seq_consignee', 'cge-', 5);
     await db.query(
         `INSERT INTO consignee (
             consignee_id, consignee_name, address_line, city, state, province, postal_code, country
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [finalId, consignee_name, address_line, city, state, province, postal_code, country]
+        [finalId, consignee_name || province, address_line || province, city, state, province, postal_code, country]
     );
     return finalId;
 }
@@ -133,9 +122,13 @@ async function resolveBookingService({ service_id, quotation_id, service_items, 
             return service_id;
         }
         if (quotation_id) {
-            const qRes = await db.query('SELECT service_id FROM document WHERE document_id = $1', [quotation_id]);
+            const qRes = await db.query('SELECT service_id FROM quotations WHERE quotation_id = $1 OR quotation_no = $1', [quotation_id]);
             if (qRes.rows[0]?.service_id) {
                 return qRes.rows[0].service_id;
+            }
+            const docRes = await db.query('SELECT service_id FROM document WHERE document_id = $1 OR ref_id = $1', [quotation_id]);
+            if (docRes.rows[0]?.service_id) {
+                return docRes.rows[0].service_id;
             }
         }
     }
@@ -254,7 +247,6 @@ async function initBookingTables() {
                 delivery_date DATE,
                 car_id VARCHAR(50),
                 truck_name VARCHAR(100),
-                status VARCHAR(50) DEFAULT 'Pending',
                 remark TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -346,43 +338,7 @@ async function initBookingTables() {
             );
         `);
 
-        // Backward compatibility: keep booking_attachments table and migrate existing records
-        await db.query(`
-            CREATE TABLE IF NOT EXISTS booking_attachments (
-                attachment_id VARCHAR(50) PRIMARY KEY,
-                booking_id VARCHAR(50) REFERENCES bookings(booking_id) ON DELETE CASCADE,
-                file_name VARCHAR(255),
-                original_name VARCHAR(255),
-                file_path TEXT,
-                file_type VARCHAR(100),
-                file_size INT,
-                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
 
-        // Auto-migrate any existing records into separate tables
-        try {
-            const oldAtts = await db.query(`SELECT * FROM booking_attachments`);
-            for (const att of oldAtts.rows) {
-                const cleaned = fixOriginalName(att.original_name);
-                const isDo = (cleaned || '').toLowerCase().includes('do') || (att.file_name || '').toLowerCase().includes('do');
-                if (isDo) {
-                    await db.query(`
-                        INSERT INTO booking_do_files (do_file_id, booking_id, file_name, original_name, file_path, file_type, file_size, uploaded_at)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                        ON CONFLICT (do_file_id) DO NOTHING
-                    `, [att.attachment_id, att.booking_id, att.file_name, cleaned, att.file_path, att.file_type, att.file_size, att.uploaded_at]);
-                } else {
-                    await db.query(`
-                        INSERT INTO booking_customer_attachments (attachment_id, booking_id, file_name, original_name, file_path, file_type, file_size, uploaded_at)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                        ON CONFLICT (attachment_id) DO NOTHING
-                    `, [att.attachment_id, att.booking_id, att.file_name, cleaned, att.file_path, att.file_type, att.file_size, att.uploaded_at]);
-                }
-            }
-        } catch (e) {
-            // ignore
-        }
 
         // Auto-link existing booking bk-00041 to service if null
         try {
@@ -535,7 +491,7 @@ router.post('/bookings', async (req, res) => {
         await initBookingTables();
         const { 
             booking_no, customer_id, customer_name, pickup_date, delivery_date, 
-            car_id, truck_name, status, remark, service_id, quotation_id, 
+            car_id, truck_name, remark, service_id, quotation_id, 
             cargo_details, sender_details, receiver_details,
             service_items, service_typename, pricing_mode 
         } = req.body;
@@ -600,8 +556,8 @@ router.post('/bookings', async (req, res) => {
         });
 
         await db.query(
-            `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, status, remark, consigner_id, consignee_id, service_id, quotation_id) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            `INSERT INTO bookings (booking_id, booking_no, customer_id, customer_name, pickup_date, delivery_date, car_id, truck_name, remark, consigner_id, consignee_id, service_id, quotation_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
             [
                 booking_id,
                 finalBookingNo,
@@ -611,7 +567,6 @@ router.post('/bookings', async (req, res) => {
                 delivery_date || null,
                 car_id || null,
                 truck_name || '— Select truck —',
-                status || 'Pending',
                 remark || null,
                 firstConsignerId,
                 firstConsigneeId,
@@ -651,6 +606,17 @@ router.post('/bookings', async (req, res) => {
             }
         }
 
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'Booking',
+            refId: booking_id,
+            documentNo: finalBookingNo,
+            customerId: customer_id || null,
+            customerName: customer_name || null,
+            documentDate: pickup_date || new Date(),
+            remark: remark || null
+        });
+
         res.json({ message: 'สร้าง Booking สำเร็จ', booking_id, booking_no: finalBookingNo, service_id: resolvedServiceId });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -663,7 +629,7 @@ router.put('/bookings/:id', async (req, res) => {
         await initBookingTables();
         const { 
             booking_no, customer_id, customer_name, pickup_date, delivery_date, 
-            car_id, truck_name, status, remark, service_id, quotation_id, 
+            car_id, truck_name, remark, service_id, quotation_id, 
             cargo_details, sender_details, receiver_details,
             service_items, service_typename, pricing_mode 
         } = req.body;
@@ -722,15 +688,14 @@ router.put('/bookings/:id', async (req, res) => {
                 customer_name = COALESCE(NULLIF($3, ''), customer_name),
                 pickup_date = COALESCE(NULLIF($4, '')::date, pickup_date),
                 delivery_date = COALESCE(NULLIF($5, '')::date, delivery_date),
-                car_id = CASE WHEN $12::boolean THEN NULLIF($6, '') ELSE car_id END,
+                car_id = CASE WHEN $11::boolean THEN NULLIF($6, '') ELSE car_id END,
                 truck_name = COALESCE(NULLIF($7, ''), truck_name),
-                status = COALESCE(NULLIF($8, ''), status),
-                remark = COALESCE(NULLIF($9, ''), remark),
-                consigner_id = COALESCE($10, consigner_id),
-                consignee_id = COALESCE($11, consignee_id),
-                service_id = CASE WHEN $14::boolean THEN $13 ELSE service_id END,
-                quotation_id = CASE WHEN $16::boolean THEN $15 ELSE quotation_id END
-             WHERE booking_id = $17`,
+                remark = COALESCE(NULLIF($8, ''), remark),
+                consigner_id = COALESCE($9, consigner_id),
+                consignee_id = COALESCE($10, consignee_id),
+                service_id = CASE WHEN $13::boolean THEN $12 ELSE service_id END,
+                quotation_id = CASE WHEN $15::boolean THEN $14 ELSE quotation_id END
+             WHERE booking_id = $16`,
             [
                 booking_no || null, 
                 customer_id || null, 
@@ -739,7 +704,6 @@ router.put('/bookings/:id', async (req, res) => {
                 delivery_date || null, 
                 car_id || null, 
                 truck_name || null, 
-                status || null, 
                 remark || null, 
                 firstConsignerId,
                 firstConsigneeId,
@@ -786,6 +750,17 @@ router.put('/bookings/:id', async (req, res) => {
             }
         }
 
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'Booking',
+            refId: req.params.id,
+            documentNo: booking_no || req.params.id,
+            customerId: customer_id || null,
+            customerName: customer_name || null,
+            documentDate: pickup_date || null,
+            remark: remark || null
+        });
+
         res.json({ message: 'แก้ไข Booking สำเร็จ', service_id: resolvedServiceId });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -822,8 +797,8 @@ router.delete('/bookings/:id', async (req, res) => {
 
         await db.query(`DELETE FROM booking_customer_attachments WHERE booking_id = $1`, [bookingId]);
         await db.query(`DELETE FROM booking_do_files WHERE booking_id = $1`, [bookingId]);
-        await db.query(`DELETE FROM booking_attachments WHERE booking_id = $1`, [bookingId]);
         await db.query('DELETE FROM bookings WHERE booking_id = $1', [bookingId]);
+        await removeDocumentRegistry(bookingId);
 
         res.json({ message: 'ลบ Booking สำเร็จ' });
     } catch (err) {

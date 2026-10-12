@@ -210,6 +210,7 @@ export default function InvoiceTable({
   };
 
   const handleOpenCreate = () => {
+    loadData();
     setEditingInvoiceId(null);
     setCurrentStep(1);
     const defaultAcc = accounts.length > 0 ? accounts[0] : null;

@@ -32,22 +32,6 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
 
-  const countries = [
-    'Thailand',
-    'Malaysia',
-    'Singapore',
-    'Laos',
-    'Cambodia',
-    'Vietnam',
-    'Myanmar',
-    'China',
-    'Japan',
-    'South Korea',
-    'United States',
-    'United Kingdom',
-    'Australia',
-    'Other'
-  ];
 
   const [formData, setFormData] = useState({
     customer_name: '',
@@ -526,18 +510,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                       <label className="form-label">{tText('ประเทศ', 'Country')}</label>
                       <input
                         type="text"
-                        list="modal1-countries-list"
                         placeholder={tText('ประเทศ...', 'Country')}
                         className="form-input"
                         value={formData.country}
                         onChange={e => setFormData({ ...formData, country: e.target.value })}
                         autoComplete="new-password"
                       />
-                      <datalist id="modal1-countries-list">
-                        {countries.map(c => (
-                          <option key={c} value={c} />
-                        ))}
-                      </datalist>
                     </div>
                   </div>
 
@@ -799,18 +777,12 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [] })
                     <label className="form-label">{tText('ประเทศ', 'Country')}</label>
                     <input
                       type="text"
-                      list="modal2-countries-list"
                       placeholder={tText('ประเทศ...', 'Country')}
                       className="form-input"
                       value={formData.country}
                       onChange={e => setFormData({ ...formData, country: e.target.value })}
                       autoComplete="new-password"
                     />
-                    <datalist id="modal2-countries-list">
-                      {countries.map(c => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
                   </div>
                 </div>
 

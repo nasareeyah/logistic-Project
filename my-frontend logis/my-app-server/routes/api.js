@@ -6,6 +6,7 @@ router.use(require('./cars'));
 router.use(require('./drivers'));
 router.use(require('./accounts'));
 router.use(require('./documents'));
+router.use(require('./quotations'));
 router.use(require('./locations'));
 router.use(require('./bookings'));
 router.use(require('./deliveryOrders'));

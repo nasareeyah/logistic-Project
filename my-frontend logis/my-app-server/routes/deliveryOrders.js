@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
+const { syncDocumentRegistry, removeDocumentRegistry } = require('../utils/documentRegistry');
 
 let isTableInitialized = false;
 
@@ -79,18 +80,19 @@ const DO_SELECT_QUERY = `
         -- Dates synced with booking
         COALESCE(bk.pickup_date, d.date_of_load) AS date_of_load,
         COALESCE(bk.delivery_date, d.eta) AS eta,
-        -- Customer details from customers (only when customer_name is explicitly provided on DO)
-        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.tax_id ELSE NULL END AS customer_tax_id,
-        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN COALESCE(d.customer_address, cust.address) ELSE NULL END AS customer_address,
-        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.phone ELSE NULL END AS customer_phone,
-        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.email ELSE NULL END AS customer_email,
-        CASE WHEN d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' THEN cust.contact_person ELSE NULL END AS customer_contact_person,
+        -- Customer details from DO or booking
+        COALESCE(d.customer_name, bk.customer_name, cust.customer_name) AS customer_name,
+        COALESCE(d.customer_address, cust.address) AS customer_address,
+        cust.tax_id AS customer_tax_id,
+        cust.phone AS customer_phone,
+        cust.email AS customer_email,
+        cust.contact_person AS customer_contact_person,
         -- Driver details from driver
         dr.full_name AS driver_name,
         dr.phone AS driver_phone
     FROM delivery_orders d
     LEFT JOIN bookings bk ON d.booking_id = bk.booking_id
-    LEFT JOIN customers cust ON (d.customer_name IS NOT NULL AND TRIM(d.customer_name) <> '' AND (d.customer_name = cust.customer_name OR bk.customer_id = cust.customer_id))
+    LEFT JOIN customers cust ON (bk.customer_id = cust.customer_id OR (d.customer_name IS NOT NULL AND d.customer_name = cust.customer_name))
     LEFT JOIN booking_cargo bc ON d.cargo_id = bc.cargo_id
     LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
     LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
@@ -332,6 +334,17 @@ router.post('/delivery-orders', async (req, res) => {
             [finalId]
         );
 
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'DeliveryOrder',
+            refId: finalId,
+            documentNo: finalDoNo,
+            customerName: customer_name || fullRes.rows[0]?.customer_name || null,
+            documentDate: resolvedDateOfLoad || new Date(),
+            status: 'Active',
+            remark: remark || null
+        });
+
         res.status(201).json({
             message: 'สร้างเอกสาร Delivery Order สำเร็จ',
             data: fullRes.rows[0],
@@ -452,6 +465,17 @@ router.put('/delivery-orders/:id', async (req, res) => {
             [id]
         );
 
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'DeliveryOrder',
+            refId: id,
+            documentNo: fullRes.rows[0]?.do_no || id,
+            customerName: customer_name || fullRes.rows[0]?.customer_name || null,
+            documentDate: date_of_load || fullRes.rows[0]?.date_of_load || null,
+            status: 'Active',
+            remark: remark || fullRes.rows[0]?.remark || null
+        });
+
         res.json({ message: 'แก้ไข Delivery Order สำเร็จ', data: fullRes.rows[0] });
     } catch (err) {
         console.error('Error updating delivery order:', err);
@@ -465,6 +489,7 @@ router.delete('/delivery-orders/:id', async (req, res) => {
         await initDeliveryOrdersTable();
         const { id } = req.params;
         await db.query(`DELETE FROM delivery_orders WHERE delivery_orders_id = $1 OR do_no = $1`, [id]);
+        await removeDocumentRegistry(id);
         res.json({ message: 'ลบ Delivery Order สำเร็จ' });
     } catch (err) {
         console.error('Error deleting delivery order:', err);

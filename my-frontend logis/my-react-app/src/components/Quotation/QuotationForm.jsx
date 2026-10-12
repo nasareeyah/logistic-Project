@@ -79,12 +79,26 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   const [currentStep, setCurrentStep] = useState(1); // 1..5
 
   const [customerList, setCustomerList] = useState(Array.isArray(propCustomers) ? propCustomers : []);
+  const [quotationsFromApi, setQuotationsFromApi] = useState([]);
   const [quotationList, setQuotationList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingDocId, setEditingDocId] = useState(null);
   const [previewData, setPreviewData] = useState(null);
+
+  const loadQuotations = () => {
+    fetch('http://localhost:3000/api/quotations')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setQuotationsFromApi(data);
+      })
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadQuotations();
+  }, [viewMode]);
 
   // Sync props
   useEffect(() => {
@@ -101,10 +115,12 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   }, [propCustomers]);
 
   useEffect(() => {
-    if (Array.isArray(propDocuments)) {
+    if (quotationsFromApi.length > 0) {
+      setQuotationList(quotationsFromApi);
+    } else if (Array.isArray(propDocuments)) {
       setQuotationList(propDocuments.filter(d => d.document_type === 'Quotation'));
     }
-  }, [propDocuments]);
+  }, [propDocuments, quotationsFromApi]);
 
   // Form State
   const initialIssueDate = getTodayDate();
@@ -247,46 +263,78 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Edit Handler — โหลดข้อมูลเอกสารมาใส่ในฟอร์ม
   const handleEditQuotation = async (doc) => {
-    const origin = doc.consigner_address || '';
-    const destination = doc.consignee_address || '';
+    const targetId = doc.ref_id || doc.quotation_id || doc.document_id;
+    setEditingDocId(targetId);
+
+    let fullDoc = doc;
+    try {
+      const qRes = await fetch(`http://localhost:3000/api/quotations/${targetId}`);
+      if (qRes.ok) {
+        fullDoc = await qRes.json();
+      }
+    } catch (err) {
+      console.warn('Could not fetch full quotation details:', err);
+    }
+
+    const origin = fullDoc.origin || fullDoc.origin_province || fullDoc.consigner_address || '';
+    const destination = fullDoc.destination || fullDoc.destination_province || fullDoc.consignee_address || '';
 
     setFormData({
-      documentNo: doc.document_no || '',
-      issueDate: formatDateOnly(doc.document_date) || getTodayDate(),
-      expiryDate: formatDateOnly(doc.valid_until) || getFutureDate(doc.document_date, 30),
-      salesperson: doc.sale_name || '',
-      projectName: doc.job_name || '',
-      customerId: doc.customer_id || '',
-      customerName: '',
-      address: '',
-      taxId: '',
-      contactPerson: '',
-      phone: '',
-      email: '',
-      remark: doc.remark || ''
+      documentNo: fullDoc.document_no || fullDoc.quotation_no || '',
+      issueDate: formatDateOnly(fullDoc.document_date || fullDoc.quotation_date) || getTodayDate(),
+      expiryDate: formatDateOnly(fullDoc.valid_until) || getFutureDate(fullDoc.document_date || fullDoc.quotation_date, 30),
+      salesperson: fullDoc.sale_name || fullDoc.salesperson || '',
+      projectName: fullDoc.job_name || fullDoc.project_name || '',
+      customerId: fullDoc.customer_id || '',
+      customerName: fullDoc.customer_name || '',
+      address: fullDoc.customer_address || '',
+      taxId: fullDoc.customer_tax_id || '',
+      contactPerson: fullDoc.contact_person || '',
+      phone: fullDoc.customer_phone || '',
+      email: fullDoc.customer_email || '',
+      remark: fullDoc.remark || '',
+      consigner_id: fullDoc.consigner_id || null,
+      consignee_id: fullDoc.consignee_id || null
     });
-    setRoutes([{ id: 1, origin, destination }]);
-    setEditingDocId(doc.document_id);
+    setRoutes([{
+      id: 1,
+      origin,
+      destination,
+      consigner_id: fullDoc.consigner_id || null,
+      consignee_id: fullDoc.consignee_id || null
+    }]);
 
-    // โหลด items จาก document_items
-    try {
-      const res = await fetch(`http://localhost:3000/api/document_items?document_id=${doc.document_id}`);
-      const docItems = await res.json();
-      if (docItems.length > 0) {
-        setItems(docItems.map((di, idx) => ({
-          id: Date.now() + idx,
-          serviceType: di.service_typename || '',
-          quantity: Number(di.item_quantity) || 1,
-          unitQuantity: di.unit || '',
-          pricePerUnit: Number(di.unit_price) || 0,
-          unit: 'THB',
-          total: (Number(di.item_quantity) || 1) * (Number(di.unit_price) || 0)
-        })));
-      } else {
+    // โหลด items จาก fullDoc.items หรือ document_items
+    if (Array.isArray(fullDoc.items) && fullDoc.items.length > 0) {
+      setItems(fullDoc.items.map((di, idx) => ({
+        id: Date.now() + idx,
+        serviceType: di.service_typename || di.service_type || '',
+        quantity: Number(di.item_quantity || di.quantity) || 1,
+        unitQuantity: di.unit || di.unit_quantity || '',
+        pricePerUnit: Number(di.unit_price) || 0,
+        unit: 'THB',
+        total: (Number(di.item_quantity || di.quantity) || 1) * (Number(di.unit_price) || 0)
+      })));
+    } else {
+      try {
+        const res = await fetch(`http://localhost:3000/api/document_items?document_id=${targetId}`);
+        const docItems = await res.json();
+        if (docItems.length > 0) {
+          setItems(docItems.map((di, idx) => ({
+            id: Date.now() + idx,
+            serviceType: di.service_typename || di.service_type || '',
+            quantity: Number(di.item_quantity || di.quantity) || 1,
+            unitQuantity: di.unit || di.unit_quantity || '',
+            pricePerUnit: Number(di.unit_price) || 0,
+            unit: 'THB',
+            total: (Number(di.item_quantity || di.quantity) || 1) * (Number(di.unit_price) || 0)
+          })));
+        } else {
+          setItems([{ id: Date.now(), serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
+        }
+      } catch (e) {
         setItems([{ id: Date.now(), serviceType: '', quantity: 1, unitQuantity: '', pricePerUnit: 0, unit: 'THB', total: 0 }]);
       }
-    } catch (e) {
-      console.error('Load items error:', e);
     }
 
     setCurrentStep(1);
@@ -295,10 +343,10 @@ export default function QuotationForm({ customers: propCustomers = [], documents
 
   // Delete Handler
   const handleDeleteQuotation = (doc) => {
-    const docId = typeof doc === 'object' ? doc.document_id : doc;
+    const docId = typeof doc === 'object' ? (doc.ref_id || doc.quotation_id || doc.document_id) : doc;
     const docNo = typeof doc === 'object' ? doc.document_no : 'ใบเสนอราคา';
     const custName = typeof doc === 'object' ? getCustomerName(doc.customer_id) : 'ลูกค้าทั่วไป';
-    const jobName = typeof doc === 'object' ? (doc.job_name || doc.project || '') : '';
+    const jobName = typeof doc === 'object' ? (doc.job_name || doc.project || doc.project_name || '') : '';
 
     confirmDelete({
       title: 'ยืนยันการลบใบเสนอราคานี้?',
@@ -311,6 +359,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
         try {
           await deleteQuotation(docId);
           notify.delete('ลบใบเสนอราคาสำเร็จ', `นำใบเสนอราคาเลขที่ ${docNo || ''} ออกจากระบบเรียบร้อยแล้ว`);
+          loadQuotations();
           if (fetchData) fetchData();
         } catch (err) {
           notify.error('เกิดข้อผิดพลาดในการลบ', err.message);
@@ -322,7 +371,8 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   // Preview Handler
   const handlePreview = async (doc) => {
     try {
-      const res = await fetch(`http://localhost:3000/api/document_items?document_id=${doc.document_id}`);
+      const targetId = doc.ref_id || doc.quotation_id || doc.document_id;
+      const res = await fetch(`http://localhost:3000/api/document_items?document_id=${targetId}`);
       const items = await res.json();
       setPreviewData({ doc, items: Array.isArray(items) ? items : [] });
     } catch (err) {
@@ -365,7 +415,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
   // Filtered List for Table
   const filteredQuotations = quotationList.filter(doc => {
     const qNo = doc.document_no || doc.document_id || '';
-    const job = doc.job_name || doc.project || '';
+    const job = doc.job_name || doc.project_name || doc.project || '';
     const custName = getCustomerName(doc.customer_id);
     const q = searchQuery.toLowerCase();
     return qNo.toLowerCase().includes(q) || job.toLowerCase().includes(q) || custName.toLowerCase().includes(q);
@@ -446,7 +496,7 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                         {getCustomerName(doc.customer_id)}
                       </td>
                       <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
-                        {doc.job_name || doc.project || '-'}
+                        {doc.job_name || doc.project_name || doc.project || '-'}
                       </td>
                       <td style={{ color: '#64748b', whiteSpace: 'nowrap' }}>
                         {doc.document_date ? formatDateLocale(doc.document_date) : '-'}
@@ -670,7 +720,10 @@ export default function QuotationForm({ customers: propCustomers = [], documents
                     (c.tax_id || c.taxId || '').toLowerCase().includes(q);
                 })
                 .map((cust, idx) => {
-                  const isSelected = String(formData.customerId) === String(cust.customer_id || cust.id);
+                  const isSelected = Boolean(
+                    (formData.customerId && String(formData.customerId) === String(cust.customer_id || cust.id)) ||
+                    (formData.customerName && (cust.customer_name === formData.customerName || cust.name === formData.customerName))
+                  );
 
                   return (
                     <div

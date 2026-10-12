@@ -15,107 +15,119 @@ const checkFinancialPermission = (req, res, next) => {
     next();
 };
 
-// --- DOCUMENTS & DOCUMENT ITEMS ---
+// --- CENTRAL DOCUMENT REGISTRY & DOCUMENT ITEMS ---
+const { syncDocumentRegistry, removeDocumentRegistry } = require('../utils/documentRegistry');
+
 router.get('/document', checkFinancialPermission, async (req, res) => {
     try {
-        const query = `
-            SELECT d.*, st.service_typename AS service_name, st.service_typename,
-                   cgr.address_line AS consigner_address,
-                   cge.address_line AS consignee_address
+        const { document_type, ref_id } = req.query;
+        let query = `
+            SELECT d.*,
+                   COALESCE(d.customer_name, c.customer_name) AS customer_name,
+                   c.address AS customer_address,
+                   c.phone AS customer_phone,
+                   c.email AS customer_email,
+                   c.tax_id AS customer_tax_id,
+                   c.contact_person AS customer_contact_person,
+                   q.project_name AS job_name,
+                   q.project_name AS project,
+                   q.project_name,
+                   q.salesperson AS sale_name,
+                   q.consigner_id,
+                   q.consignee_id,
+                   q.service_id
             FROM document d
-            LEFT JOIN service s ON d.service_id = s.service_id
-            LEFT JOIN service_type st ON s.service_typeid = st.service_typeid
-            LEFT JOIN consigner cgr ON d.consigner_id = cgr.consigner_id
-            LEFT JOIN consignee cge ON d.consignee_id = cge.consignee_id
-            ORDER BY d.document_date DESC
+            LEFT JOIN customers c ON d.customer_id = c.customer_id
+            LEFT JOIN quotations q ON (d.document_type = 'Quotation' AND (d.ref_id = q.quotation_id OR d.document_no = q.quotation_no))
         `;
-        const result = await db.query(query);
+        const params = [];
+        const conditions = [];
+
+        if (document_type) {
+            params.push(document_type);
+            conditions.push(`d.document_type = $${params.length}`);
+        }
+        if (ref_id) {
+            params.push(ref_id);
+            conditions.push(`d.ref_id = $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        query += ' ORDER BY d.document_date DESC NULLS LAST, d.created_at DESC';
+
+        const result = await db.query(query, params);
         res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching documents from registry:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+router.get('/document/:id', checkFinancialPermission, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const query = `
+            SELECT d.*,
+                   COALESCE(d.customer_name, c.customer_name) AS customer_name,
+                   c.address AS customer_address,
+                   c.phone AS customer_phone,
+                   c.email AS customer_email,
+                   c.tax_id AS customer_tax_id,
+                   c.contact_person AS customer_contact_person,
+                   q.project_name AS job_name,
+                   q.project_name AS project,
+                   q.project_name,
+                   q.salesperson AS sale_name,
+                   q.consigner_id,
+                   q.consignee_id,
+                   q.service_id
+            FROM document d
+            LEFT JOIN customers c ON d.customer_id = c.customer_id
+            LEFT JOIN quotations q ON (d.document_type = 'Quotation' AND (d.ref_id = q.quotation_id OR d.document_no = q.quotation_no))
+            WHERE d.document_id = $1 OR d.ref_id = $1 OR d.document_no = $1
+            LIMIT 1
+        `;
+        const result = await db.query(query, [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'ไม่พบเอกสาร' });
+        }
+        res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 router.post('/document', checkFinancialPermission, async (req, res) => {
-    const {
-        document_id,
-        document_type,
-        document_no,
-        document_date,
-        customer_id,
-        grand_total, total_amount,
-        remark,
-        consigner_id, consignee_id,
-        service_id,
-        service_typename,
-        sale_name, job_name, valid_until, currency
-    } = req.body;
-
     try {
-        let resolvedServiceId = service_id || null;
+        const {
+            document_type,
+            ref_id,
+            document_no,
+            customer_id,
+            customer_name,
+            document_date,
+            grand_total,
+            total_amount,
+            status,
+            remark
+        } = req.body;
 
-        if (service_typename && !service_id) {
-            const stResult = await db.query(
-                `SELECT service_typeid FROM service_type WHERE service_typename = $1`,
-                [service_typename]
-            );
-            let typeId = stResult.rows[0]?.service_typeid;
+        const docId = await syncDocumentRegistry({
+            documentType: document_type || 'General',
+            refId: ref_id || document_no || await nextId('seq_document', 'ref-', 6),
+            documentNo: document_no,
+            customerId: customer_id || null,
+            customerName: customer_name || null,
+            documentDate: document_date || new Date(),
+            grandTotal: grand_total || total_amount || 0,
+            status: status || 'Active',
+            remark: remark || null
+        });
 
-            if (!typeId) {
-                typeId = await nextId('seq_service_type', 'st-', 5);
-                await db.query(
-                    `INSERT INTO service_type (service_typeid, service_typename) VALUES ($1, $2)`,
-                    [typeId, service_typename]
-                );
-            }
-
-            const svResult = await db.query(
-                `SELECT service_id FROM service WHERE service_typeid = $1`,
-                [typeId]
-            );
-            resolvedServiceId = svResult.rows[0]?.service_id;
-
-            if (!resolvedServiceId) {
-                resolvedServiceId = await nextId('seq_service', 'sv-', 5);
-                await db.query(
-                    `INSERT INTO service (service_id, service_typeid) VALUES ($1, $2)`,
-                    [resolvedServiceId, typeId]
-                );
-            }
-        }
-        const finalDocId = document_id || await nextId('seq_document', 'doc-', 6);
-        const finalGrandTotal = grand_total || total_amount || null;
-        const sql = `
-            INSERT INTO document (
-                document_id, document_type, document_no, document_date,
-                customer_id, grand_total, remark,
-                consigner_id, consignee_id, service_id,
-                sale_name, job_name, valid_until, currency
-            ) VALUES (
-                $1, $2, $3, $4,
-                $5, $6, $7,
-                $8, $9, $10,
-                $11, $12, $13, $14
-            )
-        `;
-        await db.query(sql, [
-            finalDocId,
-            document_type || null,
-            document_no || null,
-            document_date || null,
-            customer_id || null,
-            finalGrandTotal,
-            remark || null,
-            consigner_id || null,
-            consignee_id || null,
-            resolvedServiceId,
-            sale_name || null,
-            job_name || null,
-            valid_until || null,
-            currency || 'THB'
-        ]);
-
-        res.json({ message: 'บันทึกเอกสารสำเร็จ', data: { document_id: finalDocId } });
+        res.json({ message: 'บันทึกเอกสารลงทะเบียนกลางสำเร็จ', data: { document_id: docId } });
     } catch (err) {
         console.error('POST document error:', err);
         res.status(500).json({ error: err.message });
@@ -124,30 +136,33 @@ router.post('/document', checkFinancialPermission, async (req, res) => {
 
 router.put('/document/:id', checkFinancialPermission, async (req, res) => {
     try {
+        const { id } = req.params;
         const {
-            document_type, document_no, document_date,
-            customer_id, grand_total, total_amount, remark,
-            consigner_id, consignee_id, service_id,
-            sale_name, job_name, valid_until, currency
+            document_type,
+            ref_id,
+            document_no,
+            customer_id,
+            customer_name,
+            document_date,
+            grand_total,
+            total_amount,
+            status,
+            remark
         } = req.body;
 
-        const finalGrandTotal = grand_total || total_amount || null;
-        const sql = `
-            UPDATE document SET
-                document_type=$1, document_no=$2, document_date=$3,
-                customer_id=$4, grand_total=$5, remark=$6,
-                consigner_id=$7, consignee_id=$8, service_id=$9,
-                sale_name=$10, job_name=$11, valid_until=$12, currency=$13
-            WHERE document_id=$14
-        `;
-        await db.query(sql, [
-            document_type, document_no, document_date,
-            customer_id, finalGrandTotal, remark,
-            consigner_id, consignee_id, service_id,
-            sale_name, job_name, valid_until, currency || 'THB',
-            req.params.id
-        ]);
-        res.json({ message: 'แก้ไขเอกสารสำเร็จ' });
+        const docId = await syncDocumentRegistry({
+            documentType: document_type || 'General',
+            refId: ref_id || id,
+            documentNo: document_no || id,
+            customerId: customer_id || null,
+            customerName: customer_name || null,
+            documentDate: document_date,
+            grandTotal: grand_total || total_amount || 0,
+            status: status || 'Active',
+            remark: remark || null
+        });
+
+        res.json({ message: 'แก้ไขเอกสารในทะเบียนกลางสำเร็จ', data: { document_id: docId } });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -155,9 +170,17 @@ router.put('/document/:id', checkFinancialPermission, async (req, res) => {
 
 router.delete('/document/:id', checkFinancialPermission, async (req, res) => {
     try {
-        await db.query('DELETE FROM document_items WHERE document_id = $1', [req.params.id]);
-        await db.query('DELETE FROM document WHERE document_id = $1', [req.params.id]);
-        res.json({ message: 'ลบเอกสารสำเร็จ' });
+        const { id } = req.params;
+        // Check if this document points to a quotation
+        const check = await db.query('SELECT ref_id, document_type FROM document WHERE document_id = $1 OR ref_id = $1', [id]);
+        if (check.rows.length > 0) {
+            const { ref_id, document_type } = check.rows[0];
+            if (document_type === 'Quotation' && ref_id) {
+                await db.query('DELETE FROM quotations WHERE quotation_id = $1', [ref_id]);
+            }
+        }
+        await removeDocumentRegistry(id);
+        res.json({ message: 'ลบเอกสารออกจากทะเบียนสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -166,17 +189,38 @@ router.delete('/document/:id', checkFinancialPermission, async (req, res) => {
 router.get('/document_items', checkFinancialPermission, async (req, res) => {
     try {
         const { document_id } = req.query;
-        const sql = `SELECT di.*, s.description, s.quantity AS item_quantity, s.unit_quantity AS unit,
-                            s.default_price AS unit_price, st.service_typename
-                     FROM document_items di
-                     LEFT JOIN service s ON di.service_id = s.service_id
-                     LEFT JOIN service_type st ON s.service_typeid = st.service_typeid`;
-        let result;
+        let query = `
+            SELECT 
+                qi.item_id AS document_items_id,
+                qi.item_id,
+                qi.quotation_id AS document_id,
+                qi.service_type AS service_typename,
+                qi.service_type,
+                qi.description,
+                qi.quantity AS item_quantity,
+                qi.quantity,
+                qi.unit_quantity AS unit,
+                qi.unit_quantity,
+                qi.unit_price,
+                qi.unit_price AS default_price,
+                qi.total_amount,
+                qi.total_amount AS total
+            FROM quotation_items qi
+        `;
+        let params = [];
         if (document_id) {
-            result = await db.query(sql + ' WHERE di.document_id = $1', [document_id]);
-        } else {
-            result = await db.query(sql);
+            let targetQuotationId = document_id;
+            if (document_id.startsWith('doc-')) {
+                const regRes = await db.query('SELECT ref_id FROM document WHERE document_id = $1', [document_id]);
+                if (regRes.rows.length > 0 && regRes.rows[0].ref_id) {
+                    targetQuotationId = regRes.rows[0].ref_id;
+                }
+            }
+            query += ' WHERE qi.quotation_id = $1';
+            params.push(targetQuotationId);
         }
+        query += ' ORDER BY qi.item_id ASC';
+        const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -184,22 +228,13 @@ router.get('/document_items', checkFinancialPermission, async (req, res) => {
 });
 
 router.post('/document_items', checkFinancialPermission, async (req, res) => {
-    try {
-        const { document_id, service_id } = req.body;
-        const itemId = await nextId('seq_document_items', 'di-', 6);
-        await db.query(
-            `INSERT INTO document_items (document_items_id, document_id, service_id) VALUES ($1, $2, $3)`,
-            [itemId, document_id, service_id || null]
-        );
-        res.json({ message: 'บันทึกรายการสำเร็จ' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    // Legacy stub if anything still calls it
+    res.json({ message: 'บันทึกรายการสำเร็จ' });
 });
 
 router.delete('/document_items/:id', checkFinancialPermission, async (req, res) => {
     try {
-        await db.query('DELETE FROM document_items WHERE document_items_id = $1', [req.params.id]);
+        await db.query('DELETE FROM quotation_items WHERE item_id = $1', [req.params.id]);
         res.json({ message: 'ลบรายการสำเร็จ' });
     } catch (err) {
         res.status(500).json({ error: err.message });

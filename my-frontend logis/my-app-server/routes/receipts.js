@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
+const { syncDocumentRegistry, removeDocumentRegistry } = require('../utils/documentRegistry');
 
 // Ensure tables exist
 const initReceiptsTable = async () => {
@@ -206,6 +207,18 @@ router.post('/receipts', async (req, res) => {
 
             await db.query('COMMIT');
 
+            // Auto-sync to Central Document Registry
+            await syncDocumentRegistry({
+                documentType: 'Receipt',
+                refId: receiptId,
+                documentNo: finalReceiptNo,
+                customerId: customer_id || null,
+                documentDate: payment_date || new Date(),
+                grandTotal: totalAmount,
+                status: 'Paid',
+                remark: remark || ''
+            });
+
             res.status(201).json({
                 message: 'สร้างใบเสร็จรับเงินสำเร็จ',
                 receipt: insertResult.rows[0]
@@ -313,6 +326,19 @@ router.put('/receipts/:id', async (req, res) => {
         }
 
         await db.query('COMMIT');
+
+        // Auto-sync to Central Document Registry
+        await syncDocumentRegistry({
+            documentType: 'Receipt',
+            refId: id,
+            documentNo: receipt_no || id,
+            customerId: customer_id || null,
+            documentDate: payment_date || null,
+            grandTotal: totalAmount,
+            status: 'Paid',
+            remark: remark || ''
+        });
+
         res.json({ message: 'แก้ไขใบเสร็จรับเงินสำเร็จ' });
     } catch (err) {
         await db.query('ROLLBACK').catch(() => {});
@@ -331,9 +357,11 @@ router.delete('/receipts/:id', async (req, res) => {
     try {
         const { id } = req.params;
         await db.query(`DELETE FROM receipts WHERE receipt_id = $1;`, [id]);
+        await removeDocumentRegistry(id);
         fallbackReceipts = fallbackReceipts.filter(r => r.receipt_id !== id);
         res.json({ message: 'ลบใบเสร็จรับเงินสำเร็จ' });
     } catch (err) {
+        await removeDocumentRegistry(req.params.id);
         fallbackReceipts = fallbackReceipts.filter(r => r.receipt_id !== req.params.id);
         res.json({ message: 'ลบใบเสร็จรับเงินสำเร็จ' });
     }

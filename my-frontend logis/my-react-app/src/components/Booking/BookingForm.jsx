@@ -60,11 +60,24 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const [tableSearch, setTableSearch] = useState('');
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedQuotationId, setSelectedQuotationId] = useState('');
-  const quotationList = (Array.isArray(documents) ? documents : []).filter(d => d.document_type === 'Quotation');
-
   // View Mode: 'table' or 'wizard'
   const [viewMode, setViewMode] = useState('table');
   const [editingBooking, setEditingBooking] = useState(null);
+
+  const [quotationsFromApi, setQuotationsFromApi] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:3000/api/quotations')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setQuotationsFromApi(data);
+      })
+      .catch(() => {});
+  }, [viewMode]);
+
+  const quotationList = quotationsFromApi.length > 0
+    ? quotationsFromApi
+    : (Array.isArray(documents) ? documents : []).filter(d => d.document_type === 'Quotation');
 
   // 1. Customer Documents Modal State (เอกสารเพิ่มเติมจากลูกค้า)
   const [selectedBookingForCustDoc, setSelectedBookingForCustDoc] = useState(null);
@@ -124,34 +137,89 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
     setServiceItems(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const handleSelectQuotation = (qt) => {
-    setSelectedQuotationId(qt.document_id);
-    if (qt.service_id) {
-      setSelectedServiceId(qt.service_id);
+  const handleSelectQuotation = async (qt) => {
+    const qId = qt.quotation_id || qt.ref_id || qt.document_id || qt.document_no;
+    setSelectedQuotationId(qt.document_id || qt.quotation_id || qId);
+
+    let fullQt = qt;
+    try {
+      const res = await fetch(`http://localhost:3000/api/quotations/${qId}`);
+      if (res.ok) {
+        fullQt = await res.json();
+      }
+    } catch (e) {
+      console.error('Failed to fetch full quotation detail:', e);
     }
-    const matchingItems = (Array.isArray(documentItems) ? documentItems : []).filter(
-      di => di.document_id === qt.document_id
-    );
+
+    if (fullQt.service_id) {
+      setSelectedServiceId(fullQt.service_id);
+    }
+
+    // Resolve service items from quotation items (NEVER remarks!)
+    const matchingItems = (Array.isArray(fullQt.items) && fullQt.items.length > 0)
+      ? fullQt.items
+      : (Array.isArray(documentItems) ? documentItems.filter(di => di.document_id === qt.document_id || di.document_id === qId) : []);
+
     if (matchingItems.length > 0) {
       setServiceItems(matchingItems.map((it, idx) => ({
-        id: it.document_items_id || idx + 1,
-        description: it.description || it.service_typename || 'Logistics Service',
-        quantity: Number(it.item_quantity || 1),
-        unit: it.unit || 'trip',
-        unit_price: Number(it.unit_price || 0),
-        total: (Number(it.item_quantity || 1)) * (Number(it.unit_price || 0))
+        id: it.item_id || it.document_items_id || idx + 1,
+        description: it.service_type || it.service_typename || it.description || fullQt.service_name || 'บริการขนส่งสินค้า',
+        quantity: Number(it.quantity || it.item_quantity || 1),
+        unit: it.unit || it.unitQuantity || 'เที่ยว',
+        unit_price: Number(it.unit_price || it.pricePerUnit || 0),
+        total: (Number(it.quantity || it.item_quantity || 1)) * (Number(it.unit_price || it.pricePerUnit || 0))
       })));
     } else {
-      const totalVal = Number(qt.grand_total || qt.net_total || 0);
+      const totalVal = Number(fullQt.grand_total || fullQt.net_total || 0);
       setServiceItems([{
         id: 1,
-        description: qt.remarks || qt.remark || qt.subject || qt.customer_name || 'Logistics Service',
+        description: fullQt.service_name || fullQt.service_typename || 'บริการขนส่งสินค้า',
         quantity: 1,
-        unit: 'trip',
+        unit: 'เที่ยว',
         unit_price: totalVal,
         total: totalVal
       }]);
     }
+
+    // Auto-fill Origin & Destination provinces into sender and receiver Route (Province only, leave address_line blank)
+    const originProvince = (fullQt.origin_province || fullQt.origin || '').trim();
+    const destProvince = (fullQt.destination_province || fullQt.destination || '').trim();
+
+    const senderAddr = fullQt.consigner_address_line && fullQt.consigner_address_line.trim() !== originProvince
+      ? fullQt.consigner_address_line.trim()
+      : '';
+
+    const receiverAddr = fullQt.consignee_address_line && fullQt.consignee_address_line.trim() !== destProvince
+      ? fullQt.consignee_address_line.trim()
+      : '';
+
+    setSendersList(prev => {
+      const first = prev[0] || { ...emptySender };
+      return [{
+        ...first,
+        state: originProvince || first.state || '',
+        province: originProvince || first.province || '',
+        consigner_id: fullQt.consigner_id || first.consigner_id || null,
+        company_name: fullQt.consigner_name && fullQt.consigner_name.trim() !== originProvince ? fullQt.consigner_name : '',
+        address_line: senderAddr,
+        city: fullQt.consigner_city && fullQt.consigner_city.trim() !== originProvince ? fullQt.consigner_city : '',
+        postal_code: fullQt.consigner_postal_code || '',
+      }, ...prev.slice(1)];
+    });
+
+    setReceiversList(prev => {
+      const first = prev[0] || { ...emptyReceiver };
+      return [{
+        ...first,
+        state: destProvince || first.state || '',
+        province: destProvince || first.province || '',
+        consignee_id: fullQt.consignee_id || first.consignee_id || null,
+        company_name: fullQt.consignee_name && fullQt.consignee_name.trim() !== destProvince ? fullQt.consignee_name : '',
+        address_line: receiverAddr,
+        city: fullQt.consignee_city && fullQt.consignee_city.trim() !== destProvince ? fullQt.consignee_city : '',
+        postal_code: fullQt.consignee_postal_code || '',
+      }, ...prev.slice(1)];
+    });
   };
 
   const serviceItemsSubtotal = serviceItems.reduce(
@@ -185,7 +253,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleSenderChange = (index, field, value) => {
     setSendersList(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[index] = { 
+        ...updated[index], 
+        [field]: value
+      };
       return updated;
     });
   };
@@ -202,7 +273,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
   const handleReceiverChange = (index, field, value) => {
     setReceiversList(prev => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[index] = { 
+        ...updated[index], 
+        [field]: value
+      };
       return updated;
     });
   };
@@ -357,38 +431,101 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       { inv_no: '', product_name: '', quantity: '1', unit: 'box', weight: '0', wt_unit: 'kg', remark: '' }
     ]);
 
+    const sanitizeAddr = (addr, prov) => {
+      const a = (addr || '').trim();
+      const p = (prov || '').trim();
+      return (a && a === p) ? '' : a;
+    };
+    const sanitizeName = (name, prov) => {
+      const n = (name || '').trim();
+      const p = (prov || '').trim();
+      return (n && n === p) ? '' : n;
+    };
+
     // Parse sender_details if array or single object
+    const senderProv = booking.consigner_province || booking.consigner_state || '';
     if (Array.isArray(booking.sender_details) && booking.sender_details.length > 0) {
-      setSendersList(booking.sender_details);
+      setSendersList(booking.sender_details.map((s, idx) => {
+        const p = s.province || s.state || senderProv;
+        return {
+          ...s,
+          company_name: sanitizeName(s.company_name, p),
+          address_line: sanitizeAddr(s.address_line, p),
+          consigner_id: idx === 0 ? (s.consigner_id || booking.consigner_id || null) : s.consigner_id
+        };
+      }));
     } else if (booking.sender_details && typeof booking.sender_details === 'object') {
+      const p = booking.sender_details.sender_state || booking.sender_details.state || booking.sender_details.province || senderProv;
+      const rawName = booking.sender_details.sender_name || booking.sender_details.company_name || booking.consigner_name || '';
+      const rawAddr = booking.sender_details.sender_address || booking.sender_details.address_line || booking.consigner_address_line || booking.consigner_address || '';
       setSendersList([{
-        company_name: booking.sender_details.sender_name || booking.sender_details.company_name || '',
-        address_line: booking.sender_details.sender_address || booking.sender_details.address_line || '',
-        city: booking.sender_details.sender_city || booking.sender_details.city || '',
-        state: booking.sender_details.sender_state || booking.sender_details.state || '',
-        postal_code: booking.sender_details.sender_postal || booking.sender_details.postal_code || '',
-        country: booking.sender_details.sender_country || booking.sender_details.country || '',
+        company_name: sanitizeName(rawName, p),
+        address_line: sanitizeAddr(rawAddr, p),
+        city: booking.sender_details.sender_city || booking.sender_details.city || booking.consigner_city || '',
+        state: p,
+        province: p,
+        postal_code: booking.sender_details.sender_postal || booking.sender_details.postal_code || booking.consigner_postal_code || '',
+        country: booking.sender_details.sender_country || booking.sender_details.country || booking.consigner_country || '',
+        consigner_id: booking.sender_details.consigner_id || booking.consigner_id || null,
         pickup_date: booking.pickup_date ? new Date(booking.pickup_date).toISOString().slice(0, 10) : todayStr
       }]);
     } else {
-      setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
+      const rawName = booking.consigner_name || '';
+      const rawAddr = booking.consigner_address_line || booking.consigner_address || '';
+      setSendersList([{
+        company_name: sanitizeName(rawName, senderProv),
+        address_line: sanitizeAddr(rawAddr, senderProv),
+        city: booking.consigner_city || '',
+        state: senderProv,
+        province: senderProv,
+        postal_code: booking.consigner_postal_code || '',
+        country: booking.consigner_country || '',
+        consigner_id: booking.consigner_id || null,
+        pickup_date: booking.pickup_date ? new Date(booking.pickup_date).toISOString().slice(0, 10) : todayStr
+      }]);
     }
 
     // Parse receiver_details if array or single object
+    const receiverProv = booking.consignee_province || booking.consignee_state || '';
     if (Array.isArray(booking.receiver_details) && booking.receiver_details.length > 0) {
-      setReceiversList(booking.receiver_details);
+      setReceiversList(booking.receiver_details.map((r, idx) => {
+        const p = r.province || r.state || receiverProv;
+        return {
+          ...r,
+          company_name: sanitizeName(r.company_name, p),
+          address_line: sanitizeAddr(r.address_line, p),
+          consignee_id: idx === 0 ? (r.consignee_id || booking.consignee_id || null) : r.consignee_id
+        };
+      }));
     } else if (booking.receiver_details && typeof booking.receiver_details === 'object') {
+      const p = booking.receiver_details.receiver_state || booking.receiver_details.state || booking.receiver_details.province || receiverProv;
+      const rawName = booking.receiver_details.receiver_name || booking.receiver_details.company_name || booking.consignee_name || '';
+      const rawAddr = booking.receiver_details.receiver_address || booking.receiver_details.address_line || booking.consignee_address_line || booking.consignee_address || '';
       setReceiversList([{
-        company_name: booking.receiver_details.receiver_name || booking.receiver_details.company_name || '',
-        address_line: booking.receiver_details.receiver_address || booking.receiver_details.address_line || '',
-        city: booking.receiver_details.receiver_city || booking.receiver_details.city || '',
-        state: booking.receiver_details.receiver_state || booking.receiver_details.state || '',
-        postal_code: booking.receiver_details.receiver_postal || booking.receiver_details.postal_code || '',
-        country: booking.receiver_details.receiver_country || booking.receiver_details.country || '',
+        company_name: sanitizeName(rawName, p),
+        address_line: sanitizeAddr(rawAddr, p),
+        city: booking.receiver_details.receiver_city || booking.receiver_details.city || booking.consignee_city || '',
+        state: p,
+        province: p,
+        postal_code: booking.receiver_details.receiver_postal || booking.receiver_details.postal_code || booking.consignee_postal_code || '',
+        country: booking.receiver_details.receiver_country || booking.receiver_details.country || booking.consignee_country || '',
+        consignee_id: booking.receiver_details.consignee_id || booking.consignee_id || null,
         delivery_date: booking.delivery_date ? new Date(booking.delivery_date).toISOString().slice(0, 10) : todayStr
       }]);
     } else {
-      setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
+      const rawName = booking.consignee_name || '';
+      const rawAddr = booking.consignee_address_line || booking.consignee_address || '';
+      setReceiversList([{
+        company_name: sanitizeName(rawName, receiverProv),
+        address_line: sanitizeAddr(rawAddr, receiverProv),
+        city: booking.consignee_city || '',
+        state: receiverProv,
+        province: receiverProv,
+        postal_code: booking.consignee_postal_code || '',
+        country: booking.consignee_country || '',
+        consignee_id: booking.consignee_id || null,
+        delivery_date: booking.delivery_date ? new Date(booking.delivery_date).toISOString().slice(0, 10) : todayStr
+      }]);
     }
 
     setWizardAttachedFiles(booking.customer_attachments || booking.attachments || []);
@@ -623,7 +760,6 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
         pickup_date: sendersList[0]?.pickup_date || todayStr,
         delivery_date: receiversList[0]?.delivery_date || todayStr,
         truck_name: editingBooking?.truck_name || '— Select truck —',
-        status: editingBooking?.status || 'Active',
         service_id: pricingMode === 'quotation' ? (selectedServiceId || null) : null,
         service_typename: firstDesc || (pricingMode === 'custom' ? 'ค่าขนส่ง' : ''),
         quotation_id: pricingMode === 'quotation' ? (selectedQuotationId || null) : null,
@@ -797,8 +933,10 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                       (c.phone || '').toLowerCase().includes(q);
                   })
                   .map((cust, idx) => {
-                    const isSelected = selectedCustomer?.customer_id === cust.customer_id ||
-                      (cust.customer_name && selectedCustomer?.customer_name === cust.customer_name);
+                    const isSelected = Boolean(
+                      (selectedCustomer?.customer_id && String(selectedCustomer.customer_id) === String(cust.customer_id)) ||
+                      (cust.customer_name && selectedCustomer?.customer_name && cust.customer_name.trim().toLowerCase() === selectedCustomer.customer_name.trim().toLowerCase())
+                    );
 
                     return (
                       <div
@@ -874,6 +1012,8 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         onClick={() => {
                           setPricingMode('custom');
                           setSelectedQuotationId('');
+                          setSendersList(prev => prev.map(s => ({ ...s, consigner_id: null })));
+                          setReceiversList(prev => prev.map(r => ({ ...r, consignee_id: null })));
                         }}
                       >
                         <div className="pricing-mode-icon-circle">
@@ -895,14 +1035,20 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                         {customerQuotations.length > 0 ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                             {customerQuotations.map(qt => {
-                              const isSelected = selectedQuotationId === qt.document_id;
-                              const qtItems = (Array.isArray(documentItems) ? documentItems : []).filter(di => di.document_id === qt.document_id);
+                              const qId = qt.quotation_id || qt.document_id;
+                              const isSelected = selectedQuotationId === qt.document_id || selectedQuotationId === qt.quotation_id;
+                              const qtItems = (Array.isArray(qt.items) && qt.items.length > 0)
+                                ? qt.items
+                                : (Array.isArray(documentItems) ? documentItems.filter(di => di.document_id === qt.document_id || di.document_id === qId) : []);
                               const itemCount = qtItems.length > 0 ? qtItems.length : 1;
                               const totalAmount = qt.grand_total || qt.net_total || 0;
+                              const serviceName = qt.service_name || qt.service_typename || qt.project_name || qt.remarks || qt.remark || qt.subject || tText('ใบเสนอราคาบริการขนส่ง', 'Freight Quotation');
+                              const originText = qt.origin_province || qt.origin || '';
+                              const destText = qt.destination_province || qt.destination || '';
 
                               return (
                                 <div
-                                  key={qt.document_id}
+                                  key={qt.document_id || qt.quotation_id}
                                   className="selected-quotation-card"
                                   style={{
                                     cursor: 'pointer',
@@ -912,14 +1058,15 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                                   onClick={() => handleSelectQuotation(qt)}
                                 >
                                   <div className="qt-top-row">
-                                    <span className="qt-code">{qt.document_no || qt.document_id}</span>
-                                    <span className="qt-status-badge">
-                                      <span className="qt-status-dot" style={{ backgroundColor: qt.status === 'Approved' ? '#16a34a' : '#94a3b8' }} />
-                                      <span>{qt.status || 'Draft'}</span>
-                                    </span>
+                                    <span className="qt-code">{qt.quotation_no || qt.document_no || qt.document_id}</span>
                                   </div>
-                                  <div className="qt-remark">
-                                    {qt.remarks || qt.remark || qt.subject || tText('ใบเสนอราคาบริการขนส่ง', 'Freight Quotation')}
+                                  <div className="qt-remark" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{serviceName}</span>
+                                    {originText && destText && (
+                                      <span style={{ fontSize: '12px', color: '#0284c7', backgroundColor: '#e0f2fe', padding: '2px 8px', borderRadius: '4px', fontWeight: 500 }}>
+                                        📍 {originText} ➔ {destText}
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="qt-summary">
                                     {itemCount} {tText('รายการ', 'items')} · THB {Number(totalAmount).toLocaleString()}
@@ -1787,7 +1934,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
         <div style={{ textAlign: 'left' }}>
-          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('bookingPageTitle', 'การจองรถขนส่ง (Booking)')}</h2>
+          <h2 className="dashboard-view-title" style={{ marginBottom: '4px' }}>{t('bookingPageTitle', 'การจอง')}</h2>
           <p className="dashboard-view-subtitle" style={{ margin: 0 }}>{t('bookingPageSubtitle', 'จัดการรายการจองรถขนส่ง ตารางงาน และสถานะการจัดส่ง')}</p>
         </div>
         <button className="btn-primary" onClick={handleOpenCreateWizard}>
