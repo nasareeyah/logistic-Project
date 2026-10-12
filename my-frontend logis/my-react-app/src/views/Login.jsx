@@ -53,7 +53,7 @@ function Login({ onLogin, loginError }) {
           <div className="login-hero-middle">
             <div className="login-brand-badge">
               <Sparkles size={13} />
-              <span>{tText('ระบบบริหารจัดการงานขนส่งอัจฉริยะ', 'Intelligent Logistics Platform')}</span>
+              <span>{tText('ระบบปฏิบัติการงานขนส่งและงานเอกสาร', 'Transport Operations & Document System')}</span>
             </div>
 
             <h1 className="login-brand-title">
@@ -64,8 +64,8 @@ function Login({ onLogin, loginError }) {
 
             <p className="login-brand-tagline">
               {tText(
-                'ระบบบริหารจัดการงานขนส่ง โลจิสติกส์ และศูนย์รวมเอกสารการเงินครบวงจร ออกแบบเพื่อความรวดเร็ว แม่นยำ และความปลอดภัยระดับองค์กร',
-                'Comprehensive enterprise logistics, fleet dispatching, and automated financial document workflows.'
+                'จัดการงานจองรถ งานเอกสาร และสรุปภาพรวมการดำเนินงานในระบบเดียว',
+                'Manage bookings, document workflows, and operational overview in one place.'
               )}
             </p>
 
@@ -73,22 +73,22 @@ function Login({ onLogin, loginError }) {
             <div className="login-value-props">
               <div className="login-value-prop-item">
                 <CheckCircle2 size={16} className="login-prop-icon" />
-                <span>{tText('วางแผนเที่ยววิ่ง จัดสรรรถ และติดตามสถานะขนส่งเรียลไทม์', 'Real-time booking dispatch & fleet tracking')}</span>
+                <span>{tText('แดชบอร์ดสรุปภาพรวมและปฏิทินงานขนส่ง', 'Operations dashboard & transport calendar')}</span>
               </div>
               <div className="login-value-prop-item">
                 <CheckCircle2 size={16} className="login-prop-icon" />
-                <span>{tText('ศูนย์รวมเอกสาร Quotation, DO, Invoice, Receipt อัตโนมัติ', 'Automated Quotation, DO, Invoice & Receipt workflows')}</span>
+                <span>{tText('บริหารจัดการงานจองและมอบหมายงานจัดส่ง', 'Booking management & delivery coordination')}</span>
               </div>
               <div className="login-value-prop-item">
                 <CheckCircle2 size={16} className="login-prop-icon" />
-                <span>{tText('ควบคุมความปลอดภัยแยกสิทธิ์ฝ่ายปฏิบัติการและการเงิน', 'Enterprise role-based security & audit trail')}</span>
+                <span>{tText('จัดการเอกสารขนส่งและวางบิลครบวงจร', 'Freight & billing document management')}</span>
               </div>
             </div>
           </div>
 
           {/* Bottom Footnote */}
           <div className="login-hero-bottom">
-            <span>S.T. TRANS EXPRESS CO., LTD. • SECURE ENTERPRISE PORTAL</span>
+            <span>S.T. TRANS EXPRESS CO., LTD. • INTERNAL SYSTEM</span>
           </div>
         </div>
       </div>

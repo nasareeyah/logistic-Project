@@ -1269,9 +1269,13 @@ code {
 }
 
 .calendar-day-cell.today {
-  background-color: #1872b2;
-  color: #ffffff;
+  background-color: #0284c7;
+  color: #ffffff !important;
   font-weight: 700;
+}
+
+.calendar-day-cell.today span {
+  color: #ffffff !important;
 }
 
 /* Job Status BADGES */

@@ -55,9 +55,23 @@
 }
 
 .calendar-day-cell.today {
-  border-color: #0284c7;
-  color: #0284c7;
+  background-color: #0284c7 !important;
+  border-color: #0284c7 !important;
+  color: #ffffff !important;
   font-weight: 700;
+}
+
+.calendar-day-cell.today span {
+  color: #ffffff !important;
+}
+
+.calendar-day-cell.today:hover {
+  background-color: #0369a1 !important;
+  color: #ffffff !important;
+}
+
+.calendar-day-cell.today .calendar-event-dot {
+  background-color: #ffffff !important;
 }
 
 .calendar-day-cell.selected {
@@ -67,7 +81,11 @@
   box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
 }
 
-.calendar-day-cell.has-bookings:not(.selected) {
+.calendar-day-cell.selected span {
+  color: #ffffff !important;
+}
+
+.calendar-day-cell.has-bookings:not(.selected):not(.today) {
   font-weight: 700;
   color: #0f172a;
   background-color: #f0f9ff;

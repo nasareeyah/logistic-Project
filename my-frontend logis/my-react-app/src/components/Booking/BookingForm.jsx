@@ -1969,7 +1969,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                 <th style={{ width: '11%', whiteSpace: 'nowrap' }}>{t('bookingColDeliveryDate', 'วันที่ส่งมอบ (Delivery)')}</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{t('bookingColTruck', 'รถบรรทุก')}</th>
                 <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{tText('เอกสารจากลูกค้า', 'Customer Docs')}</th>
-                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{tText('เอกสารใบ DO ปิดงาน', 'Signed DO (POD)')}</th>
+                <th style={{ width: '13%', whiteSpace: 'nowrap' }}>{tText('เอกสารใบ DO', 'Signed DO')}</th>
                 <th style={{ width: '8%', textAlign: 'right', paddingRight: '24px', whiteSpace: 'nowrap' }}>{t('bookingColActions', 'จัดการ')}</th>
               </tr>
             </thead>
@@ -2062,7 +2062,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             title={tText('แนบเอกสารเพิ่มเติมจากลูกค้า', 'Attach customer document')}
                           >
                             <Paperclip size={13} />
-                            <span>{tText('+ แนบเอกสาร', '+ Attach')}</span>
+                            <span>{tText('แนบเอกสาร', 'Attach')}</span>
                           </button>
                         )}
                       </td>
@@ -2096,7 +2096,7 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             style={{ borderColor: '#bbf7d0', color: '#059669', backgroundColor: '#f0fdf4' }}
                           >
                             <Plus size={13} />
-                            <span>{tText('+ แนบใบ DO', '+ Attach DO')}</span>
+                            <span>{tText('แนบใบ DO', 'Attach DO')}</span>
                           </button>
                         )}
                       </td>
