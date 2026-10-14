@@ -378,7 +378,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [], b
               <FileText size={24} />
             </div>
             <div style={{ fontSize: '36px', fontWeight: '800', color: '#1e3a8a', lineHeight: '1' }}>{customerBookings.length}</div>
-            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginTop: '8px' }}>{tText('รายการจองรถ (Bookings)', 'Bookings')}</div>
+            <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '600', marginTop: '8px' }}>{tText('รายการจอง (Bookings)', 'Bookings')}</div>
             {customerDos.length > 0 && (
               <div style={{ fontSize: '12px', color: '#059669', fontWeight: '500', marginTop: '6px', backgroundColor: '#ecfdf5', padding: '2px 8px', borderRadius: '6px' }}>
                 {customerDos.length} {tText('ใบส่งสินค้า (DO)', 'Delivery Orders')}
@@ -392,7 +392,7 @@ function CustomerTable({ customers, onAdd, onUpdate, onDelete, documents = [], b
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Truck size={18} color="#0284c7" />
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>{tText('ประวัติการจองรถ', 'Booking History')}</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, textAlign: 'left' }}>{tText('ประวัติการจอง', 'Booking History')}</h3>
             </div>
             <span style={{ fontSize: '13px', color: '#0284c7', fontWeight: '600', backgroundColor: '#f0f9ff', padding: '4px 12px', borderRadius: '20px' }}>
               {customerBookings.length} {tText('รายการ', 'records')}

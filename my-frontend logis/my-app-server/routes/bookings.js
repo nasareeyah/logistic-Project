@@ -9,7 +9,7 @@ const fs = require('fs');
 
 let isBookingTableInit = false;
 
-// Decode original filename from latin1/utf8 if it was corrupted by multipart parsers
+// ถ้าชื่อไฟล์มีภาษาไทยหรืออักขระพิเศษให้ถอดรหัส
 const fixOriginalName = (name) => {
     if (!name) return '';
     try {
@@ -17,7 +17,7 @@ const fixOriginalName = (name) => {
             const decoded = Buffer.from(name, 'latin1').toString('utf8');
             if (decoded && !decoded.includes('\ufffd')) return decoded;
         }
-    } catch (e) {}
+    } catch (e) { }
     return name;
 };
 
@@ -77,7 +77,7 @@ async function saveConsigneeFromBooking(receiver) {
     const state = receiver.state || receiver.province || null;
     const province = receiver.province || receiver.state || null;
     const postal_code = receiver.postal_code || null;
-    const country = receiver.country || 'Thailand';
+    const country = receiver.country || '';
 
     if (!address_line && !consignee_name && !province && !consignee_id) return null;
 
@@ -443,7 +443,7 @@ router.get('/bookings', async (req, res) => {
             const doFiles = doFilesMap[b.booking_id] || [];
             const bServices = bookingServicesMap[b.booking_id] || [];
             const allServiceNames = bServices.map(s => s.description).filter(Boolean);
-            const primaryServiceName = allServiceNames.length > 0 
+            const primaryServiceName = allServiceNames.length > 0
                 ? allServiceNames.join(', ')
                 : (b.service_name || b.service_typename || '-');
 
@@ -489,15 +489,15 @@ router.get('/bookings', async (req, res) => {
 router.post('/bookings', async (req, res) => {
     try {
         await initBookingTables();
-        const { 
-            booking_no, customer_id, customer_name, pickup_date, delivery_date, 
-            car_id, truck_name, remark, service_id, quotation_id, 
+        const {
+            booking_no, customer_id, customer_name, pickup_date, delivery_date,
+            car_id, truck_name, remark, service_id, quotation_id,
             cargo_details, sender_details, receiver_details,
-            service_items, service_typename, pricing_mode 
+            service_items, service_typename, pricing_mode
         } = req.body;
-        
+
         const booking_id = await nextId('seq_booking', 'bk-', 5);
-        
+
         // Generate daily resetting booking number (BK-YYYYMMDD-XXXX)
         let finalBookingNo = booking_no;
         if (!finalBookingNo) {
@@ -507,7 +507,7 @@ router.post('/bookings', async (req, res) => {
                 `SELECT booking_no FROM bookings WHERE booking_no LIKE $1 ORDER BY booking_no DESC LIMIT 1`,
                 [`${prefix}%`]
             );
-            
+
             let nextNumber = 1;
             if (lastBookingRes.rows.length > 0) {
                 const lastNo = lastBookingRes.rows[0].booking_no;
@@ -627,11 +627,11 @@ router.post('/bookings', async (req, res) => {
 router.put('/bookings/:id', async (req, res) => {
     try {
         await initBookingTables();
-        const { 
-            booking_no, customer_id, customer_name, pickup_date, delivery_date, 
-            car_id, truck_name, remark, service_id, quotation_id, 
+        const {
+            booking_no, customer_id, customer_name, pickup_date, delivery_date,
+            car_id, truck_name, remark, service_id, quotation_id,
             cargo_details, sender_details, receiver_details,
-            service_items, service_typename, pricing_mode 
+            service_items, service_typename, pricing_mode
         } = req.body;
 
         // Save senders to consigner table and get the first one's ID
@@ -697,14 +697,14 @@ router.put('/bookings/:id', async (req, res) => {
                 quotation_id = CASE WHEN $15::boolean THEN $14 ELSE quotation_id END
              WHERE booking_id = $16`,
             [
-                booking_no || null, 
-                customer_id || null, 
-                customer_name || null, 
-                pickup_date || null, 
-                delivery_date || null, 
-                car_id || null, 
-                truck_name || null, 
-                remark || null, 
+                booking_no || null,
+                customer_id || null,
+                customer_name || null,
+                pickup_date || null,
+                delivery_date || null,
+                car_id || null,
+                truck_name || null,
+                remark || null,
                 firstConsignerId,
                 firstConsigneeId,
                 hasCarId,

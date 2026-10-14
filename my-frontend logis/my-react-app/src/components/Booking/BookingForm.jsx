@@ -949,9 +949,17 @@ export default function BookingForm({ customers = [], cars = [], consigners = []
                             (q.customer_name && q.customer_name.trim().toLowerCase() === cust.customer_name?.trim().toLowerCase())
                           );
                           if (custQts.length > 0) {
+                            setPricingMode('quotation');
                             handleSelectQuotation(custQts[0]);
                           } else {
+                            setPricingMode('custom');
                             setSelectedQuotationId('');
+                            setSelectedServiceId('');
+                            setServiceItems([
+                              { id: 1, description: '', quantity: 1, unit: 'trip', unit_price: 0, total: 0 }
+                            ]);
+                            setSendersList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', pickup_date: todayStr }]);
+                            setReceiversList([{ company_name: '', address_line: '', city: '', state: '', postal_code: '', country: '', delivery_date: todayStr }]);
                           }
                         }}
                       >

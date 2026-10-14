@@ -10,6 +10,8 @@ async function initDeliveryOrdersTable() {
     if (isTableInitialized) return;
     try {
         await db.query(`CREATE SEQUENCE IF NOT EXISTS seq_delivery_order;`);
+        await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS document_id VARCHAR(50);`);
+        await db.query(`ALTER TABLE delivery_orders ALTER COLUMN document_id TYPE VARCHAR(50);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS do_no VARCHAR(50);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS booking_id VARCHAR(50);`);
         await db.query(`ALTER TABLE delivery_orders ADD COLUMN IF NOT EXISTS cargo_id VARCHAR(50);`);
@@ -151,6 +153,7 @@ router.post('/delivery-orders', async (req, res) => {
             do_id,
             do_no,
             booking_id,
+            document_id,
             cargo_id,
             consigner_id,
             consignee_id,
@@ -213,31 +216,76 @@ router.post('/delivery-orders', async (req, res) => {
         let resolvedDriverId = driver_id || null;
         let resolvedDateOfLoad = date_of_load ? date_of_load : null;
         let resolvedEta = eta ? eta : null;
+        let resolvedDocumentId = document_id || null;
+        let resolvedCustomerName = customer_name || null;
+        let resolvedCustomerAddress = customer_address || null;
+        let resolvedCustomerCity = customer_city || null;
+        let resolvedCustomerState = customer_state || null;
+        let resolvedCustomerPostalCode = customer_postal_code || null;
+        let resolvedCustomerCountry = customer_country || 'Thailand';
 
-        // Auto-resolve missing IDs and dates from booking if booking_id is provided
+        // Auto-resolve missing IDs, dates, document_id, and customer from booking if booking_id is provided
         if (booking_id) {
             const bkRes = await db.query(
-                `SELECT consigner_id, consignee_id, car_id, truck_name, pickup_date, delivery_date FROM bookings WHERE booking_id = $1`,
+                `SELECT b.consigner_id, b.consignee_id, b.car_id, b.truck_name, b.pickup_date, b.delivery_date,
+                        b.customer_id, b.customer_name, b.quotation_id,
+                        c.customer_name AS cust_name, c.address AS cust_address,
+                        c.city AS cust_city, c.state AS cust_state, c.postal_code AS cust_postal_code, c.country AS cust_country
+                 FROM bookings b
+                 LEFT JOIN customers c ON b.customer_id = c.customer_id
+                 WHERE b.booking_id = $1`,
                 [booking_id]
             );
             if (bkRes.rows.length > 0) {
-                if (!resolvedConsignerId) resolvedConsignerId = bkRes.rows[0].consigner_id;
-                if (!resolvedConsigneeId) resolvedConsigneeId = bkRes.rows[0].consignee_id;
-                if (!resolvedCarId && bkRes.rows[0].car_id) resolvedCarId = bkRes.rows[0].car_id;
-                if (!resolvedCarId && bkRes.rows[0].truck_name) {
+                const bkRow = bkRes.rows[0];
+                if (!resolvedConsignerId) resolvedConsignerId = bkRow.consigner_id;
+                if (!resolvedConsigneeId) resolvedConsigneeId = bkRow.consignee_id;
+                if (!resolvedCarId && bkRow.car_id) resolvedCarId = bkRow.car_id;
+                if (!resolvedCarId && bkRow.truck_name) {
                     const matchedCar = await db.query(
                         `SELECT car_id FROM cars WHERE car_number = $1 LIMIT 1`,
-                        [bkRes.rows[0].truck_name]
+                        [bkRow.truck_name]
                     );
                     if (matchedCar.rows.length > 0) {
                         resolvedCarId = matchedCar.rows[0].car_id;
                     }
                 }
-                if (!resolvedDateOfLoad && bkRes.rows[0].pickup_date) {
-                    resolvedDateOfLoad = bkRes.rows[0].pickup_date;
+                if (!resolvedDateOfLoad && bkRow.pickup_date) {
+                    resolvedDateOfLoad = bkRow.pickup_date;
                 }
-                if (!resolvedEta && bkRes.rows[0].delivery_date) {
-                    resolvedEta = bkRes.rows[0].delivery_date;
+                if (!resolvedEta && bkRow.delivery_date) {
+                    resolvedEta = bkRow.delivery_date;
+                }
+                if (!resolvedCustomerName) {
+                    resolvedCustomerName = bkRow.customer_name || bkRow.cust_name || null;
+                }
+                if (!resolvedCustomerAddress && bkRow.cust_address) {
+                    resolvedCustomerAddress = bkRow.cust_address;
+                }
+                if (!resolvedCustomerCity && bkRow.cust_city) {
+                    resolvedCustomerCity = bkRow.cust_city;
+                }
+                if (!resolvedCustomerState && bkRow.cust_state) {
+                    resolvedCustomerState = bkRow.cust_state;
+                }
+                if (!resolvedCustomerPostalCode && bkRow.cust_postal_code) {
+                    resolvedCustomerPostalCode = bkRow.cust_postal_code;
+                }
+                if ((!resolvedCustomerCountry || resolvedCustomerCountry === 'Thailand') && bkRow.cust_country) {
+                    resolvedCustomerCountry = bkRow.cust_country;
+                }
+
+                // Auto-resolve document_id from quotation_id if not explicitly provided
+                if (!resolvedDocumentId && bkRow.quotation_id) {
+                    const docRes = await db.query(
+                        `SELECT document_id FROM document WHERE ref_id = $1 OR document_id = $1 OR document_no = $1 LIMIT 1`,
+                        [bkRow.quotation_id]
+                    );
+                    if (docRes.rows.length > 0 && docRes.rows[0].document_id) {
+                        resolvedDocumentId = docRes.rows[0].document_id;
+                    } else {
+                        resolvedDocumentId = bkRow.quotation_id;
+                    }
                 }
             }
             if (!resolvedCargoId) {
@@ -284,6 +332,7 @@ router.post('/delivery-orders', async (req, res) => {
         await db.query(
             `INSERT INTO delivery_orders (
                 delivery_orders_id,
+                document_id,
                 booking_id,
                 cargo_id,
                 consigner_id,
@@ -304,10 +353,11 @@ router.post('/delivery-orders', async (req, res) => {
                 remark
             ) VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18, $19
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
             )`,
             [
                 finalId,
+                resolvedDocumentId,
                 booking_id || null,
                 resolvedCargoId,
                 resolvedConsignerId,
@@ -315,12 +365,12 @@ router.post('/delivery-orders', async (req, res) => {
                 resolvedCarId,
                 resolvedDriverId,
                 finalDoNo,
-                customer_name || null,
-                customer_address || null,
-                customer_city || null,
-                customer_state || null,
-                customer_postal_code || null,
-                customer_country || 'Thailand',
+                resolvedCustomerName,
+                resolvedCustomerAddress,
+                resolvedCustomerCity,
+                resolvedCustomerState,
+                resolvedCustomerPostalCode,
+                resolvedCustomerCountry || 'Thailand',
                 resolvedDateOfLoad,
                 resolvedEta,
                 warehouse || null,
@@ -370,6 +420,7 @@ router.put('/delivery-orders/:id', async (req, res) => {
         const { id } = req.params;
         const {
             booking_id,
+            document_id,
             cargo_id,
             consigner_id,
             consignee_id,
@@ -391,25 +442,27 @@ router.put('/delivery-orders/:id', async (req, res) => {
 
         await db.query(
             `UPDATE delivery_orders SET
-                booking_id = COALESCE($1, booking_id),
-                cargo_id = COALESCE($2, cargo_id),
-                consigner_id = COALESCE($3, consigner_id),
-                consignee_id = COALESCE($4, consignee_id),
-                car_id = COALESCE($5, car_id),
-                driver_id = COALESCE($6, driver_id),
-                customer_name = COALESCE($7, customer_name),
-                customer_address = COALESCE($8, customer_address),
-                customer_city = COALESCE($9, customer_city),
-                customer_state = COALESCE($10, customer_state),
-                customer_postal_code = COALESCE($11, customer_postal_code),
-                customer_country = COALESCE($12, customer_country),
-                date_of_load = COALESCE($13, date_of_load),
-                eta = COALESCE($14, eta),
-                warehouse = COALESCE($15, warehouse),
-                shipping = COALESCE($16, shipping),
-                remark = COALESCE($17, remark)
-             WHERE delivery_orders_id = $18 OR do_no = $18`,
+                document_id = COALESCE($1, document_id),
+                booking_id = COALESCE($2, booking_id),
+                cargo_id = COALESCE($3, cargo_id),
+                consigner_id = COALESCE($4, consigner_id),
+                consignee_id = COALESCE($5, consignee_id),
+                car_id = COALESCE($6, car_id),
+                driver_id = COALESCE($7, driver_id),
+                customer_name = COALESCE($8, customer_name),
+                customer_address = COALESCE($9, customer_address),
+                customer_city = COALESCE($10, customer_city),
+                customer_state = COALESCE($11, customer_state),
+                customer_postal_code = COALESCE($12, customer_postal_code),
+                customer_country = COALESCE($13, customer_country),
+                date_of_load = COALESCE($14, date_of_load),
+                eta = COALESCE($15, eta),
+                warehouse = COALESCE($16, warehouse),
+                shipping = COALESCE($17, shipping),
+                remark = COALESCE($18, remark)
+             WHERE delivery_orders_id = $19 OR do_no = $19`,
             [
+                document_id !== undefined ? document_id : null,
                 booking_id !== undefined ? booking_id : null,
                 cargo_id !== undefined ? cargo_id : null,
                 consigner_id !== undefined ? consigner_id : null,

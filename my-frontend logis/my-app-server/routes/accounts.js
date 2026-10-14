@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 const { nextId } = require('../utils/dbHelpers');
 
-// Helper to resolve or create bank
+// 
 async function resolveBank(clientOrDb, bankName, bankId) {
     if (bankId) {
         const existing = await clientOrDb.query('SELECT bank_id FROM bank WHERE bank_id = $1', [bankId]);
@@ -65,7 +65,7 @@ router.get('/banks', async (req, res) => {
     }
 });
 
-// CREATE account
+// เพิ่มข้อมูลบัญชี
 router.post('/accounts', async (req, res) => {
     const client = await db.connect();
     try {
@@ -80,12 +80,12 @@ router.post('/accounts', async (req, res) => {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'กรุณากรอกชื่อบัญชี' });
         }
-
+        //ป้องการข้อมูลผิดพลาดในฐานข้อมูล คลีนข้อมูลก่อนบันทึกลงฐานข้อมูล
         const cleanAccountNo = account_no.trim();
         const cleanAccountName = account_name.trim();
         const cleanBranch = (bank_branch || '').trim();
 
-        // Check if account already exists
+        // ป้องกันข้อมูลซ้ำ
         const existsCheck = await client.query('SELECT 1 FROM account WHERE account_no = $1', [cleanAccountNo]);
         if (existsCheck.rows.length > 0) {
             await client.query('ROLLBACK');
@@ -133,7 +133,7 @@ router.put('/accounts/:account_no', async (req, res) => {
         const resolvedBankId = await resolveBank(client, bank_name, bank_id);
 
         let finalAccountNo = oldAccountNo;
-        // If account_no changed and is provided
+        // ป้องกันข้อมูลซ้ำ
         if (newAccountNo && newAccountNo.trim() !== oldAccountNo) {
             finalAccountNo = newAccountNo.trim();
             const dupeCheck = await client.query('SELECT 1 FROM account WHERE account_no = $1', [finalAccountNo]);

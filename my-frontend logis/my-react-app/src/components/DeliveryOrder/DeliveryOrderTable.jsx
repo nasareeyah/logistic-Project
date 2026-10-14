@@ -310,6 +310,7 @@ export default function DeliveryOrderTable({
 
     setFormData({
       booking_id: item.booking_id || '',
+      document_id: item.document_id || (matchedBooking?.quotation_id || ''),
       booking_no: item.booking_no || (matchedBooking?.booking_no || ''),
       cargo_id: item.cargo_id || (matchedBooking?.cargo_details?.[0]?.cargo_id || ''),
       consigner_id: item.consigner_id || '',
@@ -434,6 +435,7 @@ export default function DeliveryOrderTable({
     setFormData((prev) => ({
       ...prev,
       booking_id: bk.booking_id || '',
+      document_id: bk.quotation_id || bk.document_id || '',
       booking_no: bk.booking_no || '',
       cargo_id: resolvedCargoId || prev.cargo_id,
       consigner_id: bk.consigner_id || prev.consigner_id,
@@ -1468,11 +1470,11 @@ export default function DeliveryOrderTable({
                 {/* Shipping & Warehouse in the same row */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div className="form-group">
-                    <label className="form-label">{tText('สายการเดินเรือ / บริษัทขนส่ง', 'Shipping Line / Carrier')}</label>
+                    <label className="form-label">{tText('ชิปปิ้ง', 'Shipping')}</label>
                     <input
                       type="text"
                       className="form-input"
-                      placeholder={tText('เช่น KLM, สายเรือ, บริษัทขนส่ง...', 'e.g. KLM, Carrier...')}
+                      placeholder={tText('ระบุชิปปิ้ง...', 'e.g. Shipping...')}
                       value={formData.shipping}
                       onChange={(e) => setFormData({ ...formData, shipping: e.target.value })}
                     />
@@ -1615,7 +1617,7 @@ export default function DeliveryOrderTable({
                 <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
                     <div>
-                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{tText('สายเรือ/ขนส่ง: ', 'Shipping: ')}</span>
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{tText('ชิปปิ้ง: ', 'Shipping: ')}</span>
                       <span style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600 }}>{formData.shipping || '-'}</span>
                     </div>
                     <div>

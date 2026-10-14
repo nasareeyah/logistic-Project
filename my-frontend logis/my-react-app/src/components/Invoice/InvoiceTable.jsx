@@ -97,6 +97,7 @@ export default function InvoiceTable({
     due_date: defaultDueDate,
     credit_term: 30,
     customer_id: '',
+    customer_name: '',
     booking_id: '',
     quotation_id: '',
     do_no: '',
@@ -124,7 +125,7 @@ export default function InvoiceTable({
       if (editingInvoiceId && formData.booking_id === bk.booking_id) return true;
       // หากมีใบแจ้งหนี้แล้ว ให้คัดออก
       if (bk.has_invoice) return false;
-      const alreadyInvoiced = invoices.some(inv => 
+      const alreadyInvoiced = invoices.some(inv =>
         (inv.booking_id && String(inv.booking_id) === String(bk.booking_id)) ||
         (inv.booking_no && bk.booking_no && String(inv.booking_no) === String(bk.booking_no))
       );
@@ -221,6 +222,7 @@ export default function InvoiceTable({
       due_date: defaultDueDate,
       credit_term: 30,
       customer_id: '',
+      customer_name: '',
       booking_id: '',
       quotation_id: '',
       do_no: '',
@@ -310,6 +312,7 @@ export default function InvoiceTable({
       ...prev,
       booking_id: bk.booking_id,
       customer_id: bk.customer_id || prev.customer_id,
+      customer_name: bk.customer_name || '',
       quotation_id: bk.quotation_id || '',
       do_no: bk.do_no || '',
       items: importedItems
@@ -395,6 +398,7 @@ export default function InvoiceTable({
         due_date: detail.due_date ? new Date(detail.due_date).toISOString().slice(0, 10) : '',
         credit_term: detail.credit_term || 30,
         customer_id: detail.customer_id || '',
+        customer_name: detail.customer_name || '',
         booking_id: detail.booking_id || '',
         quotation_id: detail.quotation_id || '',
         do_no: detail.do_no || '',
@@ -466,7 +470,10 @@ export default function InvoiceTable({
 
   // RENDER CREATE / EDIT INVOICE MULTI-STEP WIZARD (Image 2 style)
   if (viewMode === 'wizard') {
-    const selectedCustomer = (Array.isArray(customers) ? customers : []).find(c => c.customer_id === formData.customer_id);
+    const selectedCustomer = (Array.isArray(customers) ? customers : []).find(c =>
+      (formData.customer_id && String(c.customer_id) === String(formData.customer_id)) ||
+      (formData.customer_name && c.customer_name === formData.customer_name)
+    );
 
     return (
       <div style={{ maxWidth: '1100px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -574,7 +581,7 @@ export default function InvoiceTable({
                         <Truck size={18} />
                       </div>
                       <span style={{ fontWeight: '700', color: '#0f172a', fontSize: '14.5px' }}>
-                        {tText('เลือกจากงานจองที่ส่งของ (DO) เรียบร้อยแล้ว', 'Import from completed Delivery Order (DO)')}
+                        {tText('เลือกจากงานจองที่แนบใบ DO เรียบร้อยแล้ว', 'Import from completed Booking with attached DO')}
                       </span>
                     </div>
                     <span style={{
@@ -606,7 +613,7 @@ export default function InvoiceTable({
                   >
                     <option value="">
                       {availableBookings.length === 0
-                        ? tText('— ไม่มีงานค้างที่รอออกใบแจ้งหนี้ (ออกครบทั้งหมดแล้ว) —', '— No pending bookings to invoice (All invoiced) —')
+                        ? tText('— ไม่มีงานค้างที่รอออกใบแจ้งหนี้ (งานที่พร้อมออกบิลต้องแนบไฟล์ใบ DO ก่อน) —', '— No pending bookings to invoice (Must attach DO file first) —')
                         : tText('— เลือกรอบการส่งสินค้า เพื่อดึงข้อมูลบริการ ราคา และ DO อัตโนมัติ —', '— Select a completed booking to auto-import service, price, and DO —')
                       }
                     </option>
@@ -617,7 +624,7 @@ export default function InvoiceTable({
                     ))}
                   </select>
                   <small style={{ display: 'block', marginTop: '8px', color: '#64748b', fontSize: '12px' }}>
-                    {tText('* เมื่อเลือก ระบบจะดึงชื่อบริการ + ชื่อสินค้า (เช่น "ค่าขนส่ง เม็ดพลาสติก"), หน่วยเป็น "คันรถ", และราคาค่าบริการจากใบเสนอราคามาให้ทันที', '* When selected, service description, goods, unit, and pricing from quotation will be auto-filled.')}
+                    {tText('* แสดงเฉพาะงานจองที่แนบไฟล์ใบ DO เรียบร้อยแล้ว เมื่อเลือก ระบบจะดึงข้อมูลบริการ สินค้า และราคามาให้อัตโนมัติ', '* Only bookings with attached DO files are shown. When selected, service, goods, and pricing will be auto-filled.')}
                   </small>
                 </div>
               )}
@@ -657,21 +664,42 @@ export default function InvoiceTable({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    {tText('เลือกลูกค้า', 'Customer')} <span className="form-label-required">*</span>
+                    {tText('ลูกค้า', 'Customer')} <span className="form-label-required">*</span>
                   </label>
-                  <select
-                    className="form-select"
-                    value={formData.customer_id}
-                    onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
-                    required
-                  >
-                    <option value="">{tText('— เลือกลูกค้า —', '— Select Customer —')}</option>
-                    {(Array.isArray(customers) ? customers : []).map(c => (
-                      <option key={c.customer_id} value={c.customer_id}>
-                        {c.customer_name}
-                      </option>
-                    ))}
-                  </select>
+                  {formData.booking_id ? (
+                    <div>
+                      <input
+                        type="text"
+                        className="form-input"
+                        value={selectedCustomer?.customer_name || formData.customer_name || (eligibleBookings.find(b => b.booking_id === formData.booking_id)?.customer_name) || formData.customer_id || ''}
+                        readOnly
+                        style={{
+                          backgroundColor: '#f8fafc',
+                          color: '#0f172a',
+                          fontWeight: '600',
+                          border: '1px solid #cbd5e1',
+                          cursor: 'default'
+                        }}
+                      />
+                      <small style={{ color: '#0284c7', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                        {tText('* ดึงข้อมูลลูกค้าตามงานจองอัตโนมัติ', '* Auto-imported customer from booking')}
+                      </small>
+                    </div>
+                  ) : (
+                    <select
+                      className="form-select"
+                      value={formData.customer_id}
+                      onChange={(e) => setFormData({ ...formData, customer_id: e.target.value })}
+                      required
+                    >
+                      <option value="">{tText('— เลือกลูกค้า —', '— Select Customer —')}</option>
+                      {(Array.isArray(customers) ? customers : []).map(c => (
+                        <option key={c.customer_id} value={c.customer_id}>
+                          {c.customer_name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -862,7 +890,7 @@ export default function InvoiceTable({
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Landmark size={20} color="#0284c7" />
-                  <span>{tText('เลือกบัญชีธนาคารสำหรับรับชำระเงิน', 'Select Bank Account')}</span>
+                  <span>{tText('เลือกบัญชีธนาคารสำหรับชำระเงิน', 'Select Bank Account')}</span>
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
                   {tText('เลือกบัญชีธนาคารจากระบบ Master Data เพื่อระบุข้อมูลการโอนเงินในใบแจ้งหนี้อย่างถูกต้อง', 'Select company bank account for payment remittance instructions')}
@@ -1135,7 +1163,7 @@ export default function InvoiceTable({
                       return;
                     }
                     if (currentStep === 4 && !formData.account_no) {
-                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกบัญชีธนาคารสำหรับรับชำระเงินก่อนดำเนินการต่อ' : 'Please select a bank account before continuing');
+                      notify.error('ข้อมูลไม่ครบถ้วน', lang === 'th' ? 'กรุณาเลือกบัญชีธนาคารสำหรับชำระเงินก่อนดำเนินการต่อ' : 'Please select a bank account before continuing');
                       return;
                     }
                     setCurrentStep(prev => Math.min(5, prev + 1));

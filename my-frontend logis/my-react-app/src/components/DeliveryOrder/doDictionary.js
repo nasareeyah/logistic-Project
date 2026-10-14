@@ -62,7 +62,7 @@ export const doDictionary = {
 
     // Sub-table Information Boxes
     remarkLabel: 'หมายเหตุ:',
-    shippingLabel: 'การจัดส่ง:',
+    shippingLabel: 'ชิปปิ้ง:',
     warehouseLabel: 'คลังสินค้า:',
 
     // Signatures

@@ -57,7 +57,7 @@ router.get(['/invoices-eligible-bookings', '/invoices/eligible-bookings'], async
                 COALESCE(s.unit_quantity, qs.unit_quantity, cust_qs.unit_quantity, 'คันรถ') AS unit_quantity,
                 COALESCE(b.quotation_id, cust_qd.document_id) AS quotation_id,
                 COALESCE(qd.quotation_no, cust_qd.document_no) AS quotation_no,
-                COALESCE(d.do_no, (SELECT bdf.file_name FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id LIMIT 1)) AS do_no,
+                COALESCE(d.do_no, (SELECT COALESCE(bdf.original_name, bdf.file_name) FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id LIMIT 1)) AS do_no,
                 (
                     SELECT STRING_AGG(DISTINCT bc.product_name, ', ')
                     FROM booking_cargo bc
@@ -83,7 +83,7 @@ router.get(['/invoices-eligible-bookings', '/invoices/eligible-bookings'], async
             LEFT JOIN delivery_orders d ON d.booking_id = b.booking_id
             WHERE EXISTS (
                 SELECT 1 FROM booking_do_files bdf WHERE bdf.booking_id = b.booking_id
-            ) OR d.do_no IS NOT NULL
+            )
             ORDER BY b.created_at DESC;
         `;
         const result = await db.query(sql);
@@ -255,6 +255,20 @@ router.post('/invoices', async (req, res) => {
 
         const invId = await nextId('seq_invoice', 'inv-', 6);
 
+        // Validation: If booking_id is provided, must have attached DO file
+        if (booking_id && String(booking_id).trim() !== '') {
+            const doCheck = await client.query(
+                `SELECT 1 FROM booking_do_files WHERE booking_id = $1 LIMIT 1`,
+                [booking_id]
+            );
+            if (doCheck.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    error: 'ไม่สามารถสร้างใบแจ้งหนี้ได้ เนื่องจากรายการ Booking นี้ยังไม่ได้แนบไฟล์เอกสารใบ DO (Delivery Order)'
+                });
+            }
+        }
+
         // Auto-generate invoice number: INV-YYYYMMDD-XXXX
         let finalInvoiceNo = invoice_no;
         if (!finalInvoiceNo) {
@@ -386,6 +400,20 @@ router.put('/invoices/:id', async (req, res) => {
         } = req.body;
 
         const invId = req.params.id;
+
+        // Validation: If booking_id is provided, must have attached DO file
+        if (booking_id && String(booking_id).trim() !== '') {
+            const doCheck = await client.query(
+                `SELECT 1 FROM booking_do_files WHERE booking_id = $1 LIMIT 1`,
+                [booking_id]
+            );
+            if (doCheck.rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                    error: 'ไม่สามารถบันทึกใบแจ้งหนี้ได้ เนื่องจากรายการ Booking นี้ยังไม่ได้แนบไฟล์เอกสารใบ DO (Delivery Order)'
+                });
+            }
+        }
 
         // Calculate total
         let totalAmount = 0;
